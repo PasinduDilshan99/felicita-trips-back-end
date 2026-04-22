@@ -1496,4 +1496,75 @@ public class DestinationRepositoryImpl implements DestinationRepository {
         }
     }
 
+    @Override
+    public DestinationStatisticsResponse.DestinationDetails getDestinationDetailsStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch destination details statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    DestinationQueries.GET_DESTINATION_DETAILS_STATISTICS,
+                    (rs, rowNum) -> DestinationStatisticsResponse.DestinationDetails.builder()
+                            .totalDestinationCount(rs.getInt("totalDestinationCount"))
+                            .activeDestinations(rs.getInt("activeDestinations"))
+                            .inActiveDestinations(rs.getInt("inActiveDestinations"))
+                            .hiddenDestinations(rs.getInt("hiddenDestinations"))
+                            .recentlyUpdateDestinations(rs.getInt("recentlyUpdateDestinations"))
+                            .recentlyAddedDestinations(rs.getInt("recentlyAddedDestinations"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching destination details statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch destination details statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching destination details statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching destination details statistics");
+        }
+    }
+
+    @Override
+    public DestinationStatisticsResponse.WishDetails getDestinationWishStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch destination wish statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    DestinationQueries.GET_DESTINATION_WISH_STATISTICS,
+                    (rs, rowNum) -> DestinationStatisticsResponse.WishDetails.builder()
+                            .wishListCount(rs.getInt("wishListCount"))
+                            .notWishListCount(rs.getInt("notWishListCount"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching destination wish statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch destination wish statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching destination wish statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching destination wish statistics");
+        }
+    }
+
+    @Override
+    public List<DestinationStatisticsResponse.CategoryDetails> getDestinationCategoryStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch destination category statistics.");
+
+            return jdbcTemplate.query(
+                    DestinationQueries.GET_DESTINATION_CATEGORY_STATISTICS,
+                    (rs, rowNum) -> DestinationStatisticsResponse.CategoryDetails.builder()
+                            .categoryId(rs.getLong("category_id"))
+                            .categoryName(rs.getString("category_name"))
+                            .count(rs.getInt("destination_count"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching destination category statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch destination category statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching destination category statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching destination category statistics");
+        }
+    }
+
 }

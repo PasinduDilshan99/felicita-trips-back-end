@@ -662,4 +662,34 @@ public class DestinationServiceImpl implements DestinationService {
         }
     }
 
+    @Override
+    public CommonResponse<DestinationStatisticsResponse> getDestinationsStatistics() {
+        LOGGER.info("Start fetching destination statistics from repository");
+        try {
+            DestinationStatisticsResponse destinationStatisticsResponse = new DestinationStatisticsResponse();
+            DestinationStatisticsResponse.DestinationDetails destinationDetails = destinationRepository.getDestinationDetailsStatistics();
+            DestinationStatisticsResponse.WishDetails wishDetails = destinationRepository.getDestinationWishStatistics();
+            List<DestinationStatisticsResponse.CategoryDetails> categoryDetails = destinationRepository.getDestinationCategoryStatistics();
+
+            destinationStatisticsResponse.setDestinationDetails(destinationDetails);
+            destinationStatisticsResponse.setWishDetails(wishDetails);
+            destinationStatisticsResponse.setCategoryDetails(categoryDetails);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    destinationStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching destination statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch destination statistics from database");
+        } finally {
+            LOGGER.info("End fetching destination statistics from repository");
+        }
+    }
+
 }

@@ -9,10 +9,7 @@ import com.felicita.model.request.BookingRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
 import com.felicita.model.response.*;
 import com.felicita.repository.BookingRepository;
-import com.felicita.service.BookingService;
-import com.felicita.service.CommonService;
-import com.felicita.service.PackageService;
-import com.felicita.service.VehicleService;
+import com.felicita.service.*;
 import com.felicita.util.CommonResponseMessages;
 import com.felicita.validation.BookingValidationService;
 import org.slf4j.Logger;
@@ -39,6 +36,8 @@ public class BookingServiceImpl implements BookingService {
     private final BookingHelperService bookingHelperService;
     private final PackageService packageService;
     private final VehicleService vehicleService;
+    private final EmailService emailService;
+    private final EmailHelperService emailHelperService;
 
     @Autowired
     public BookingServiceImpl(BookingRepository bookingRepository,
@@ -46,13 +45,17 @@ public class BookingServiceImpl implements BookingService {
                               BookingValidationService bookingValidationService,
                               BookingHelperService bookingHelperService,
                               PackageService packageService,
-                              VehicleService vehicleService) {
+                              VehicleService vehicleService,
+                              EmailService emailService,
+                              EmailHelperService emailHelperService) {
         this.bookingRepository = bookingRepository;
         this.commonService = commonService;
         this.bookingValidationService = bookingValidationService;
         this.bookingHelperService = bookingHelperService;
         this.packageService = packageService;
         this.vehicleService = vehicleService;
+        this.emailService = emailService;
+        this.emailHelperService = emailHelperService;
     }
 
     @Override
@@ -469,6 +472,27 @@ public class BookingServiceImpl implements BookingService {
 
             if (tourBookingInquiryId == null || tourBookingInquiryId <= 0) {
                 throw new InsertFailedErrorExceptionHandler("Failed to insert tour booking inquiry");
+            }else{
+                String adminSubject = emailHelperService.buildAdminTourBookingSubject(tourBookingInquiryRequest);
+                String adminBody = emailHelperService.buildAdminTourBookingBody(tourBookingInquiryRequest, tourBookingInquiryId);
+
+                emailService.sendFromDev(
+                        "felicitatrips@gmail.com",
+                        adminSubject,
+                        adminBody
+                );
+
+                if (tourBookingInquiryRequest.getEmail() != null && !tourBookingInquiryRequest.getEmail().isEmpty()) {
+
+                    String customerSubject = emailHelperService.buildCustomerTourBookingSubject();
+                    String customerBody = emailHelperService.buildCustomerTourBookingBody(tourBookingInquiryRequest);
+
+                    emailService.sendFromMain(
+                            tourBookingInquiryRequest.getEmail(),
+                            customerSubject,
+                            customerBody
+                    );
+                }
             }
 
             return new CommonResponse<>(

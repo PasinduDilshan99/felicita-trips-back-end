@@ -1,6 +1,7 @@
 package com.felicita.validation.impl;
 
 import com.felicita.exception.ValidationFailedErrorExceptionHandler;
+import com.felicita.model.request.ChatBotRequest;
 import com.felicita.model.request.CreateInquiryRequest;
 import com.felicita.model.response.ValidationFailedResponse;
 import com.felicita.model.response.ValidationResultResponse;
@@ -65,5 +66,10 @@ public class InquiryValidationServiceImpl implements InquiryValidationService {
         if (!validationFailedResponses.isEmpty()) {
             throw new ValidationFailedErrorExceptionHandler("Validation failed : createInquiryRequest", validationFailedResponses);
         }
+    }
+
+    @Override
+    public void validateChatBotRequest(ChatBotRequest chatBotRequest) {
+
     }
 }

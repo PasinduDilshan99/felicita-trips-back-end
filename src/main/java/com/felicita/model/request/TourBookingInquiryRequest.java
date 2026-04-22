@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 @Builder
 public class TourBookingInquiryRequest {
     private Long tourId;
+    private String tourName;
     private Long packageId;
+    private String packageName;
     private String name;
     private String email;
     private String contactNumber;

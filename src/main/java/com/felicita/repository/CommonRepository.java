@@ -14,4 +14,6 @@ public interface CommonRepository {
     List<AllCategoriesResponse.PackageCategory> getAllPackageCategories();
 
     List<AllCategoriesResponse.TourType> getAllTourTypes();
+
+    List<AllCategoriesResponse.Seasons> getAllSeasons();
 }

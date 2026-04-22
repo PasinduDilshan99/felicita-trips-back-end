@@ -226,4 +226,50 @@ public class CommonRepositoryImpl implements CommonRepository {
         }
     }
 
+    @Override
+    public List<AllCategoriesResponse.Seasons> getAllSeasons() {
+        try {
+            Map<Long, AllCategoriesResponse.Seasons> seasonsMap = new LinkedHashMap<>();
+
+            jdbcTemplate.query(CommonQueries.GET_ALL_SEASONS, rs -> {
+                Long seasonId = rs.getLong("season_id");
+                AllCategoriesResponse.Seasons season = seasonsMap.get(seasonId);
+                if (season == null) {
+                    season = AllCategoriesResponse.Seasons.builder()
+                            .seasonId(seasonId)
+                            .seasonName(rs.getString("season_name"))
+                            .seasonStandardName(rs.getString("season_standard_name"))
+                            .seasonDescription(rs.getString("season_description"))
+                            .startMonth(rs.getInt("start_month"))
+                            .endMonth(rs.getInt("end_month"))
+                            .isPeak(rs.getBoolean("is_peak"))
+                            .seasonImages(new ArrayList<>())
+                            .build();
+
+                    seasonsMap.put(seasonId, season);
+                }
+
+                Long imageId = rs.getLong("image_id");
+
+                if (!rs.wasNull()) {
+                    AllCategoriesResponse.Images image =
+                            AllCategoriesResponse.Images.builder()
+                                    .imageId(imageId)
+                                    .imageUrl(rs.getString("image_url"))
+                                    .imageName(rs.getString("image_name"))
+                                    .imageDescription(rs.getString("image_description"))
+                                    .build();
+
+                    season.getSeasonImages().add(image);
+                }
+            });
+
+            return new ArrayList<>(seasonsMap.values());
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch seasons: ", e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch seasons");
+        }
+    }
+
 }

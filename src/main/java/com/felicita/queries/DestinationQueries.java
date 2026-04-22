@@ -2,6 +2,50 @@ package com.felicita.queries;
 
 public class DestinationQueries {
 
+    public static final String GET_DESTINATION_DETAILS_STATISTICS = """
+            SELECT
+                COUNT(*) AS totalDestinationCount,
+                SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS activeDestinations,
+                SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS inActiveDestinations,
+                SUM(CASE
+                    WHEN terminated_at IS NOT NULL THEN 1
+                    ELSE 0
+                END) AS hiddenDestinations,
+                SUM(CASE
+                    WHEN updated_at >= NOW() - INTERVAL 7 DAY THEN 1
+                    ELSE 0
+                END) AS recentlyUpdateDestinations,
+                SUM(CASE
+                    WHEN created_at >= NOW() - INTERVAL 7 DAY THEN 1
+                    ELSE 0
+                END) AS recentlyAddedDestinations
+            FROM destination
+            """;
+    public static final String GET_DESTINATION_WISH_STATISTICS = """
+            SELECT
+                COUNT(DISTINCT destination_id) AS wishListCount,
+                (SELECT COUNT(*) FROM destination)
+                  - COUNT(DISTINCT destination_id) AS notWishListCount
+            FROM destination_wishlist
+            WHERE status_id = 1
+            """;
+    public static final String GET_DESTINATION_CATEGORY_STATISTICS = """
+            SELECT
+                dc.id AS category_id,
+                dc.category AS category_name,
+                COUNT(dcm.destination_id) AS destination_count
+            FROM destination_categories dc
+            LEFT JOIN destination_category_map dcm
+                ON dc.id = dcm.category_id
+                AND dcm.status = 1
+            LEFT JOIN destination d
+                ON d.destination_id = dcm.destination_id
+                AND d.status = 1
+            WHERE dc.status = 1
+            GROUP BY dc.id, dc.category
+            ORDER BY destination_count DESC
+            """;
+
     private DestinationQueries() {
     }
 
@@ -94,7 +138,7 @@ public class DestinationQueries {
             ))                  AND (? IS NULL OR a.season = ?)
                   AND (? IS NULL OR cs.name = ?)
                 GROUP BY d.destination_id
-                ORDER BY d.created_at DESC
+                ORDER BY d.name
                 LIMIT ? OFFSET ?
             """;
 
