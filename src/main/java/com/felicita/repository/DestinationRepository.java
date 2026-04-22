@@ -54,4 +54,9 @@ public interface DestinationRepository {
 
     void addNewActivitiesToDestination(List<DestinationUpdateRequest.Activity> newActivities, Long destinationId, Long userId);
 
+    DestinationStatisticsResponse.DestinationDetails getDestinationDetailsStatistics();
+
+    DestinationStatisticsResponse.WishDetails getDestinationWishStatistics();
+
+    List<DestinationStatisticsResponse.CategoryDetails> getDestinationCategoryStatistics();
 }

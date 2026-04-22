@@ -20,7 +20,7 @@ public class TourResponseDto {
     private Double longitude;
     private String startLocation;
     private String endLocation;
-
+    private Double tourStartingPrice;
     private List<TourTypeDto> tourTypeDtos;
     private List<TourCategoryDto> tourCategoryDto;
     private String seasonName;

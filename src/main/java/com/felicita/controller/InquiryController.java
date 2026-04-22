@@ -1,5 +1,6 @@
 package com.felicita.controller;
 
+import com.felicita.model.request.ChatBotRequest;
 import com.felicita.model.request.CreateInquiryRequest;
 import com.felicita.model.response.CommonResponse;
 import com.felicita.model.response.InsertResponse;
@@ -33,6 +34,14 @@ public class InquiryController {
         LOGGER.info("{} Start execute create inquiry {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<InsertResponse> response = inquiryService.createInquiry(createInquiryRequest);
         LOGGER.info("{} End execute create inquiry {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/chat-bot-request")
+    public ResponseEntity<CommonResponse<InsertResponse>> chatBotRequest(@RequestBody ChatBotRequest chatBotRequest) {
+        LOGGER.info("{} Start execute create chat bot inquiry {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = inquiryService.chatBotRequest(chatBotRequest);
+        LOGGER.info("{} End execute create chat bot inquiry {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

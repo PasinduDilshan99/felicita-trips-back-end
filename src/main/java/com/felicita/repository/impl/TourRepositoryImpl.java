@@ -59,6 +59,7 @@ public class TourRepositoryImpl implements TourRepository {
                             .longitude(rs.getObject("longitude", Double.class))
                             .startLocation(rs.getString("start_location"))
                             .endLocation(rs.getString("end_location"))
+                            .tourStartingPrice(rs.getDouble("min_price"))
                             .seasonName(rs.getString("season_name"))
                             .seasonDescription(rs.getString("season_description"))
                             .statusName(rs.getString("status_name"))
@@ -954,7 +955,11 @@ public class TourRepositoryImpl implements TourRepository {
 
     @Override
     public ToursDetailsWithParamResponse getToursToShowWithParam(TourDataRequest tourDataRequest) {
+        LOGGER.info(tourDataRequest.toString());
         try {
+            if (tourDataRequest.getMinPrice() == null && tourDataRequest.getMaxPrice() != null){
+                tourDataRequest.setMinPrice(0.0);
+            }
             int offset = (tourDataRequest.getPageNumber() - 1) * tourDataRequest.getPageSize();
             List<Integer> tourIds = jdbcTemplate.queryForList(GET_PAGINATED_TOUR_IDS,
                     new Object[]{
@@ -964,6 +969,8 @@ public class TourRepositoryImpl implements TourRepository {
                             tourDataRequest.getTourCategory(), tourDataRequest.getTourCategory(),
                             tourDataRequest.getSeason(), tourDataRequest.getSeason(),
                             tourDataRequest.getTourType(), tourDataRequest.getTourType(),
+                            tourDataRequest.getMinPrice(), tourDataRequest.getMaxPrice(),
+                            tourDataRequest.getMinPrice(), tourDataRequest.getMaxPrice(),
                             tourDataRequest.getPageSize(), offset
                     }, Integer.class);
 
@@ -975,7 +982,9 @@ public class TourRepositoryImpl implements TourRepository {
                             tourDataRequest.getLocation(), tourDataRequest.getLocation(), tourDataRequest.getLocation(),
                             tourDataRequest.getTourCategory(), tourDataRequest.getTourCategory(),
                             tourDataRequest.getSeason(), tourDataRequest.getSeason(),
-                            tourDataRequest.getTourType(), tourDataRequest.getTourType()
+                            tourDataRequest.getTourType(), tourDataRequest.getTourType(),
+                            tourDataRequest.getMinPrice(), tourDataRequest.getMaxPrice(),
+                            tourDataRequest.getMinPrice(), tourDataRequest.getMaxPrice()
                     },
                     Integer.class
             );
@@ -993,6 +1002,12 @@ public class TourRepositoryImpl implements TourRepository {
                     Long tourId = rs.getLong("tour_id");
                     TourResponseDto tour = tourMap.get(tourId);
 
+                    Double tourMinPrice = jdbcTemplate.queryForObject(
+                            "SELECT MIN(total_price) FROM packages WHERE tour_id = ?",
+                            new Object[]{tourId},
+                            Double.class
+                    );
+
                     if (tour == null) {
                         tour = TourResponseDto.builder()
                                 .tourId(tourId)
@@ -1003,6 +1018,7 @@ public class TourRepositoryImpl implements TourRepository {
                                 .longitude(rs.getObject("longitude", Double.class))
                                 .startLocation(rs.getString("start_location"))
                                 .endLocation(rs.getString("end_location"))
+                                .tourStartingPrice(tourMinPrice)
                                 .seasonName(rs.getString("season_name"))
                                 .seasonDescription(rs.getString("season_description"))
                                 .statusName(rs.getString("status_name"))

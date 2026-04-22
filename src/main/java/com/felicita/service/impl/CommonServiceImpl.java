@@ -94,6 +94,9 @@ public class CommonServiceImpl implements CommonService {
             List<AllCategoriesResponse.PackageCategory> packageCategoryList =
                     commonRepository.getAllPackageCategories();
             allCategoriesResponse.setPackageCategoryList(packageCategoryList);
+            List<AllCategoriesResponse.Seasons> seasonsList =
+                    commonRepository.getAllSeasons();
+            allCategoriesResponse.setSeasonsList(seasonsList);
             List<AllCategoriesResponse.TourType> tourTypeList =
                     commonRepository.getAllTourTypes();
             allCategoriesResponse.setTourTypeList(tourTypeList);

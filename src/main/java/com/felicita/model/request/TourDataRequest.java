@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
 @Builder
 public class TourDataRequest {
     private String name;
-    private Long minPrice;
-    private Long maxPrice;
+    private Double minPrice;
+    private Double maxPrice;
     private Integer duration;
     private String tourType;
     private String tourCategory;

@@ -17,6 +17,7 @@ public class AllCategoriesResponse {
     private List<TourCategory> tourCategoryList;
     private List<PackageCategory> packageCategoryList;
     private List<TourType> tourTypeList;
+    private List<Seasons> seasonsList;
 
     @Data
     @AllArgsConstructor
@@ -66,7 +67,22 @@ public class AllCategoriesResponse {
         private String packageCategoryDescription;
         private String packageCategoryColor;
         private String packageCategoryHoverColor;
-        private List<Images> packageCategoryImages; // Added images list
+        private List<Images> packageCategoryImages;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class Seasons {
+        private Long seasonId;
+        private String seasonName;
+        private String seasonStandardName;
+        private String seasonDescription;
+        private Integer startMonth;
+        private Integer endMonth;
+        private Boolean isPeak;
+        private List<Images> seasonImages;
     }
 
     @Data

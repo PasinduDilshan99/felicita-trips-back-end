@@ -52,4 +52,5 @@ public interface DestinationService {
 
     CommonResponse<UpdateResponse> updateDestination(DestinationUpdateRequest destinationUpdateRequest);
 
+    CommonResponse<DestinationStatisticsResponse> getDestinationsStatistics();
 }

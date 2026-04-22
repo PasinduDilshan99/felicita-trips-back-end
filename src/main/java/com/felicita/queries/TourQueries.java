@@ -16,6 +16,11 @@ public class TourQueries {
                 s.name AS season_name,
                 s.description AS season_description,
                 cs.name AS status_name,
+                (
+                    SELECT MIN(p.total_price)
+                    FROM packages p
+                    WHERE p.tour_id = t.tour_id
+                ) AS min_price,
             
                 -- Tour Types
                 (
@@ -87,6 +92,7 @@ public class TourQueries {
             FROM tour t
             LEFT JOIN common_status cs ON t.status = cs.id
             LEFT JOIN seasons s ON t.season = s.id
+            LEFT JOIN packages p ON p.tour_id = t.tour_id
             WHERE cs.name = 'ACTIVE'
               AND (? IS NULL OR t.name LIKE CONCAT('%', ?, '%'))
               AND (? IS NULL OR t.duration = ?)
@@ -98,7 +104,7 @@ public class TourQueries {
                    JOIN tour_category tc2 ON tcm.category_id = tc2.id
                    WHERE tcm.tour_id = t.tour_id
                      AND tc2.name = ?
-               ))                 
+               ))
               AND (? IS NULL OR s.name = ?)
               AND (? IS NULL OR EXISTS (
                    SELECT 1
@@ -107,7 +113,11 @@ public class TourQueries {
                    WHERE ttm.tour_id = t.tour_id
                      AND tt2.name = ?
                ))
-            LIMIT ? OFFSET ?;
+               AND (
+                      (? IS NULL AND ? IS NULL)
+                      OR (p.total_price BETWEEN ? AND ?)
+                 )
+            LIMIT ? OFFSET ?
             """;
 
 
@@ -180,7 +190,7 @@ public class TourQueries {
                    JOIN tour_category tc2 ON tcm.category_id = tc2.id
                    WHERE tcm.tour_id = t.tour_id
                      AND tc2.name = ?
-               ))                 
+               ))
               AND (? IS NULL OR s.name = ?)
               AND (? IS NULL OR EXISTS (
                    SELECT 1
@@ -188,7 +198,15 @@ public class TourQueries {
                    JOIN tour_type tt2 ON ttm.type_id = tt2.id
                    WHERE ttm.tour_id = t.tour_id
                      AND tt2.name = ?
-               ));
+               ))
+                AND (
+                    (? IS NULL AND ? IS NULL)
+                    OR (
+                        SELECT MIN(p.total_price)
+                        FROM packages p
+                        WHERE p.tour_id = t.tour_id
+                    ) BETWEEN ? AND ?
+                )
             """;
 
 

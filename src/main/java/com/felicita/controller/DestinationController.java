@@ -205,4 +205,13 @@ public class DestinationController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @GetMapping(path = "/destination-statistics")
+    public ResponseEntity<CommonResponse<DestinationStatisticsResponse>> getDestinationsStatistics() {
+        LOGGER.info("{} Start execute get destination statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<DestinationStatisticsResponse> response = destinationService.getDestinationsStatistics();
+        LOGGER.info("{} End execute get destination statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+
 }
