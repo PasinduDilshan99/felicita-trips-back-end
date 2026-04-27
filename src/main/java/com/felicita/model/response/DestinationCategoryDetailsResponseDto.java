@@ -1,6 +1,9 @@
-package com.felicita.model.dto;
+package com.felicita.model.response;
 
+import com.felicita.model.dto.CategoryDestinationResponseDto;
+import com.felicita.model.dto.DestinationsCategoryImageResponseDto;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -10,7 +13,8 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class DestinationCategoryResponseDto {
+@Builder
+public class DestinationCategoryDetailsResponseDto {
     private int categoryId;
     private String category;
     private String categoryDescription;
@@ -19,5 +23,8 @@ public class DestinationCategoryResponseDto {
     private String hoverColor;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
     private List<DestinationsCategoryImageResponseDto> images;
+
+    private List<CategoryDestinationResponseDto> destinations;
 }

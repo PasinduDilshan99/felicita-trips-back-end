@@ -15,7 +15,7 @@ public class DestinationInsertRequest {
     private String name;
     private String description;
     private String status;
-    private String destinationCategory;
+    private List<Long> destinationCategoriesIdList;
     private String location;
     private Double latitude;
     private Double longitude;

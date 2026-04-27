@@ -5,8 +5,10 @@ import com.felicita.exception.DataNotFoundErrorExceptionHandler;
 import com.felicita.exception.InternalServerErrorExceptionHandler;
 import com.felicita.exception.UnAuthenticateErrorExceptionHandler;
 import com.felicita.model.dto.ActivityResponseDto;
-import com.felicita.model.response.AllCategoriesResponse;
-import com.felicita.model.response.CommonResponse;
+import com.felicita.model.dto.NotificationInsertRequestDto;
+import com.felicita.model.dto.SupervisorBasicDetailsDto;
+import com.felicita.model.request.ReadNotificationInsertRequest;
+import com.felicita.model.response.*;
 import com.felicita.repository.CommonRepository;
 import com.felicita.security.model.CustomUserDetails;
 import com.felicita.security.model.User;
@@ -53,6 +55,17 @@ public class CommonServiceImpl implements CommonService {
         CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
         User user = principal.getDomainUser();
         return user.getId();
+    }
+
+    @Override
+    public String getUserEmailBySecurityContext() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails)) {
+            throw new UnAuthenticateErrorExceptionHandler("No authenticated user");
+        }
+        CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
+        User user = principal.getDomainUser();
+        return user.getEmail();
     }
 
     @Override
@@ -116,6 +129,160 @@ public class CommonServiceImpl implements CommonService {
             throw new InternalServerErrorExceptionHandler("Failed to fetch categories from database");
         } finally {
             LOGGER.info("End fetching all categories from repository");
+        }
+    }
+
+    @Override
+    public List<SupervisorBasicDetailsDto> getSupervisorBasicDetailsByUserId(Long userId) {
+        LOGGER.info("Start fetching supervisors emails by user id");
+        try {
+            List<SupervisorBasicDetailsDto> supervisorsEmails = commonRepository.getSupervisorBasicDetailsByUserId(userId);
+
+            if (supervisorsEmails.isEmpty()) {
+                return List.of();
+            }
+
+            return supervisorsEmails;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching supervisors emails by user id");
+        }
+    }
+
+    @Override
+    public User getLoggedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails)) {
+            throw new UnAuthenticateErrorExceptionHandler("No authenticated user");
+        }
+        CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
+        return principal.getDomainUser();
+    }
+
+    @Override
+    public Long createNotification(NotificationInsertRequestDto notificationInsertRequestDto) {
+        LOGGER.info("Start create notification");
+        try {
+            return commonRepository.createNotification(notificationInsertRequestDto);
+
+        } catch (Exception e) {
+            return null;
+        } finally {
+            LOGGER.info("End create notification");
+        }
+    }
+
+    @Override
+    public void createNotificationRecipients(Long notificationId, List<Long> supervisorUserIds) {
+        LOGGER.info("Start create notification recipients");
+        try {
+            commonRepository.createNotificationRecipients(notificationId,supervisorUserIds);
+
+        } catch (Exception e) {
+            LOGGER.error("error when create notification recipients");
+        } finally {
+            LOGGER.info("End create notification recipients");
+        }
+    }
+
+    @Override
+    public CommonResponse<List<NotificationResponse>> getNotificationForLoggedUser() {
+        LOGGER.info("Start fetching notifications from repository");
+        try {
+
+            Long userId = getUserIdBySecurityContext();
+
+            List<NotificationResponse> notificationResponses = commonRepository.getNotificationForLoggedUser(userId);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    notificationResponses,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching notifications: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch notifications from database");
+        } finally {
+            LOGGER.info("End fetching notifications from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<UpdateResponse> readNotification(ReadNotificationInsertRequest notificationInsertRequest) {
+        LOGGER.info("Start update notifications read from repository");
+        try {
+            Long userId = getUserIdBySecurityContext();
+            commonRepository.readNotification(notificationInsertRequest,userId);
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
+                    new UpdateResponse("Successfully update", notificationInsertRequest.getNotificationId()),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching notifications: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch notifications from database");
+        } finally {
+            LOGGER.info("End update notifications read from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<UnReadNotificationCountResponse> getAllUnReadNotifications() {
+        LOGGER.info("Start get all unread notifications from repository");
+        try {
+            Long userId = getUserIdBySecurityContext();
+            UnReadNotificationCountResponse unReadNotificationCountResponse = commonRepository.getAllUnReadNotifications(userId);
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
+                    unReadNotificationCountResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching all unread notifications: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch all unread notifications from database");
+        } finally {
+            LOGGER.info("End all unread notifications read from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<UpdateResponse> readAllUnreadNotifications() {
+        LOGGER.info("Start update all unread notifications from repository");
+        try {
+            Long userId = getUserIdBySecurityContext();
+            commonRepository.readAllUnreadNotifications(userId);
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
+                    new UpdateResponse("Successfully update", null),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while update all unread notifications: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to update all unread notifications from database");
+        } finally {
+            LOGGER.info("End update all unread notifications from repository");
         }
     }
 

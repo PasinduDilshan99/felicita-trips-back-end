@@ -1,10 +1,7 @@
 package com.felicita.service;
 
 import com.felicita.model.dto.*;
-import com.felicita.model.request.DestinationDataRequest;
-import com.felicita.model.request.DestinationInsertRequest;
-import com.felicita.model.request.DestinationTerminateRequest;
-import com.felicita.model.request.DestinationUpdateRequest;
+import com.felicita.model.request.*;
 import com.felicita.model.response.*;
 import java.util.List;
 
@@ -53,4 +50,14 @@ public interface DestinationService {
     CommonResponse<UpdateResponse> updateDestination(DestinationUpdateRequest destinationUpdateRequest);
 
     CommonResponse<DestinationStatisticsResponse> getDestinationsStatistics();
+
+    CommonResponse<DestinationCategoriesStatisticsResponse> getDestinationCategoriesStatistics();
+
+    CommonResponse<DestinationCategoryDetailsResponseDto> getDestinationsCategoryDetailsById(DestinationCategoryDetailsRequest destinationCategoryDetailsRequest);
+
+    CommonResponse<InsertResponse> insertDestinationCategory(DestinationCategoryInsertRequest destinationCategoryInsertRequest);
+
+    CommonResponse<UpdateResponse> updateDestinationCategory(DestinationCategoryUpdateRequest destinationCategoryUpdateRequest);
+
+    CommonResponse<TerminateResponse> terminateDestinationCategory(DestinationCategoryTerminateRequest destinationCategoryTerminateRequest);
 }

@@ -47,7 +47,7 @@ public class CommonQueries {
                     AND dci.terminated_at IS NULL
             
                 WHERE dc.status = 1
-                  AND dc.terminated_at IS NULL
+           
             
                 ORDER BY dc.id
             """;
@@ -127,4 +127,40 @@ public class CommonQueries {
             WHERE s.status = 1
             ORDER BY s.display_order ASC, si.id ASC
             """;
+
+    public static final String GET_SUPERVISOR_EMAILS_BY_USER_ID = """
+        WITH RECURSIVE supervisor_hierarchy AS (
+
+            -- direct supervisor
+            SELECT
+                e.supervisor_id,
+                u.user_id,
+                u.username,
+                u.email
+            FROM employees e
+            JOIN employees s ON e.supervisor_id = s.id
+            JOIN user u ON s.user_id = u.user_id
+            WHERE e.user_id = ?
+
+            UNION ALL
+
+            -- higher level supervisors
+            SELECT
+                s.supervisor_id,
+                u.user_id,
+                u.username,
+                u.email
+            FROM employees s
+            JOIN supervisor_hierarchy sh ON sh.supervisor_id = s.id
+            JOIN user u ON s.user_id = u.user_id
+            WHERE s.supervisor_id IS NOT NULL
+        )
+
+        SELECT DISTINCT
+            user_id,
+            username,
+            email
+        FROM supervisor_hierarchy
+        WHERE email IS NOT NULL
+        """;
 }

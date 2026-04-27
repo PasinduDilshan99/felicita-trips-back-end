@@ -1,28 +1,35 @@
 package com.felicita.service.impl;
 
+import com.felicita.comparator.DestinationComparator;
+import com.felicita.email.DestinationCategoryEmailHelperService;
 import com.felicita.exception.*;
 import com.felicita.model.dto.*;
 import com.felicita.model.enums.CommonStatus;
-import com.felicita.model.request.DestinationDataRequest;
-import com.felicita.model.request.DestinationInsertRequest;
-import com.felicita.model.request.DestinationTerminateRequest;
-import com.felicita.model.request.DestinationUpdateRequest;
+import com.felicita.model.enums.NotificationType;
+import com.felicita.model.enums.Priority;
+import com.felicita.model.enums.Privileges;
+import com.felicita.model.other.DestinationCategoryUpdateComparisonResult;
+import com.felicita.model.other.DestinationUpdateComparisonResult;
+import com.felicita.model.request.*;
 import com.felicita.model.response.*;
 import com.felicita.repository.DestinationRepository;
 import com.felicita.repository.WishListRepository;
+import com.felicita.security.model.User;
 import com.felicita.service.CommonService;
 import com.felicita.service.DestinationService;
+import com.felicita.service.EmailHelperService;
+import com.felicita.service.EmailService;
 import com.felicita.util.CommonResponseMessages;
 import com.felicita.validation.DestinationValidationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class DestinationServiceImpl implements DestinationService {
@@ -33,13 +40,21 @@ public class DestinationServiceImpl implements DestinationService {
     private final DestinationValidationService destinationValidationService;
     private final CommonService commonService;
     private final WishListRepository wishListRepository;
+    private final EmailService emailService;
+    private final EmailHelperService emailHelperService;
+    private final DestinationComparator destinationComparator;
+    private final DestinationCategoryEmailHelperService destinationCategoryEmailHelperService;
 
     @Autowired
-    public DestinationServiceImpl(DestinationRepository destinationRepository, DestinationValidationService destinationValidationService, CommonService commonService, WishListRepository wishListRepository) {
+    public DestinationServiceImpl(DestinationRepository destinationRepository, DestinationValidationService destinationValidationService, CommonService commonService, WishListRepository wishListRepository, EmailService emailService, EmailHelperService emailHelperService, DestinationComparator destinationComparator, DestinationCategoryEmailHelperService destinationCategoryEmailHelperService) {
         this.destinationRepository = destinationRepository;
         this.destinationValidationService = destinationValidationService;
         this.commonService = commonService;
         this.wishListRepository = wishListRepository;
+        this.emailService = emailService;
+        this.emailHelperService = emailHelperService;
+        this.destinationComparator = destinationComparator;
+        this.destinationCategoryEmailHelperService = destinationCategoryEmailHelperService;
     }
 
     @Override
@@ -109,7 +124,7 @@ public class DestinationServiceImpl implements DestinationService {
                 throw new DataNotFoundErrorExceptionHandler("No destinations categories found");
             }
 
-            LOGGER.info("Fetched {} destinations categories successfully", destinationCategoryResponseDtos.size());
+            LOGGER.info("Fetched {} all destinations categories successfully", destinationCategoryResponseDtos.size());
             return new CommonResponse<>(
                     CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
                     CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
@@ -381,11 +396,11 @@ public class DestinationServiceImpl implements DestinationService {
             }
 
             return new CommonResponse<>(
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
-                            destinationDetailsById,
-                            Instant.now());
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    destinationDetailsById,
+                    Instant.now());
 
         } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
             throw e;
@@ -409,11 +424,11 @@ public class DestinationServiceImpl implements DestinationService {
             }
 
             return new CommonResponse<>(
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
-                            destinationReviewDetailsResponses,
-                            Instant.now());
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    destinationReviewDetailsResponses,
+                    Instant.now());
 
         } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
             throw e;
@@ -437,11 +452,11 @@ public class DestinationServiceImpl implements DestinationService {
             }
 
             return new CommonResponse<>(
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
-                            destinationReviewDetailsResponses,
-                            Instant.now());
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    destinationReviewDetailsResponses,
+                    Instant.now());
 
         } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
             throw e;
@@ -465,11 +480,11 @@ public class DestinationServiceImpl implements DestinationService {
             }
 
             return new CommonResponse<>(
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
-                            destinationHistoryImageResponses,
-                            Instant.now());
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    destinationHistoryImageResponses,
+                    Instant.now());
 
         } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
             throw e;
@@ -493,11 +508,11 @@ public class DestinationServiceImpl implements DestinationService {
             }
 
             return new CommonResponse<>(
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
-                            destinationHistoryImageResponses,
-                            Instant.now());
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    destinationHistoryImageResponses,
+                    Instant.now());
 
         } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
             throw e;
@@ -505,7 +520,7 @@ public class DestinationServiceImpl implements DestinationService {
             LOGGER.error("Error occurred while fetching destination history images by destination id : {} , {}", destinationId, e.getMessage(), e);
             throw new InternalServerErrorExceptionHandler("Failed to fetch destination history images from database");
         } finally {
-            LOGGER.info("End fetching destination history images by destination id : {} from repository",destinationId);
+            LOGGER.info("End fetching destination history images by destination id : {} from repository", destinationId);
         }
     }
 
@@ -558,22 +573,72 @@ public class DestinationServiceImpl implements DestinationService {
         try {
             destinationValidationService.validateDestinationInsertRequest(destinationInsertRequest);
             Long userId = commonService.getUserIdBySecurityContext();
-            destinationRepository.insertDestination(destinationInsertRequest, userId);
+            String email = commonService.getUserEmailBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            List<SupervisorBasicDetailsDto> supervisorDetails =
+                    commonService.getSupervisorBasicDetailsByUserId(userId);
+
+            List<String> supervisorEmails = extractSupervisorEmails(supervisorDetails);
+            Long destinationId = destinationRepository.insertDestination(destinationInsertRequest, userId);
+            List<String> destinationCategories = destinationRepository.getDestinationCategoriesNamesByIds(destinationInsertRequest.getDestinationCategoriesIdList());
+
+            List<Long> supervisorUserIds = extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.DESTINATION_CREATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("New Destination Created")
+                    .message("A new destination '" + destinationInsertRequest.getName() + "' has been created.")
+                    .actionUrl("/destinations/" + destinationId)
+                    .actionText("View Destination")
+                    .icon("MapPin")
+                    .color("#10B981")
+                    .metadata(Map.of(
+                            "destinationId", destinationId,
+                            "destinationName", destinationInsertRequest.getName(),
+                            "createdBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.DESTINATION_CREATE.name())
+                    .sourceModule("DESTINATION")
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            LOGGER.info("notification id " + notificationId.toString());
+
+            commonService.createNotificationRecipients(notificationId,supervisorUserIds);
+
+            if (destinationId != null) {
+                supervisorEmails.remove(email);
+                supervisorEmails.add("felicitatrips@gmail.com");
+                String body = emailHelperService.buildDestinationCreateSuccessfullBody(destinationInsertRequest, destinationCategories, loggedUser);
+                String subject = emailHelperService.buildDestinationCreateSuccessfullSubject(destinationInsertRequest, loggedUser);
+//                emailService.sendFromDev(email, supervisorEmails, subject, body);
+            }
 
             return new CommonResponse<>(
-                            CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
-                            CommonResponseMessages.SUCCESSFULLY_INSERT_STATUS,
-                            CommonResponseMessages.SUCCESSFULLY_INSERT_MESSAGE,
-                            new InsertResponse("Successfully insert destination request"),
-                            Instant.now());
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_MESSAGE,
+                    new InsertResponse("Successfully insert destination request"),
+                    Instant.now());
 
         } catch (ValidationFailedErrorExceptionHandler vfe) {
+            LOGGER.error(vfe.toString());
             throw new ValidationFailedErrorExceptionHandler("validation failed in the insert destination request", vfe.getValidationFailedResponses());
         } catch (InsertFailedErrorExceptionHandler ife) {
+            LOGGER.error(ife.toString());
             throw new InsertFailedErrorExceptionHandler(ife.getMessage());
         } catch (UnAuthenticateErrorExceptionHandler uae) {
+            LOGGER.error(uae.toString());
             throw new UnAuthenticateErrorExceptionHandler(uae.getMessage());
         } catch (Exception e) {
+            LOGGER.error(e.toString());
             throw new InternalServerErrorExceptionHandler("Something went wrong");
         }
     }
@@ -583,14 +648,26 @@ public class DestinationServiceImpl implements DestinationService {
         LOGGER.info("Start execute terminate destination request.");
         try {
             destinationValidationService.validateTerminateDestinationRequest(destinationTerminateRequest);
+            DestinationResponseDto destinationDetailsById = getDestinationDetailsById(destinationTerminateRequest.getDestinationId()).getData();
             Long userId = commonService.getUserIdBySecurityContext();
+            User loggeduser = commonService.getLoggedUser();
+            List<SupervisorBasicDetailsDto> supervisorDetails =
+                    commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<String> superviosrList = extractSupervisorEmails(supervisorDetails);
+            superviosrList.add("felicitatrips@gmail.com");
             destinationRepository.terminateDestination(destinationTerminateRequest, userId);
+
+            String subject = emailHelperService.buildDestinationTerminateSuccessfullSubject(loggeduser, destinationDetailsById);
+            String body = emailHelperService.buildDestinationTerminateSuccessfullBody(loggeduser, destinationDetailsById);
+
+            emailService.sendFromDev(loggeduser.getEmail(), superviosrList, subject, body);
+
             return new CommonResponse<>(
-                            CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
-                            CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
-                            CommonResponseMessages.SUCCESSFULLY_TERMINATE_MESSAGE,
-                            new TerminateResponse("Successfully terminate destination request"),
-                            Instant.now());
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_MESSAGE,
+                    new TerminateResponse("Successfully terminate destination request"),
+                    Instant.now());
 
         } catch (ValidationFailedErrorExceptionHandler vfe) {
             throw new ValidationFailedErrorExceptionHandler("validation failed in the terminate destination request", vfe.getValidationFailedResponses());
@@ -616,11 +693,11 @@ public class DestinationServiceImpl implements DestinationService {
             }
 
             return new CommonResponse<>(
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
-                            CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
-                            destinationForTerminateResponses,
-                            Instant.now());
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    destinationForTerminateResponses,
+                    Instant.now());
 
         } catch (DataNotFoundErrorExceptionHandler e) {
             LOGGER.error("Error occurred while fetching active destinations: {}", e.getMessage(), e);
@@ -638,18 +715,37 @@ public class DestinationServiceImpl implements DestinationService {
         LOGGER.info("Start execute update destination request.");
         try {
             destinationValidationService.validateDestinationUpdateRequest(destinationUpdateRequest);
+            DestinationResponseDto destinationDetailsById = getDestinationDetailsById(destinationUpdateRequest.getDestinationId()).getData();
             Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+            List<SupervisorBasicDetailsDto> supervisorDetails =
+                    commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<String> supervisorsEmails = extractSupervisorEmails(supervisorDetails);
+            supervisorsEmails.add("felicitatrips@gmail.com");
             destinationRepository.updateBasicDestinationDetails(destinationUpdateRequest, userId);
             destinationRepository.removeDestinationImages(destinationUpdateRequest.getRemoveImages(), userId);
             destinationRepository.addNewImagesToDestination(destinationUpdateRequest.getNewImages(), destinationUpdateRequest.getDestinationId(), userId);
             destinationRepository.removeDestinationActivities(destinationUpdateRequest.getRemoveActivities(), userId);
             destinationRepository.addNewActivitiesToDestination(destinationUpdateRequest.getNewActivities(), destinationUpdateRequest.getDestinationId(), userId);
+
+            DestinationUpdateComparisonResult comparisonResult = destinationComparator.compareUpdates(
+                    destinationUpdateRequest,
+                    destinationDetailsById
+            );
+
+            LOGGER.info("Update comparison result: {}", comparisonResult);
+
+            String subject = emailHelperService.buildDestinationUpdateSuccessfullSubject(loggedUser);
+            String body = emailHelperService.buildDestinationUpdateSuccessfullBody(loggedUser, destinationUpdateRequest.getDestinationId(), comparisonResult);
+            emailService.sendFromDev(loggedUser.getEmail(), supervisorsEmails, subject, body);
+
+
             return new CommonResponse<>(
-                            CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
-                            CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
-                            CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
-                            new UpdateResponse("Successfully update destination request", destinationUpdateRequest.getDestinationId()),
-                            Instant.now());
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
+                    new UpdateResponse("Successfully update destination request", destinationUpdateRequest.getDestinationId()),
+                    Instant.now());
 
         } catch (ValidationFailedErrorExceptionHandler vfe) {
             throw new ValidationFailedErrorExceptionHandler("validation failed in the insert destination request", vfe.getValidationFailedResponses());
@@ -690,6 +786,223 @@ public class DestinationServiceImpl implements DestinationService {
         } finally {
             LOGGER.info("End fetching destination statistics from repository");
         }
+    }
+
+    @Override
+    public CommonResponse<DestinationCategoriesStatisticsResponse> getDestinationCategoriesStatistics() {
+        LOGGER.info("Start fetching destination categories statistics from repository");
+        try {
+            DestinationCategoriesStatisticsResponse destinationCategoriesStatisticsResponse = new DestinationCategoriesStatisticsResponse();
+
+            DestinationCategoriesStatisticsResponse.DestinationCategoriesDetails destinationCategoriesDetails =
+                    destinationRepository.getDestinationCategoriesDetails();
+            List<DestinationCategoriesStatisticsResponse.CategoryUsedDetails> categoryUsedDetails =
+                    destinationRepository.getCategoryUsedDetails();
+            List<DestinationCategoriesStatisticsResponse.CategoriesImagesCount> categoriesImagesCounts =
+                    destinationRepository.getCategoriesImagesCount();
+
+            destinationCategoriesStatisticsResponse.setDestinationCategoriesDetails(destinationCategoriesDetails);
+            destinationCategoriesStatisticsResponse.setCategoryUsedDetails(categoryUsedDetails);
+            destinationCategoriesStatisticsResponse.setCategoriesImagesCounts(categoriesImagesCounts);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    destinationCategoriesStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching destination categories statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch destination categories statistics from database");
+        } finally {
+            LOGGER.info("End fetching destination categories statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<DestinationCategoryDetailsResponseDto> getDestinationsCategoryDetailsById(DestinationCategoryDetailsRequest destinationCategoryDetailsRequest) {
+        LOGGER.info("Start fetching destinations category from repository");
+        try {
+            DestinationCategoryDetailsResponseDto destinationCategoryDetailsResponseDto = destinationRepository.getDestinationsCategoryDetailsById(destinationCategoryDetailsRequest);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    destinationCategoryDetailsResponseDto,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching destinations category: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch destinations category from database");
+        } finally {
+            LOGGER.info("End fetching destinations category from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<InsertResponse> insertDestinationCategory(DestinationCategoryInsertRequest destinationCategoryInsertRequest) {
+        LOGGER.info("Start execute insert destination category request.");
+        try {
+            destinationValidationService.validateDestinationCategoryInsertRequest(destinationCategoryInsertRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            String email = commonService.getUserEmailBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+            List<SupervisorBasicDetailsDto> supervisorDetails =
+                    commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<String> supervisorsEmails = extractSupervisorEmails(supervisorDetails);
+            Long destinationCategoryId = destinationRepository.insertDestinationCategory(destinationCategoryInsertRequest, userId);
+            destinationRepository.insertDestinationCategoryImages(destinationCategoryInsertRequest.getImages(), destinationCategoryId, userId);
+
+            if (destinationCategoryId != null) {
+                supervisorsEmails.remove(email);
+                supervisorsEmails.add("felicitatrips@gmail.com");
+                String body = destinationCategoryEmailHelperService.buildDestinationCategoryCreateSuccessfullBody(destinationCategoryInsertRequest, loggedUser);
+                String subject = destinationCategoryEmailHelperService.buildDestinationCategoryCreateSuccessfullSubject(destinationCategoryInsertRequest, loggedUser);
+                emailService.sendFromDev(email, supervisorsEmails, subject, body);
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_MESSAGE,
+                    new InsertResponse("Successfully insert destination category request"),
+                    Instant.now());
+
+        } catch (ValidationFailedErrorExceptionHandler vfe) {
+            throw new ValidationFailedErrorExceptionHandler("validation failed in the insert destination category request", vfe.getValidationFailedResponses());
+        } catch (InsertFailedErrorExceptionHandler ife) {
+            throw new InsertFailedErrorExceptionHandler(ife.getMessage());
+        } catch (UnAuthenticateErrorExceptionHandler uae) {
+            throw new UnAuthenticateErrorExceptionHandler(uae.getMessage());
+        } catch (Exception e) {
+            throw new InternalServerErrorExceptionHandler("Something went wrong");
+        }
+    }
+
+    @Override
+    public CommonResponse<UpdateResponse> updateDestinationCategory(DestinationCategoryUpdateRequest destinationCategoryUpdateRequest) {
+        LOGGER.info("Start execute update destination request.");
+        try {
+            destinationValidationService.validateDestinationCategoryUpdateRequest(destinationCategoryUpdateRequest);
+            DestinationCategoryDetailsResponseDto destinationCategoryDetailsResponseDto
+                    = getDestinationsCategoryDetailsById(new DestinationCategoryDetailsRequest(
+                    destinationCategoryUpdateRequest.getCategoryId()
+            )).getData();
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+            List<SupervisorBasicDetailsDto> supervisorDetails =
+                    commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<String> supervisorsEmails = extractSupervisorEmails(supervisorDetails);
+            supervisorsEmails.add("felicitatrips@gmail.com");
+            destinationRepository.updateDestinationCategoryDetails(destinationCategoryUpdateRequest, userId);
+            destinationRepository.removeDestinationCategoryImagesDetails(destinationCategoryUpdateRequest.getRemoveImageIds(), userId);
+            destinationRepository.insertDestinationCategoryImages(destinationCategoryUpdateRequest.getNewImages(), destinationCategoryUpdateRequest.getCategoryId(), userId);
+            destinationRepository.updateDestinationCategoryImagesDetails(destinationCategoryUpdateRequest.getUpdateImages(), userId);
+
+            DestinationCategoryUpdateComparisonResult comparisonResult = destinationComparator.compareDestinationCategoryUpdates(
+                    destinationCategoryDetailsResponseDto,
+                    destinationCategoryUpdateRequest
+            );
+
+            LOGGER.info("Update destination category comparison result: {}", comparisonResult);
+
+            String subject = destinationCategoryEmailHelperService.buildDestinationCategoryUpdateSuccessfullSubject(destinationCategoryUpdateRequest, loggedUser);
+            String body = destinationCategoryEmailHelperService.buildDestinationCategoryUpdateSuccessfullBody(loggedUser, comparisonResult);
+            emailService.sendFromDev(loggedUser.getEmail(), supervisorsEmails, subject, body);
+
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
+                    new UpdateResponse("Successfully update destination category request", destinationCategoryUpdateRequest.getCategoryId()),
+                    Instant.now());
+
+        } catch (ValidationFailedErrorExceptionHandler vfe) {
+            throw new ValidationFailedErrorExceptionHandler("validation failed in the insert destination category request", vfe.getValidationFailedResponses());
+        } catch (UpdateFailedErrorExceptionHandler ufe) {
+            throw new UpdateFailedErrorExceptionHandler(ufe.getMessage());
+        } catch (UnAuthenticateErrorExceptionHandler uae) {
+            throw new UnAuthenticateErrorExceptionHandler(uae.getMessage());
+        } catch (Exception e) {
+            throw new InternalServerErrorExceptionHandler("Something went wrong");
+        }
+    }
+
+    @Override
+    public CommonResponse<TerminateResponse> terminateDestinationCategory(DestinationCategoryTerminateRequest destinationCategoryTerminateRequest) {
+        LOGGER.info("Start execute terminate destination category request.");
+        try {
+            destinationValidationService.validateDestinationCategoryTerminateRequest(destinationCategoryTerminateRequest);
+            DestinationCategoryDetailsResponseDto destinationCategoryDetailsResponseDto
+                    = getDestinationsCategoryDetailsById(new DestinationCategoryDetailsRequest(
+                    destinationCategoryTerminateRequest.getDestinationCategoryId()
+            )).getData();
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggeduser = commonService.getLoggedUser();
+            List<SupervisorBasicDetailsDto> supervisorDetails =
+                    commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<String> supervisorsEmails = extractSupervisorEmails(supervisorDetails);
+            supervisorsEmails.add("felicitatrips@gmail.com");
+            destinationRepository.terminateDestinationCategory(destinationCategoryTerminateRequest, userId);
+
+            String subject = destinationCategoryEmailHelperService.buildDestinationCategoryTerminateSuccessfullSubject(loggeduser, destinationCategoryDetailsResponseDto);
+            String body = destinationCategoryEmailHelperService.buildDestinationCategoryTerminateSuccessfullBody(loggeduser, destinationCategoryDetailsResponseDto);
+
+            emailService.sendFromDev(loggeduser.getEmail(), supervisorsEmails, subject, body);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_MESSAGE,
+                    new TerminateResponse("Successfully terminate destination category request"),
+                    Instant.now());
+
+        } catch (ValidationFailedErrorExceptionHandler vfe) {
+            throw new ValidationFailedErrorExceptionHandler("validation failed in the terminate destination category request", vfe.getValidationFailedResponses());
+        } catch (TerminateFailedErrorExceptionHandler tfe) {
+            throw new TerminateFailedErrorExceptionHandler(tfe.getMessage());
+        } catch (UnAuthenticateErrorExceptionHandler uae) {
+            throw new UnAuthenticateErrorExceptionHandler(uae.getMessage());
+        } catch (Exception e) {
+            throw new InternalServerErrorExceptionHandler("Something went wrong");
+        }
+    }
+
+    private List<String> extractSupervisorEmails(List<SupervisorBasicDetailsDto> supervisorDetails) {
+
+        if (supervisorDetails == null || supervisorDetails.isEmpty()) {
+            return List.of("felicitatrips@gmail.com");
+        }
+
+        List<String> emails = supervisorDetails.stream()
+                .map(SupervisorBasicDetailsDto::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .distinct()
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        emails.add("felicitatrips@gmail.com");
+
+        return emails;
+    }
+
+    private List<Long> extractSupervisorUserIds(List<SupervisorBasicDetailsDto> supervisorDetails) {
+
+        if (supervisorDetails == null || supervisorDetails.isEmpty()) {
+            return List.of();
+        }
+
+        return supervisorDetails.stream()
+                .map(SupervisorBasicDetailsDto::getUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
 }

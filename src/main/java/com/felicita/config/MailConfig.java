@@ -30,6 +30,16 @@ public class MailConfig {
         );
     }
 
+    @Bean(name = "adminMailSender")
+    public JavaMailSender adminMailSender() {
+        return createMailSender(
+                "smtp.gmail.com",
+                587,
+                "felicitatrips@gmail.com",
+                "jlis otag gjrj jtdb"
+        );
+    }
+
     private JavaMailSender createMailSender(String host, int port, String username, String password) {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
         mailSender.setHost(host);
