@@ -35,4 +35,6 @@ public interface CommonRepository {
     UnReadNotificationCountResponse getAllUnReadNotifications(Long userId);
 
     void readAllUnreadNotifications(Long userId);
+
+    List<String> getSupervisorEmailsWhichEnableNotificationForGiven(String name, List<Long> supervisorUserIds);
 }

@@ -138,8 +138,6 @@ public class DestinationQueries {
             ))                  AND (? IS NULL OR a.season = ?)
                   AND (? IS NULL OR cs.name = ?)
                 GROUP BY d.destination_id
-                ORDER BY d.name
-                LIMIT ? OFFSET ?
             """;
 
     public static final String GET_DESTINATIONS_BY_IDS = """

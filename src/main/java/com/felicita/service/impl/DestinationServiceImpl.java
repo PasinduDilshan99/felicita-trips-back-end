@@ -2,12 +2,10 @@ package com.felicita.service.impl;
 
 import com.felicita.comparator.DestinationComparator;
 import com.felicita.email.DestinationCategoryEmailHelperService;
+import com.felicita.email.DestinationEmailHelperService;
 import com.felicita.exception.*;
 import com.felicita.model.dto.*;
-import com.felicita.model.enums.CommonStatus;
-import com.felicita.model.enums.NotificationType;
-import com.felicita.model.enums.Priority;
-import com.felicita.model.enums.Privileges;
+import com.felicita.model.enums.*;
 import com.felicita.model.other.DestinationCategoryUpdateComparisonResult;
 import com.felicita.model.other.DestinationUpdateComparisonResult;
 import com.felicita.model.request.*;
@@ -31,6 +29,9 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.felicita.util.Constant.COMPANY_EMAIL;
+import static com.felicita.util.FrontEndUrls.VIEW_DESTINATION_DETAILS;
+
 @Service
 public class DestinationServiceImpl implements DestinationService {
 
@@ -43,10 +44,19 @@ public class DestinationServiceImpl implements DestinationService {
     private final EmailService emailService;
     private final EmailHelperService emailHelperService;
     private final DestinationComparator destinationComparator;
+    private final DestinationEmailHelperService destinationEmailHelperService;
     private final DestinationCategoryEmailHelperService destinationCategoryEmailHelperService;
 
     @Autowired
-    public DestinationServiceImpl(DestinationRepository destinationRepository, DestinationValidationService destinationValidationService, CommonService commonService, WishListRepository wishListRepository, EmailService emailService, EmailHelperService emailHelperService, DestinationComparator destinationComparator, DestinationCategoryEmailHelperService destinationCategoryEmailHelperService) {
+    public DestinationServiceImpl(DestinationRepository destinationRepository,
+                                  DestinationValidationService destinationValidationService,
+                                  CommonService commonService,
+                                  WishListRepository wishListRepository,
+                                  EmailService emailService,
+                                  EmailHelperService emailHelperService,
+                                  DestinationComparator destinationComparator,
+                                  DestinationCategoryEmailHelperService destinationCategoryEmailHelperService,
+                                  DestinationEmailHelperService destinationEmailHelperService) {
         this.destinationRepository = destinationRepository;
         this.destinationValidationService = destinationValidationService;
         this.commonService = commonService;
@@ -55,6 +65,7 @@ public class DestinationServiceImpl implements DestinationService {
         this.emailHelperService = emailHelperService;
         this.destinationComparator = destinationComparator;
         this.destinationCategoryEmailHelperService = destinationCategoryEmailHelperService;
+        this.destinationEmailHelperService = destinationEmailHelperService;
     }
 
     @Override
@@ -576,10 +587,7 @@ public class DestinationServiceImpl implements DestinationService {
             String email = commonService.getUserEmailBySecurityContext();
             User loggedUser = commonService.getLoggedUser();
 
-            List<SupervisorBasicDetailsDto> supervisorDetails =
-                    commonService.getSupervisorBasicDetailsByUserId(userId);
-
-            List<String> supervisorEmails = extractSupervisorEmails(supervisorDetails);
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
             Long destinationId = destinationRepository.insertDestination(destinationInsertRequest, userId);
             List<String> destinationCategories = destinationRepository.getDestinationCategoriesNamesByIds(destinationInsertRequest.getDestinationCategoriesIdList());
 
@@ -590,7 +598,7 @@ public class DestinationServiceImpl implements DestinationService {
                     .priority(Priority.MEDIUM.name())
                     .title("New Destination Created")
                     .message("A new destination '" + destinationInsertRequest.getName() + "' has been created.")
-                    .actionUrl("/destinations/" + destinationId)
+                    .actionUrl(VIEW_DESTINATION_DETAILS + "/" + destinationId)
                     .actionText("View Destination")
                     .icon("MapPin")
                     .color("#10B981")
@@ -603,22 +611,22 @@ public class DestinationServiceImpl implements DestinationService {
                     .isDeleted(false)
                     .assignedTo(null)
                     .targetRole(Privileges.DESTINATION_CREATE.name())
-                    .sourceModule("DESTINATION")
+                    .sourceModule(SourceModule.DESTINATION.name())
                     .expiresAt(null)
                     .createdBy(userId)
                     .build();
 
             Long notificationId = commonService.createNotification(notificationInsertRequestDto);
-            LOGGER.info("notification id " + notificationId.toString());
 
-            commonService.createNotificationRecipients(notificationId,supervisorUserIds);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
 
             if (destinationId != null) {
-                supervisorEmails.remove(email);
-                supervisorEmails.add("felicitatrips@gmail.com");
-                String body = emailHelperService.buildDestinationCreateSuccessfullBody(destinationInsertRequest, destinationCategories, loggedUser);
-                String subject = emailHelperService.buildDestinationCreateSuccessfullSubject(destinationInsertRequest, loggedUser);
-//                emailService.sendFromDev(email, supervisorEmails, subject, body);
+                List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.DESTINATION_CREATED.name(), supervisorUserIds);
+                emailNotificationEnableSupervisors.remove(email);
+                emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+                String body = destinationEmailHelperService.buildDestinationCreateSuccessfullBody(destinationInsertRequest, destinationCategories, loggedUser);
+                String subject = destinationEmailHelperService.buildDestinationCreateSuccessfullSubject(destinationInsertRequest, loggedUser);
+                emailService.sendFromDev(email, emailNotificationEnableSupervisors, subject, body);
             }
 
             return new CommonResponse<>(
@@ -718,10 +726,38 @@ public class DestinationServiceImpl implements DestinationService {
             DestinationResponseDto destinationDetailsById = getDestinationDetailsById(destinationUpdateRequest.getDestinationId()).getData();
             Long userId = commonService.getUserIdBySecurityContext();
             User loggedUser = commonService.getLoggedUser();
-            List<SupervisorBasicDetailsDto> supervisorDetails =
-                    commonService.getSupervisorBasicDetailsByUserId(userId);
-            List<String> supervisorsEmails = extractSupervisorEmails(supervisorDetails);
-            supervisorsEmails.add("felicitatrips@gmail.com");
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+
+            List<Long> supervisorUserIds = extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.DESTINATION_UPDATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("Destination Updated")
+                    .message("The destination '" + destinationUpdateRequest.getName() + "' has been updated.")
+                    .actionUrl(VIEW_DESTINATION_DETAILS + "/" + destinationUpdateRequest.getDestinationId())
+                    .actionText("View Destination")
+                    .icon("MapPin")
+                    .color("#3B82F6")
+                    .metadata(Map.of(
+                            "destinationId", destinationUpdateRequest.getDestinationId(),
+                            "destinationName", destinationUpdateRequest.getName(),
+                            "updatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.DESTINATION_UPDATE.name())
+                    .sourceModule(SourceModule.DESTINATION.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
             destinationRepository.updateBasicDestinationDetails(destinationUpdateRequest, userId);
             destinationRepository.removeDestinationImages(destinationUpdateRequest.getRemoveImages(), userId);
             destinationRepository.addNewImagesToDestination(destinationUpdateRequest.getNewImages(), destinationUpdateRequest.getDestinationId(), userId);
@@ -733,11 +769,13 @@ public class DestinationServiceImpl implements DestinationService {
                     destinationDetailsById
             );
 
-            LOGGER.info("Update comparison result: {}", comparisonResult);
 
-            String subject = emailHelperService.buildDestinationUpdateSuccessfullSubject(loggedUser);
-            String body = emailHelperService.buildDestinationUpdateSuccessfullBody(loggedUser, destinationUpdateRequest.getDestinationId(), comparisonResult);
-            emailService.sendFromDev(loggedUser.getEmail(), supervisorsEmails, subject, body);
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.DESTINATION_CREATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+            String subject = destinationEmailHelperService.buildDestinationUpdateSuccessfullSubject(loggedUser);
+            String body = destinationEmailHelperService.buildDestinationUpdateSuccessfullBody(loggedUser, destinationUpdateRequest.getDestinationId(), comparisonResult);
+            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
 
 
             return new CommonResponse<>(
@@ -748,7 +786,7 @@ public class DestinationServiceImpl implements DestinationService {
                     Instant.now());
 
         } catch (ValidationFailedErrorExceptionHandler vfe) {
-            throw new ValidationFailedErrorExceptionHandler("validation failed in the insert destination request", vfe.getValidationFailedResponses());
+            throw new ValidationFailedErrorExceptionHandler("validation failed in the update destination request", vfe.getValidationFailedResponses());
         } catch (UpdateFailedErrorExceptionHandler ufe) {
             throw new UpdateFailedErrorExceptionHandler(ufe.getMessage());
         } catch (UnAuthenticateErrorExceptionHandler uae) {
@@ -1004,5 +1042,6 @@ public class DestinationServiceImpl implements DestinationService {
                 .distinct()
                 .collect(Collectors.toCollection(ArrayList::new));
     }
+
 
 }

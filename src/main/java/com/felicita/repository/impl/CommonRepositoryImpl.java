@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Repository
 public class CommonRepositoryImpl implements CommonRepository {
@@ -560,6 +561,39 @@ public class CommonRepositoryImpl implements CommonRepository {
     """;
 
         jdbcTemplate.update(sql, userId);
+    }
+
+    @Override
+    public List<String> getSupervisorEmailsWhichEnableNotificationForGiven(
+            String name,
+            List<Long> supervisorUserIds) {
+
+        if (supervisorUserIds == null || supervisorUserIds.isEmpty()) {
+            return List.of();
+        }
+
+        String inSql = supervisorUserIds.stream()
+                .map(id -> "?")
+                .collect(Collectors.joining(","));
+
+        String sql = """
+        SELECT DISTINCT u.email
+        FROM user u
+        INNER JOIN notification_settings ns 
+            ON ns.user_id = u.user_id
+        INNER JOIN notification_types nt 
+            ON nt.id = ns.notification_type_id
+        WHERE nt.name = ?
+          AND ns.is_email_enabled = 1
+          AND u.user_id IN (%s)
+          AND u.email IS NOT NULL
+    """.formatted(inSql);
+
+        List<Object> params = new ArrayList<>();
+        params.add(name);
+        params.addAll(supervisorUserIds);
+
+        return jdbcTemplate.queryForList(sql, params.toArray(), String.class);
     }
 
 }

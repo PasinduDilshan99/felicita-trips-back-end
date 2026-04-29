@@ -1120,6 +1120,15 @@ public class DestinationRepositoryImpl implements DestinationRepository {
         }
     }
 
+    private static final List<String> ALLOWED_DESTINATION_SORT_COLUMNS = List.of(
+            "name",
+            "ratings",
+            "location",
+            "destination_id",
+            "created_at",
+            "updated_at"
+    );
+
     @Override
     public DestinationsWithParamsResponse getDestinationWithParams(
             DestinationDataRequest destinationDataRequest) {
@@ -1127,12 +1136,29 @@ public class DestinationRepositoryImpl implements DestinationRepository {
         try {
             LOGGER.info("Executing query to fetch destinations with filters.");
 
+            String sortBy = destinationDataRequest.getSortBy();
+            String sortDirection = destinationDataRequest.getSortDirection();
+
+            if (sortBy == null || !ALLOWED_DESTINATION_SORT_COLUMNS.contains(sortBy)) {
+                sortBy = "name";
+            }
+
+            if (sortDirection == null ||
+                    (!sortDirection.equalsIgnoreCase("ASC")
+                            && !sortDirection.equalsIgnoreCase("DESC"))) {
+                sortDirection = "ASC";
+            }
+
+            String paginatedQuery = GET_PAGINATED_DESTINATION_IDS +
+                    " ORDER BY d." + sortBy + " " + sortDirection +
+                    " LIMIT ? OFFSET ?";
+
             int offset = (destinationDataRequest.getPageNumber() - 1)
                     * destinationDataRequest.getPageSize();
 
             // 1️⃣ Get paginated destination IDs
             List<Integer> destinationIds = jdbcTemplate.queryForList(
-                    GET_PAGINATED_DESTINATION_IDS,
+                    paginatedQuery,
                     new Object[]{
                             destinationDataRequest.getName(), destinationDataRequest.getName(),
                             destinationDataRequest.getMinPrice(), destinationDataRequest.getMinPrice(),

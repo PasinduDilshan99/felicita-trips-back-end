@@ -29,7 +29,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 @Service
 public class CommonServiceImpl implements CommonService {
@@ -195,16 +197,19 @@ public class CommonServiceImpl implements CommonService {
     public CommonResponse<List<NotificationResponse>> getNotificationForLoggedUser() {
         LOGGER.info("Start fetching notifications from repository");
         try {
-
             Long userId = getUserIdBySecurityContext();
-
             List<NotificationResponse> notificationResponses = commonRepository.getNotificationForLoggedUser(userId);
+
+            // Transform messages for each notification
+            List<NotificationResponse> transformedNotifications = notificationResponses.stream()
+                    .map(this::transformNotificationMessage)
+                    .collect(Collectors.toList());
 
             return new CommonResponse<>(
                     CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
                     CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
                     CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
-                    notificationResponses,
+                    transformedNotifications,
                     Instant.now());
 
         } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
@@ -215,6 +220,189 @@ public class CommonServiceImpl implements CommonService {
         } finally {
             LOGGER.info("End fetching notifications from repository");
         }
+    }
+
+    /**
+     * Transform notification message based on who is viewing it
+     * If logged user is not the assigned employee, change message to third-person perspective
+     */
+    private NotificationResponse transformNotificationMessage(NotificationResponse notification) {
+        if (notification == null) {
+            return notification;
+        }
+
+        Long loggedUserId = notification.getLoggedUserId();
+        Long assignedTo = notification.getAssignedTo();
+
+        // If current user is the one who performed the action OR no assigned employee, keep original message
+        if (assignedTo == null || loggedUserId.equals(assignedTo)) {
+            return notification;
+        }
+
+        // Transform message to third-person perspective based on notification type
+        String transformedMessage = transformMessageByType(
+                notification.getMessage(),
+                notification.getAssignedUsername(),
+                notification.getNotificationType(),
+                notification.getMetadata()
+        );
+        notification.setMessage(transformedMessage);
+
+        // Transform title as well
+        if (notification.getTitle() != null) {
+            String transformedTitle = transformTitleForViewer(
+                    notification.getTitle(),
+                    notification.getAssignedUsername(),
+                    notification.getNotificationType()
+            );
+            notification.setTitle(transformedTitle);
+        }
+
+        return notification;
+    }
+
+    /**
+     * Transform message based on notification type
+     */
+    private String transformMessageByType(String originalMessage, String assignedUsername,
+                                          String notificationType, Map<String, Object> metadata) {
+        if (originalMessage == null || assignedUsername == null) {
+            return originalMessage;
+        }
+
+        String transformedMessage = originalMessage;
+
+        switch (notificationType) {
+            case "DESTINATION_CREATED":
+                if (metadata != null && metadata.containsKey("destinationName")) {
+                    transformedMessage = String.format("%s created a new destination: %s",
+                            assignedUsername, metadata.get("destinationName"));
+                } else {
+                    transformedMessage = String.format("%s created a new destination", assignedUsername);
+                }
+                break;
+
+            case "DESTINATION_UPDATED":
+                if (metadata != null && metadata.containsKey("destinationName")) {
+                    transformedMessage = String.format("%s updated the destination: %s",
+                            assignedUsername, metadata.get("destinationName"));
+                } else {
+                    transformedMessage = String.format("%s updated a destination", assignedUsername);
+                }
+                break;
+
+            case "DESTINATION_TERMINATED":
+                if (metadata != null && metadata.containsKey("destinationName")) {
+                    transformedMessage = String.format("%s terminated/deactivated the destination: %s",
+                            assignedUsername, metadata.get("destinationName"));
+                } else {
+                    transformedMessage = String.format("%s terminated a destination", assignedUsername);
+                }
+                break;
+
+            case "DESTINATION_CATEGORY_CREATED":
+                if (metadata != null && metadata.containsKey("categoryName")) {
+                    transformedMessage = String.format("%s created a new destination category: %s",
+                            assignedUsername, metadata.get("categoryName"));
+                } else {
+                    transformedMessage = String.format("%s created a new destination category", assignedUsername);
+                }
+                break;
+
+            case "DESTINATION_CATEGORY_UPDATED":
+                if (metadata != null && metadata.containsKey("categoryName")) {
+                    transformedMessage = String.format("%s updated the destination category: %s",
+                            assignedUsername, metadata.get("categoryName"));
+                } else {
+                    transformedMessage = String.format("%s updated a destination category", assignedUsername);
+                }
+                break;
+
+            case "DESTINATION_CATEGORY_TERMINATED":
+                if (metadata != null && metadata.containsKey("categoryName")) {
+                    transformedMessage = String.format("%s terminated/deactivated the destination category: %s",
+                            assignedUsername, metadata.get("categoryName"));
+                } else {
+                    transformedMessage = String.format("%s terminated a destination category", assignedUsername);
+                }
+                break;
+
+            default:
+                // Default transformation for any other notification types
+                transformedMessage = transformGenericMessage(originalMessage, assignedUsername);
+                break;
+        }
+
+        // Ensure first letter is capitalized
+        if (transformedMessage != null && !transformedMessage.isEmpty()) {
+            transformedMessage = Character.toUpperCase(transformedMessage.charAt(0)) +
+                    transformedMessage.substring(1);
+        }
+
+        return transformedMessage;
+    }
+
+    /**
+     * Transform title for viewer perspective
+     */
+    private String transformTitleForViewer(String originalTitle, String assignedUsername, String notificationType) {
+        if (originalTitle == null || assignedUsername == null) {
+            return originalTitle;
+        }
+
+        String transformedTitle = originalTitle;
+
+        // Remove first-person references
+        transformedTitle = transformedTitle.replaceAll("(?i)\\bYour\\b", assignedUsername + "'s");
+        transformedTitle = transformedTitle.replaceAll("(?i)\\bMy\\b", assignedUsername + "'s");
+        transformedTitle = transformedTitle.replaceAll("(?i)\\bI've\\b", assignedUsername + " has");
+        transformedTitle = transformedTitle.replaceAll("(?i)\\bI have\\b", assignedUsername + " has");
+
+        // For specific notification types, create more appropriate titles
+        switch (notificationType) {
+            case "DESTINATION_CREATED":
+                transformedTitle = assignedUsername + " Created a Destination";
+                break;
+            case "DESTINATION_UPDATED":
+                transformedTitle = assignedUsername + " Updated a Destination";
+                break;
+            case "DESTINATION_TERMINATED":
+                transformedTitle = assignedUsername + " Terminated a Destination";
+                break;
+            case "DESTINATION_CATEGORY_CREATED":
+                transformedTitle = assignedUsername + " Created a Category";
+                break;
+            case "DESTINATION_CATEGORY_UPDATED":
+                transformedTitle = assignedUsername + " Updated a Category";
+                break;
+            case "DESTINATION_CATEGORY_TERMINATED":
+                transformedTitle = assignedUsername + " Terminated a Category";
+                break;
+        }
+
+        return transformedTitle;
+    }
+
+    /**
+     * Generic transformation for any other notification types
+     */
+    private String transformGenericMessage(String originalMessage, String assignedUsername) {
+        String transformedMessage = originalMessage;
+
+        // Replace first-person references with employee's name
+        transformedMessage = transformedMessage.replaceAll("(?i)\\bI have\\b", assignedUsername + " has");
+        transformedMessage = transformedMessage.replaceAll("(?i)\\bI've\\b", assignedUsername + " has");
+        transformedMessage = transformedMessage.replaceAll("(?i)\\bI will\\b", assignedUsername + " will");
+        transformedMessage = transformedMessage.replaceAll("(?i)\\bmy\\b", assignedUsername + "'s");
+        transformedMessage = transformedMessage.replaceAll("(?i)\\bme\\b", assignedUsername);
+        transformedMessage = transformedMessage.replaceAll("(?i)\\bI\\b", assignedUsername);
+
+        // Add employee name at the beginning if no replacement was made
+        if (transformedMessage.equals(originalMessage)) {
+            transformedMessage = assignedUsername + " " + transformedMessage;
+        }
+
+        return transformedMessage;
     }
 
     @Override
@@ -284,6 +472,20 @@ public class CommonServiceImpl implements CommonService {
         } finally {
             LOGGER.info("End update all unread notifications from repository");
         }
+    }
+
+    @Override
+    public List<String> getSupervisorEmailsWhichEnableNotificationForGiven(String name, List<Long> supervisorUserIds) {
+        LOGGER.info("Start fetch supervisor email which allow the notification for given notification type");
+        try {
+            return commonRepository.getSupervisorEmailsWhichEnableNotificationForGiven(name,supervisorUserIds);
+
+        } catch (Exception e) {
+            return List.of();
+        } finally {
+            LOGGER.info("End fetch supervisor email which allow the notification for given notification type");
+        }
+
     }
 
 

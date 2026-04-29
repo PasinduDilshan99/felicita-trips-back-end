@@ -21,4 +21,6 @@ public class DestinationDataRequest {
     private String status;
     private int pageSize;
     private int pageNumber;
+    private String sortBy;
+    private String sortDirection;
 }

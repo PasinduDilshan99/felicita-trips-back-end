@@ -36,4 +36,6 @@ public interface CommonService {
     CommonResponse<UnReadNotificationCountResponse> getAllUnReadNotifications();
 
     CommonResponse<UpdateResponse> readAllUnreadNotifications();
+
+    List<String> getSupervisorEmailsWhichEnableNotificationForGiven(String name, List<Long> supervisorUserIds);
 }
