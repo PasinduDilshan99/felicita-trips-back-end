@@ -3,6 +3,10 @@ package com.felicita.repository;
 import com.felicita.model.dto.*;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.PackageStatisticsResponse;
+import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
+
 import java.util.List;
 
 public interface PackageRepository {
@@ -107,4 +111,41 @@ public interface PackageRepository {
 
     void updatePackageFeatures(Long packageId, List<PackageFeaturesUpdateRequest> updatedFeatures, Long userId);
 
+    PackageStatisticsResponse.Summary getPackageSummaryStatistics();
+
+    List<PackageStatisticsResponse.PackagePopularity> getPackagePopularityStatistics();
+
+    List<PackageStatisticsResponse.PackageRatingOverview> getPackageRatingOverviewStatistics();
+
+    List<PackageStatisticsResponse.PackageCapacityUtilization> getPackageCapacityUtilizationStatistics();
+
+    List<PackageStatisticsResponse.PackageTypeDistribution> getPackageTypeDistributionStatistics();
+
+    List<PackageStatisticsResponse.PackagePriceDistribution> getPackagePriceDistributionStatistics();
+
+    PackageScheduleStatisticsResponse.Summary getPackageScheduleSummaryStatistics();
+
+    List<PackageScheduleStatisticsResponse.ScheduleTimeline> getPackageScheduleTimelineStatistics();
+
+    List<PackageScheduleStatisticsResponse.ScheduleStatusDistribution> getPackageScheduleStatusDistributionStatistics();
+
+    List<PackageScheduleStatisticsResponse.DurationDistribution> getPackageScheduleDurationDistributionStatistics();
+
+    List<PackageScheduleStatisticsResponse.ScheduleParticipationPerformance> getPackageScheduleParticipationPerformanceStatistics();
+
+    List<PackageScheduleStatisticsResponse.ScheduleRatingOverview> getPackageScheduleRatingOverviewStatistics();
+
+    PackageTypeStatisticsResponse.Summary getPackageTypeSummaryStatistics();
+
+    List<PackageTypeStatisticsResponse.TypeDistribution> getPackageTypesDistributionStatistics();
+
+    List<PackageTypeStatisticsResponse.TypeRevenuePerformance> getPackageTypeRevenuePerformanceStatistics();
+
+    List<PackageTypeStatisticsResponse.TypeParticipationImpact> getPackageTypeParticipationImpactStatistics();
+
+    List<PackageTypeStatisticsResponse.TypePrimarySecondaryUsage> getPackageTypePrimarySecondaryUsageStatistics();
+
+    List<PackageTypeStatisticsResponse.TypeBookingPerformance> getPackageTypeBookingPerformanceStatistics();
+
+    List<PackageTypeStatisticsResponse.TypeRatingOverview> getPackageTypeRatingOverviewStatistics();
 }

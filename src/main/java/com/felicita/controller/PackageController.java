@@ -3,6 +3,10 @@ package com.felicita.controller;
 import com.felicita.model.dto.PackageResponseDto;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.PackageStatisticsResponse;
+import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
+import com.felicita.model.response.statistics.TourStatisticsResponse;
 import com.felicita.service.PackageService;
 import com.felicita.util.Constant;
 import org.slf4j.Logger;
@@ -191,6 +195,30 @@ public class PackageController {
         LOGGER.info("{} Start execute get all active package ids and names {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<List<PackageIdAndPackageNameResponse>> response = packageService.getPackageIdsAndPackageNames();
         LOGGER.info("{} End execute get all package tour ids and names {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/package-statistics")
+    public ResponseEntity<CommonResponse<PackageStatisticsResponse>> getPackageStatistics() {
+        LOGGER.info("{} Start execute get package statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<PackageStatisticsResponse> response = packageService.getPackageStatistics();
+        LOGGER.info("{} End execute get package statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/package-schedule-statistics")
+    public ResponseEntity<CommonResponse<PackageScheduleStatisticsResponse>> getPackageScheduleStatistics() {
+        LOGGER.info("{} Start execute get package schedule statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<PackageScheduleStatisticsResponse> response = packageService.getPackageScheduleStatistics();
+        LOGGER.info("{} End execute get package schedule statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/package-type-statistics")
+    public ResponseEntity<CommonResponse<PackageTypeStatisticsResponse>> getPackageTypeStatistics() {
+        LOGGER.info("{} Start execute get package type statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<PackageTypeStatisticsResponse> response = packageService.getPackageTypeStatistics();
+        LOGGER.info("{} End execute get package type statistics {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

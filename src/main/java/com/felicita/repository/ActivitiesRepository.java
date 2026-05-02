@@ -4,6 +4,9 @@ import com.felicita.model.dto.ActivityCategoryResponseDto;
 import com.felicita.model.dto.ActivityResponseDto;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
+import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
+
 import java.util.List;
 
 public interface ActivitiesRepository {
@@ -54,4 +57,28 @@ public interface ActivitiesRepository {
     ActivityStatisticsResponse.WishDetails getActivityWishStatistics();
 
     List<ActivityStatisticsResponse.CategoryDetails> getActivityCategoryStatistics();
+
+    ActivityScheduleStatisticsResponse.Summary getActivitySchduleSummeryStatsitics();
+
+    List<ActivityScheduleStatisticsResponse.ActivityParticipationTrend> getActivityParticipationTrendsStatsitics();
+
+    List<ActivityScheduleStatisticsResponse.ActivityRatingOverview> getActivityRatingOverviewStatsitics();
+
+    List<ActivityScheduleStatisticsResponse.PopularActivity> getPopularActivitiesStatsitics();
+
+    List<ActivityScheduleStatisticsResponse.ScheduleTimeline> getScheduleTimelineStatsitics();
+
+    List<ActivityScheduleStatisticsResponse.ActivityStatusDistribution> getActivityStatusDistributionStatsitics();
+
+    ActivityCategoriesStatisticsResponse.Summary getActivitySummeryStatistics();
+
+    List<ActivityCategoriesStatisticsResponse.CategoryActivityCount> getCategoryActivityCountStatistics();
+
+    List<ActivityCategoriesStatisticsResponse.CategoryParticipationPerformance> getCategoryParticipationPerformanceStatistics();
+
+    List<ActivityCategoriesStatisticsResponse.CategoryRatingOverview> getCategoryRatingOverviewStatistics();
+
+    List<ActivityCategoriesStatisticsResponse.CategoryDistribution> getCategoryDistributionStatistics();
+
+    List<ActivityCategoriesStatisticsResponse.CategoryPrimarySecondaryUsage> getCategoryPrimarySecondaryUsageStatistics();
 }

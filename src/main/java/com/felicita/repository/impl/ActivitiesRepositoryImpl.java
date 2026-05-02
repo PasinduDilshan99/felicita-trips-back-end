@@ -8,6 +8,8 @@ import com.felicita.model.dto.*;
 import com.felicita.model.enums.CommonStatus;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
+import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
 import com.felicita.queries.ActivitiesQueries;
 import com.felicita.queries.DestinationQueries;
 import com.felicita.repository.ActivitiesRepository;
@@ -1304,6 +1306,301 @@ LOGGER.info(activityDataRequest.toString());
         } catch (Exception ex) {
             LOGGER.error("Unexpected error while fetching activities category statistics: {}", ex.getMessage(), ex);
             throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching activities category statistics");
+        }
+    }
+
+    @Override
+    public ActivityScheduleStatisticsResponse.Summary getActivitySchduleSummeryStatsitics() {
+
+        try {
+            LOGGER.info("Executing query to fetch activity schedule summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    ActivitiesQueries.GET_ACTIVITY_SCHEDULE_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> ActivityScheduleStatisticsResponse.Summary.builder()
+                            .totalActivities(rs.getInt("total_activities"))
+                            .totalActiveSchedules(rs.getInt("active_schedules"))
+                            .totalParticipants(rs.getInt("total_participants"))
+                            .overallAverageRating(rs.getDouble("overall_average_rating"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching activity schedule summary statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch activity schedule summary statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching activity schedule summary statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching activity schedule summary statistics");
+        }
+    }
+
+    @Override
+    public List<ActivityScheduleStatisticsResponse.ActivityParticipationTrend> getActivityParticipationTrendsStatsitics() {
+
+        try {
+            LOGGER.info("Executing query to fetch activity participation trend statistics.");
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_ACTIVITY_PARTICIPATION_TREND_STATISTICS,
+                    (rs, rowNum) -> ActivityScheduleStatisticsResponse.ActivityParticipationTrend.builder()
+                            .activityDate(rs.getString("activity_date"))
+                            .totalParticipants(rs.getInt("total_participants"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching activity participation trend statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch activity participation trend statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching activity participation trend statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching activity participation trend statistics");
+        }
+    }
+
+    @Override
+    public List<ActivityScheduleStatisticsResponse.ActivityRatingOverview> getActivityRatingOverviewStatsitics() {
+
+        try {
+            LOGGER.info("Executing query to fetch activity rating overview statistics.");
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_ACTIVITY_RATING_OVERVIEW_STATISTICS,
+                    (rs, rowNum) -> ActivityScheduleStatisticsResponse.ActivityRatingOverview.builder()
+                            .activityId(rs.getLong("activity_id"))
+                            .activityName(rs.getString("activity_name"))
+                            .averageRating(rs.getDouble("average_rating"))
+                            .totalReviews(rs.getInt("total_reviews"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching activity rating overview statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch activity rating overview statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching activity rating overview statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching activity rating overview statistics");
+        }
+    }
+
+    @Override
+    public List<ActivityScheduleStatisticsResponse.PopularActivity> getPopularActivitiesStatsitics() {
+
+        try {
+            LOGGER.info("Executing query to fetch popular activities statistics.");
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_POPULAR_ACTIVITIES_STATISTICS,
+                    (rs, rowNum) -> ActivityScheduleStatisticsResponse.PopularActivity.builder()
+                            .activityId(rs.getLong("activity_id"))
+                            .activityName(rs.getString("activity_name"))
+                            .totalParticipants(rs.getInt("total_participants"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching popular activities statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch popular activities statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching popular activities statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching popular activities statistics");
+        }
+    }
+
+    @Override
+    public List<ActivityScheduleStatisticsResponse.ScheduleTimeline> getScheduleTimelineStatsitics() {
+
+        try {
+            LOGGER.info("Executing query to fetch schedule timeline statistics.");
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_SCHEDULE_TIMELINE_STATISTICS,
+                    (rs, rowNum) -> ActivityScheduleStatisticsResponse.ScheduleTimeline.builder()
+                            .scheduleId(rs.getLong("schedule_id"))
+                            .scheduleName(rs.getString("schedule_name"))
+                            .activityName(rs.getString("activity_name"))
+                            .assumeStartDate(rs.getString("assume_start_date"))
+                            .assumeEndDate(rs.getString("assume_end_date"))
+                            .durationHoursStart(rs.getDouble("duration_hours_start"))
+                            .durationHoursEnd(rs.getDouble("duration_hours_end"))
+                            .specialNote(rs.getString("special_note"))
+                            .status(rs.getInt("status"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching schedule timeline statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch schedule timeline statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching schedule timeline statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching schedule timeline statistics");
+        }
+    }
+
+    @Override
+    public List<ActivityScheduleStatisticsResponse.ActivityStatusDistribution> getActivityStatusDistributionStatsitics() {
+
+        try {
+            LOGGER.info("Executing query to fetch activity status distribution statistics.");
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_ACTIVITY_STATUS_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> ActivityScheduleStatisticsResponse.ActivityStatusDistribution.builder()
+                            .statusName(rs.getString("status_name"))
+                            .totalCount(rs.getInt("total_count"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching activity status distribution statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch activity status distribution statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching activity status distribution statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching activity status distribution statistics");
+        }
+    }
+
+    @Override
+    public ActivityCategoriesStatisticsResponse.Summary getActivitySummeryStatistics() {
+
+        try {
+            LOGGER.info("Fetching activity category summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    ActivitiesQueries.GET_ACTIVITY_CATEGORY_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> ActivityCategoriesStatisticsResponse.Summary.builder()
+                            .totalCategories(rs.getInt("total_categories"))
+                            .totalActivities(rs.getInt("total_activities"))
+                            .mostUsedCategory(rs.getString("most_used_category"))
+                            .overallAverageRating(rs.getDouble("overall_average_rating"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching category summary: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch category summary statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching category summary: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching category summary");
+        }
+    }
+
+    @Override
+    public List<ActivityCategoriesStatisticsResponse.CategoryActivityCount> getCategoryActivityCountStatistics() {
+
+        try {
+            LOGGER.info("Fetching category activity count statistics.");
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_CATEGORY_ACTIVITY_COUNT_STATISTICS,
+                    (rs, rowNum) -> ActivityCategoriesStatisticsResponse.CategoryActivityCount.builder()
+                            .categoryId(rs.getLong("category_id"))
+                            .categoryName(rs.getString("category_name"))
+                            .totalActivities(rs.getInt("total_activities"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching category activity count: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch category activity count statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching category activity count: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching category activity count");
+        }
+    }
+
+    @Override
+    public List<ActivityCategoriesStatisticsResponse.CategoryParticipationPerformance> getCategoryParticipationPerformanceStatistics() {
+
+        try {
+            LOGGER.info("Fetching category participation performance statistics.");
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_CATEGORY_PARTICIPATION_PERFORMANCE_STATISTICS,
+                    (rs, rowNum) -> ActivityCategoriesStatisticsResponse.CategoryParticipationPerformance.builder()
+                            .categoryId(rs.getLong("category_id"))
+                            .categoryName(rs.getString("category_name"))
+                            .totalParticipants(rs.getInt("total_participants"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching category participation performance: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch category participation performance statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching category participation performance: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching category participation performance");
+        }
+    }
+
+    @Override
+    public List<ActivityCategoriesStatisticsResponse.CategoryRatingOverview> getCategoryRatingOverviewStatistics() {
+
+        try {
+            LOGGER.info("Fetching category rating overview statistics.");
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_CATEGORY_RATING_OVERVIEW_STATISTICS,
+                    (rs, rowNum) -> ActivityCategoriesStatisticsResponse.CategoryRatingOverview.builder()
+                            .categoryId(rs.getLong("category_id"))
+                            .categoryName(rs.getString("category_name"))
+                            .averageRating(rs.getDouble("average_rating"))
+                            .totalReviews(rs.getInt("total_reviews"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching category rating overview: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch category rating overview statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching category rating overview: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching category rating overview");
+        }
+    }
+
+    @Override
+    public List<ActivityCategoriesStatisticsResponse.CategoryDistribution> getCategoryDistributionStatistics() {
+
+        try {
+            LOGGER.info("Fetching category distribution statistics.");
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_CATEGORY_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> ActivityCategoriesStatisticsResponse.CategoryDistribution.builder()
+                            .categoryName(rs.getString("category_name"))
+                            .activityCount(rs.getInt("activity_count"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching category distribution: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch category distribution statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching category distribution: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching category distribution");
+        }
+    }
+
+    @Override
+    public List<ActivityCategoriesStatisticsResponse.CategoryPrimarySecondaryUsage> getCategoryPrimarySecondaryUsageStatistics() {
+
+        try {
+            LOGGER.info("Fetching category primary vs secondary usage statistics.");
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_CATEGORY_PRIMARY_SECONDARY_USAGE_STATISTICS,
+                    (rs, rowNum) -> ActivityCategoriesStatisticsResponse.CategoryPrimarySecondaryUsage.builder()
+                            .categoryName(rs.getString("category_name"))
+                            .primaryCount(rs.getInt("primary_count"))
+                            .secondaryCount(rs.getInt("secondary_count"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching category primary/secondary usage: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch category primary/secondary usage statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching category primary/secondary usage: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching category primary/secondary usage statistics");
         }
     }
 

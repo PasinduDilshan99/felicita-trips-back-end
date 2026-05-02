@@ -912,50 +912,262 @@ public class ActivitiesQueries {
 
 
     public static final String GET_ACTIVITY_DETAILS_STATISTICS = """
-        SELECT
-            COUNT(*) AS totalActivityCount,
-            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS activeActivities,
-            SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS inActiveActivities,
-            SUM(CASE
-                WHEN terminated_at IS NOT NULL THEN 1
-                ELSE 0
-            END) AS hiddenActivities,
-            SUM(CASE
-                WHEN updated_at >= NOW() - INTERVAL 7 DAY THEN 1
-                ELSE 0
-            END) AS recentlyUpdatedActivities,
-            SUM(CASE
-                WHEN created_at >= NOW() - INTERVAL 7 DAY THEN 1
-                ELSE 0
-            END) AS recentlyAddedActivities
-        FROM activities
-        """;
+            SELECT
+                COUNT(*) AS totalActivityCount,
+                SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS activeActivities,
+                SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS inActiveActivities,
+                SUM(CASE
+                    WHEN terminated_at IS NOT NULL THEN 1
+                    ELSE 0
+                END) AS hiddenActivities,
+                SUM(CASE
+                    WHEN updated_at >= NOW() - INTERVAL 7 DAY THEN 1
+                    ELSE 0
+                END) AS recentlyUpdatedActivities,
+                SUM(CASE
+                    WHEN created_at >= NOW() - INTERVAL 7 DAY THEN 1
+                    ELSE 0
+                END) AS recentlyAddedActivities
+            FROM activities
+            """;
 
 
     public static final String GET_ACTIVITY_WISH_STATISTICS = """
-        SELECT
-            COUNT(DISTINCT activity_id) AS wishListCount,
-            (SELECT COUNT(*) FROM activities)
-              - COUNT(DISTINCT activity_id) AS notWishListCount
-        FROM activity_wishlist
-        WHERE status_id = 1
-        """;
+            SELECT
+                COUNT(DISTINCT activity_id) AS wishListCount,
+                (SELECT COUNT(*) FROM activities)
+                  - COUNT(DISTINCT activity_id) AS notWishListCount
+            FROM activity_wishlist
+            WHERE status_id = 1
+            """;
 
 
     public static final String GET_ACTIVITY_CATEGORY_STATISTICS = """
-        SELECT
-            ac.id AS category_id,
-            ac.name AS category_name,
-            COUNT(acm.activity_id) AS activity_count
-        FROM activity_category ac
-        LEFT JOIN activity_category_map acm
-            ON ac.id = acm.category_id
-            AND acm.status = 1
-        LEFT JOIN activities a
-            ON a.id = acm.activity_id
-            AND a.status = 1
-        WHERE ac.status = 1
-        GROUP BY ac.id, ac.name
-        ORDER BY activity_count DESC
-        """;
+            SELECT
+                ac.id AS category_id,
+                ac.name AS category_name,
+                COUNT(acm.activity_id) AS activity_count
+            FROM activity_category ac
+            LEFT JOIN activity_category_map acm
+                ON ac.id = acm.category_id
+                AND acm.status = 1
+            LEFT JOIN activities a
+                ON a.id = acm.activity_id
+                AND a.status = 1
+            WHERE ac.status = 1
+            GROUP BY ac.id, ac.name
+            ORDER BY activity_count DESC
+            """;
+
+    public static final String GET_ACTIVITY_SCHEDULE_SUMMARY_STATISTICS = """
+                SELECT 
+                    (SELECT COUNT(*) 
+                     FROM activities 
+                     WHERE terminated_at IS NULL) AS total_activities,
+            
+                    (SELECT COUNT(*) 
+                     FROM activities_schedule 
+                     WHERE terminated_at IS NULL) AS active_schedules,
+            
+                    (SELECT COALESCE(SUM(number_of_participate), 0)
+                     FROM activities_history 
+                     WHERE terminated_at IS NULL) AS total_participants,
+            
+                    (SELECT ROUND(COALESCE(AVG(rating), 0), 2)
+                     FROM activities_review 
+                     WHERE terminated_at IS NULL) AS overall_average_rating
+            """;
+
+
+    public static final String GET_ACTIVITY_PARTICIPATION_TREND_STATISTICS = """
+                SELECT 
+                    DATE(activity_start) AS activity_date,
+                    SUM(number_of_participate) AS total_participants
+                FROM activities_history
+                WHERE terminated_at IS NULL
+                GROUP BY DATE(activity_start)
+                ORDER BY activity_date
+            """;
+
+
+    public static final String GET_ACTIVITY_RATING_OVERVIEW_STATISTICS = """
+                SELECT 
+                    a.id AS activity_id,
+                    a.name AS activity_name,
+                    ROUND(AVG(ar.rating), 2) AS average_rating,
+                    COUNT(ar.id) AS total_reviews
+                FROM activities a
+                INNER JOIN activities_schedule aps 
+                    ON aps.activity_id = a.id
+                INNER JOIN activities_review ar 
+                    ON ar.activity_schedule_id = aps.id
+                WHERE 
+                    a.terminated_at IS NULL
+                    AND aps.terminated_at IS NULL
+                    AND ar.terminated_at IS NULL
+                GROUP BY a.id, a.name
+                ORDER BY average_rating DESC
+            """;
+
+
+    public static final String GET_POPULAR_ACTIVITIES_STATISTICS = """
+                SELECT 
+                    a.id AS activity_id,
+                    a.name AS activity_name,
+                    SUM(ah.number_of_participate) AS total_participants
+                FROM activities a
+                INNER JOIN activities_schedule aps 
+                    ON aps.activity_id = a.id
+                INNER JOIN activities_history ah 
+                    ON ah.activity_schedule_id = aps.id
+                WHERE 
+                    a.terminated_at IS NULL
+                    AND aps.terminated_at IS NULL
+                    AND ah.terminated_at IS NULL
+                GROUP BY a.id, a.name
+                ORDER BY total_participants DESC
+                LIMIT 10
+            """;
+
+
+    public static final String GET_SCHEDULE_TIMELINE_STATISTICS = """
+                SELECT 
+                    aps.id AS schedule_id,
+                    aps.name AS schedule_name,
+                    a.name AS activity_name,
+                    aps.assume_start_date,
+                    aps.assume_end_date,
+                    aps.duration_hours_start,
+                    aps.duration_hours_end,
+                    aps.special_note,
+                    aps.status
+                FROM activities_schedule aps
+                INNER JOIN activities a 
+                    ON a.id = aps.activity_id
+                WHERE 
+                    aps.terminated_at IS NULL
+                ORDER BY aps.assume_start_date ASC
+            """;
+
+
+    public static final String GET_ACTIVITY_STATUS_DISTRIBUTION_STATISTICS = """
+                SELECT 
+                    cs.name AS status_name,
+                    COUNT(aps.id) AS total_count
+                FROM activities_schedule aps
+                INNER JOIN common_status cs 
+                    ON cs.id = aps.status
+                WHERE 
+                    aps.terminated_at IS NULL
+                GROUP BY cs.name
+                ORDER BY total_count DESC
+            """;
+
+    public static final String GET_ACTIVITY_CATEGORY_SUMMARY_STATISTICS = """
+                SELECT 
+                    (SELECT COUNT(*) 
+                     FROM activity_category 
+                     WHERE terminated_at IS NULL) AS total_categories,
+            
+                    (SELECT COUNT(DISTINCT m.activity_id)
+                     FROM activity_category_map m
+                     WHERE m.terminated_at IS NULL) AS total_activities,
+            
+                    (SELECT c.name
+                     FROM activity_category c
+                     INNER JOIN activity_category_map m ON m.category_id = c.id
+                     WHERE c.terminated_at IS NULL
+                     GROUP BY c.id, c.name
+                     ORDER BY COUNT(m.activity_id) DESC
+                     LIMIT 1) AS most_used_category,
+            
+                    (SELECT ROUND(COALESCE(AVG(ar.rating), 0), 2)
+                     FROM activities_review ar
+                     WHERE ar.terminated_at IS NULL) AS overall_average_rating
+            """;
+
+    public static final String GET_CATEGORY_ACTIVITY_COUNT_STATISTICS = """
+                SELECT 
+                    c.id AS category_id,
+                    c.name AS category_name,
+                    COUNT(DISTINCT m.activity_id) AS total_activities
+                FROM activity_category c
+                LEFT JOIN activity_category_map m 
+                    ON m.category_id = c.id
+                WHERE c.terminated_at IS NULL
+                GROUP BY c.id, c.name
+                ORDER BY total_activities DESC
+            """;
+
+    public static final String GET_CATEGORY_PARTICIPATION_PERFORMANCE_STATISTICS = """
+                SELECT 
+                    c.id AS category_id,
+                    c.name AS category_name,
+                    COALESCE(SUM(ah.number_of_participate), 0) AS total_participants
+                FROM activity_category c
+                INNER JOIN activity_category_map m 
+                    ON m.category_id = c.id
+                INNER JOIN activities_schedule s 
+                    ON s.activity_id = m.activity_id
+                LEFT JOIN activities_history ah 
+                    ON ah.activity_schedule_id = s.id
+                WHERE 
+                    c.terminated_at IS NULL
+                    AND m.terminated_at IS NULL
+                    AND s.terminated_at IS NULL
+                    AND (ah.terminated_at IS NULL OR ah.terminated_at IS NULL)
+                GROUP BY c.id, c.name
+                ORDER BY total_participants DESC
+            """;
+
+    public static final String GET_CATEGORY_RATING_OVERVIEW_STATISTICS = """
+                SELECT 
+                    c.id AS category_id,
+                    c.name AS category_name,
+                    ROUND(COALESCE(AVG(ar.rating), 0), 2) AS average_rating,
+                    COUNT(ar.id) AS total_reviews
+                FROM activity_category c
+                INNER JOIN activity_category_map m 
+                    ON m.category_id = c.id
+                INNER JOIN activities_schedule s 
+                    ON s.activity_id = m.activity_id
+                LEFT JOIN activities_review ar 
+                    ON ar.activity_schedule_id = s.id
+                WHERE 
+                    c.terminated_at IS NULL
+                    AND m.terminated_at IS NULL
+                    AND s.terminated_at IS NULL
+                    AND (ar.terminated_at IS NULL OR ar.terminated_at IS NULL)
+                GROUP BY c.id, c.name
+                ORDER BY average_rating DESC
+            """;
+
+    public static final String GET_CATEGORY_DISTRIBUTION_STATISTICS = """
+                SELECT 
+                    c.name AS category_name,
+                    COUNT(m.activity_id) AS activity_count
+                FROM activity_category c
+                LEFT JOIN activity_category_map m 
+                    ON m.category_id = c.id
+                WHERE c.terminated_at IS NULL
+                GROUP BY c.name
+            """;
+
+
+    public static final String GET_CATEGORY_PRIMARY_SECONDARY_USAGE_STATISTICS = """
+                SELECT 
+                    c.name AS category_name,
+                    SUM(CASE WHEN m.is_primary = 1 THEN 1 ELSE 0 END) AS primary_count,
+                    SUM(CASE WHEN m.is_primary = 0 THEN 1 ELSE 0 END) AS secondary_count
+                FROM activity_category c
+                INNER JOIN activity_category_map m 
+                    ON m.category_id = c.id
+                WHERE 
+                    c.terminated_at IS NULL
+                    AND m.terminated_at IS NULL
+                GROUP BY c.name
+                ORDER BY primary_count DESC
+            """;
+
+
 }

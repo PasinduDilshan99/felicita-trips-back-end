@@ -8,6 +8,9 @@ import com.felicita.model.request.PackageInsertRequest;
 import com.felicita.model.request.PackageTerminateRequest;
 import com.felicita.model.request.PackageUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.PackageStatisticsResponse;
+import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
 import com.felicita.repository.PackageRepository;
 import com.felicita.repository.WishListRepository;
 import com.felicita.service.CommonService;
@@ -859,6 +862,124 @@ public class PackageServiceImpl implements PackageService {
                 CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
                 packageIdAndPackageNameResponses,
                 Instant.now());
+    }
+
+    @Override
+    public CommonResponse<PackageStatisticsResponse> getPackageStatistics() {
+        LOGGER.info("Start fetching package statistics from repository");
+        try {
+            PackageStatisticsResponse packageStatisticsResponse = new PackageStatisticsResponse();
+
+            PackageStatisticsResponse.Summary summary = packageRepository.getPackageSummaryStatistics();
+            List<PackageStatisticsResponse.PackagePopularity> packagePopularities = packageRepository.getPackagePopularityStatistics();
+            List<PackageStatisticsResponse.PackageRatingOverview> packageRatingOverviews = packageRepository.getPackageRatingOverviewStatistics();
+            List<PackageStatisticsResponse.PackagePriceDistribution> packagePriceDistributions = packageRepository.getPackagePriceDistributionStatistics();
+            List<PackageStatisticsResponse.PackageCapacityUtilization> packageCapacityUtilizations = packageRepository.getPackageCapacityUtilizationStatistics();
+            List<PackageStatisticsResponse.PackageTypeDistribution> packageTypeDistributions = packageRepository.getPackageTypeDistributionStatistics();
+
+            // Set all the data to the response object
+            packageStatisticsResponse.setSummary(summary);
+            packageStatisticsResponse.setPackagePopularities(packagePopularities);
+            packageStatisticsResponse.setPackageRatingOverviews(packageRatingOverviews);
+            packageStatisticsResponse.setPackagePriceDistributions(packagePriceDistributions);
+            packageStatisticsResponse.setPackageCapacityUtilizations(packageCapacityUtilizations);
+            packageStatisticsResponse.setPackageTypeDistributions(packageTypeDistributions);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package statistics from database");
+        } finally {
+            LOGGER.info("End fetching package statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<PackageScheduleStatisticsResponse> getPackageScheduleStatistics() {
+        LOGGER.info("Start fetching package schedule statistics from repository");
+        try {
+            PackageScheduleStatisticsResponse packageScheduleStatisticsResponse = new PackageScheduleStatisticsResponse();
+
+            // Fetch all the required statistics from packageRepository
+            PackageScheduleStatisticsResponse.Summary summary = packageRepository.getPackageScheduleSummaryStatistics();
+            List<PackageScheduleStatisticsResponse.ScheduleTimeline> scheduleTimelines = packageRepository.getPackageScheduleTimelineStatistics();
+            List<PackageScheduleStatisticsResponse.ScheduleStatusDistribution> scheduleStatusDistributions = packageRepository.getPackageScheduleStatusDistributionStatistics();
+            List<PackageScheduleStatisticsResponse.DurationDistribution> durationDistributions = packageRepository.getPackageScheduleDurationDistributionStatistics();
+            List<PackageScheduleStatisticsResponse.ScheduleParticipationPerformance> scheduleParticipationPerformances = packageRepository.getPackageScheduleParticipationPerformanceStatistics();
+            List<PackageScheduleStatisticsResponse.ScheduleRatingOverview> scheduleRatingOverviews = packageRepository.getPackageScheduleRatingOverviewStatistics();
+
+            // Set all the data to the response object
+            packageScheduleStatisticsResponse.setSummary(summary);
+            packageScheduleStatisticsResponse.setScheduleTimelines(scheduleTimelines);
+            packageScheduleStatisticsResponse.setScheduleStatusDistributions(scheduleStatusDistributions);
+            packageScheduleStatisticsResponse.setDurationDistributions(durationDistributions);
+            packageScheduleStatisticsResponse.setScheduleParticipationPerformances(scheduleParticipationPerformances);
+            packageScheduleStatisticsResponse.setScheduleRatingOverviews(scheduleRatingOverviews);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageScheduleStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package schedule statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package schedule statistics from database");
+        } finally {
+            LOGGER.info("End fetching package schedule statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<PackageTypeStatisticsResponse> getPackageTypeStatistics() {
+        LOGGER.info("Start fetching package type statistics from repository");
+        try {
+            PackageTypeStatisticsResponse packageTypeStatisticsResponse = new PackageTypeStatisticsResponse();
+
+            // Fetch all the required statistics from packageRepository
+            PackageTypeStatisticsResponse.Summary summary = packageRepository.getPackageTypeSummaryStatistics();
+            List<PackageTypeStatisticsResponse.TypeDistribution> typeDistributions = packageRepository.getPackageTypesDistributionStatistics();
+            List<PackageTypeStatisticsResponse.TypeRevenuePerformance> typeRevenuePerformances = packageRepository.getPackageTypeRevenuePerformanceStatistics();
+            List<PackageTypeStatisticsResponse.TypeParticipationImpact> typeParticipationImpacts = packageRepository.getPackageTypeParticipationImpactStatistics();
+            List<PackageTypeStatisticsResponse.TypePrimarySecondaryUsage> typePrimarySecondaryUsages = packageRepository.getPackageTypePrimarySecondaryUsageStatistics();
+            List<PackageTypeStatisticsResponse.TypeBookingPerformance> typeBookingPerformances = packageRepository.getPackageTypeBookingPerformanceStatistics();
+            List<PackageTypeStatisticsResponse.TypeRatingOverview> typeRatingOverviews = packageRepository.getPackageTypeRatingOverviewStatistics();
+
+            // Set all the data to the response object
+            packageTypeStatisticsResponse.setSummary(summary);
+            packageTypeStatisticsResponse.setTypeDistributions(typeDistributions);
+            packageTypeStatisticsResponse.setTypeRevenuePerformances(typeRevenuePerformances);
+            packageTypeStatisticsResponse.setTypeParticipationImpacts(typeParticipationImpacts);
+            packageTypeStatisticsResponse.setTypePrimarySecondaryUsages(typePrimarySecondaryUsages);
+            packageTypeStatisticsResponse.setTypeBookingPerformances(typeBookingPerformances);
+            packageTypeStatisticsResponse.setTypeRatingOverviews(typeRatingOverviews);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageTypeStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package type statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package type statistics from database");
+        } finally {
+            LOGGER.info("End fetching package type statistics from repository");
+        }
     }
 
 }

@@ -7,6 +7,10 @@ import com.felicita.model.request.TourDataRequest;
 import com.felicita.model.request.TourInsertRequest;
 import com.felicita.model.request.TourUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
+import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.TourStatisticsResponse;
+import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
 import com.felicita.repository.TourRepository;
 import com.felicita.repository.WishListRepository;
 import com.felicita.service.CommonService;
@@ -977,6 +981,156 @@ public class TourServiceImpl implements TourService {
             throw new UnAuthenticateErrorExceptionHandler(uae.getMessage());
         } catch (Exception e) {
             throw new InternalServerErrorExceptionHandler("Something went wrong");
+        }
+    }
+
+    @Override
+    public CommonResponse<TourStatisticsResponse> getTourStatistics() {
+        LOGGER.info("Start fetching tour statistics from repository");
+        try {
+            TourStatisticsResponse tourStatisticsResponse = new TourStatisticsResponse();
+            TourStatisticsResponse.Summary summary = tourRepository.getToutSummeryStatistics();
+            List<TourStatisticsResponse.TourPopularity> tourPopularities = tourRepository.getTourPopularityStatistics();
+            List<TourStatisticsResponse.BookingStatusDistribution> bookingStatusDistributions = tourRepository.getBookingStatusDistributionStatistics();
+            List<TourStatisticsResponse.CategoryPerformance> categoryPerformances = tourRepository.getCategoryPerformanceStatistics();
+            List<TourStatisticsResponse.TypeDistribution> typeDistributions = tourRepository.getTypeDistributionStatistics();
+            List<TourStatisticsResponse.LocationDistribution> locationDistributions = tourRepository.getLocationDistributionStatistics();
+
+            tourStatisticsResponse.setSummary(summary);
+            tourStatisticsResponse.setTourPopularity(tourPopularities);
+            tourStatisticsResponse.setBookingStatusDistribution(bookingStatusDistributions);
+            tourStatisticsResponse.setCategoryPerformance(categoryPerformances);
+            tourStatisticsResponse.setTypeDistribution(typeDistributions);
+            tourStatisticsResponse.setLocationDistribution(locationDistributions);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour statistics from database");
+        } finally {
+            LOGGER.info("End fetching tour statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TourScheduleStatisticsResponse> getTourScheduleStatistics() {
+        LOGGER.info("Start fetching tour schedule statistics from repository");
+        try {
+            TourScheduleStatisticsResponse tourScheduleStatisticsResponse = new TourScheduleStatisticsResponse();
+            TourScheduleStatisticsResponse.Summary summary = tourRepository.getTourScheduleSummeryStatistics();
+            List<TourScheduleStatisticsResponse.ScheduleTimeline> scheduleTimelines = tourRepository.getScheduleTimelineStatistics();
+            List<TourScheduleStatisticsResponse.DurationDistribution> durationDistributions = tourRepository.getDurationDistributionStatistics();
+            List<TourScheduleStatisticsResponse.ScheduleExecutionPerformance> scheduleExecutionPerformances = tourRepository.getScheduleExecutionPerformanceStatistics();
+            List<TourScheduleStatisticsResponse.ScheduleRatingOverview> scheduleRatingOverviews = tourRepository.getScheduleRatingOverviewStatistics();
+            List<TourScheduleStatisticsResponse.ParticipationTrend> participationTrends = tourRepository.getParticipationTrendStatistics();
+
+            tourScheduleStatisticsResponse.setSummary(summary);
+            tourScheduleStatisticsResponse.setScheduleTimeline(scheduleTimelines);
+            tourScheduleStatisticsResponse.setDurationDistribution(durationDistributions);
+            tourScheduleStatisticsResponse.setExecutionPerformance(scheduleExecutionPerformances);
+            tourScheduleStatisticsResponse.setRatingOverview(scheduleRatingOverviews);
+            tourScheduleStatisticsResponse.setParticipationTrend(participationTrends);
+
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourScheduleStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour schedule statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour schedule statistics from database");
+        } finally {
+            LOGGER.info("End fetching tour schedule statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TourCategoryStatisticsResponse> getTourCategoryStatistics() {
+        LOGGER.info("Start fetching tour category statistics from repository");
+        try {
+            TourCategoryStatisticsResponse tourCategoryStatisticsResponse = new TourCategoryStatisticsResponse();
+
+            TourCategoryStatisticsResponse.Summary summary = tourRepository.getTourCategorySummaryStatistics();
+            List<TourCategoryStatisticsResponse.CategoryDistribution> categoryDistribution = tourRepository.getCategoryDistributionStatistics();
+            List<TourCategoryStatisticsResponse.CategoryBookingPerformance> categoryBookingPerformance = tourRepository.getCategoryBookingPerformanceStatistics();
+            List<TourCategoryStatisticsResponse.CategoryRatingOverview> categoryRatingOverview = tourRepository.getCategoryRatingOverviewStatistics();
+            List<TourCategoryStatisticsResponse.CategoryPrimarySecondaryUsage> categoryPrimarySecondaryUsage = tourRepository.getCategoryPrimarySecondaryUsageStatistics();
+            List<TourCategoryStatisticsResponse.CategoryParticipationImpact> categoryParticipationImpact = tourRepository.getCategoryParticipationImpactStatistics();
+
+            // Set all the data to the response object
+            tourCategoryStatisticsResponse.setSummary(summary);
+            tourCategoryStatisticsResponse.setCategoryDistribution(categoryDistribution);
+            tourCategoryStatisticsResponse.setCategoryBookingPerformance(categoryBookingPerformance);
+            tourCategoryStatisticsResponse.setCategoryRatingOverview(categoryRatingOverview);
+            tourCategoryStatisticsResponse.setCategoryPrimarySecondaryUsage(categoryPrimarySecondaryUsage);
+            tourCategoryStatisticsResponse.setCategoryParticipationImpact(categoryParticipationImpact);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourCategoryStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour category statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour category statistics from database");
+        } finally {
+            LOGGER.info("End fetching tour category statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TourTypeStatisticsResponse> getTourTypeStatistics() {
+        LOGGER.info("Start fetching tour type statistics from repository");
+        try {
+            TourTypeStatisticsResponse tourTypeStatisticsResponse = new TourTypeStatisticsResponse();
+
+            // Fetch all the required statistics from repository
+            TourTypeStatisticsResponse.Summary summary = tourRepository.getTourTypeSummaryStatistics();
+            List<TourTypeStatisticsResponse.TypeDistribution> typeDistribution = tourRepository.getTypesDistributionStatistics();
+            List<TourTypeStatisticsResponse.TypeBookingPerformance> typeBookingPerformance = tourRepository.getTypeBookingPerformanceStatistics();
+            List<TourTypeStatisticsResponse.TypeRatingOverview> typeRatingOverview = tourRepository.getTypeRatingOverviewStatistics();
+            List<TourTypeStatisticsResponse.TypeParticipationImpact> typeParticipationImpact = tourRepository.getTypeParticipationImpactStatistics();
+            List<TourTypeStatisticsResponse.TypePrimarySecondaryUsage> typePrimarySecondaryUsage = tourRepository.getTypePrimarySecondaryUsageStatistics();
+
+            // Set all the data to the response object
+            tourTypeStatisticsResponse.setSummary(summary);
+            tourTypeStatisticsResponse.setTypeDistribution(typeDistribution);
+            tourTypeStatisticsResponse.setTypeBookingPerformance(typeBookingPerformance);
+            tourTypeStatisticsResponse.setTypeRatingOverview(typeRatingOverview);
+            tourTypeStatisticsResponse.setTypeParticipationImpact(typeParticipationImpact);
+            tourTypeStatisticsResponse.setTypePrimarySecondaryUsage(typePrimarySecondaryUsage);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourTypeStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour type statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour type statistics from database");
+        } finally {
+            LOGGER.info("End fetching tour type statistics from repository");
         }
     }
 

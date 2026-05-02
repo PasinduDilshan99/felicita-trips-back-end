@@ -8,6 +8,10 @@ import com.felicita.model.dto.*;
 import com.felicita.model.enums.CommonStatus;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
+import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.TourStatisticsResponse;
+import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
 import com.felicita.queries.TourQueries;
 import com.felicita.repository.TourRepository;
 import org.slf4j.Logger;
@@ -2325,6 +2329,414 @@ public class TourRepositoryImpl implements TourRepository {
             throw new InternalServerErrorExceptionHandler("Failed to fetch tour assign user details");
         }
     }
+
+    @Override
+    public TourStatisticsResponse.Summary getToutSummeryStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    TourQueries.GET_TOUR_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.Summary.builder()
+                            .totalTours(rs.getInt("total_tours"))
+                            .totalBookings(rs.getInt("total_bookings"))
+                            .pendingBookings(rs.getInt("pending_bookings"))
+                            .averageRating(rs.getDouble("average_rating"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching tour summary statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch tour summary statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching tour summary statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching tour summary statistics");
+        }
+    }
+
+    @Override
+    public List<TourStatisticsResponse.TourPopularity> getTourPopularityStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour popularity statistics.");
+
+            return jdbcTemplate.query(
+                    TourQueries.GET_TOUR_POPULARITY_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.TourPopularity.builder()
+                            .tourId(rs.getLong("tour_id"))
+                            .tourName(rs.getString("tour_name"))
+                            .totalBookings(rs.getInt("total_bookings"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching tour popularity statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch tour popularity statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching tour popularity statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching tour popularity statistics");
+        }
+    }
+
+    @Override
+    public List<TourStatisticsResponse.BookingStatusDistribution> getBookingStatusDistributionStatistics() {
+
+        try {
+            LOGGER.info("Fetching booking status distribution statistics.");
+
+            return jdbcTemplate.query(
+                    TourQueries.GET_BOOKING_STATUS_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.BookingStatusDistribution.builder()
+                            .statusName(rs.getString("status_name"))
+                            .totalCount(rs.getInt("total_count"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching booking status distribution: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch booking status distribution statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching booking status distribution: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching booking status distribution statistics");
+        }
+    }
+
+    @Override
+    public List<TourStatisticsResponse.CategoryPerformance> getCategoryPerformanceStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour category performance statistics.");
+
+            return jdbcTemplate.query(
+                    TourQueries.GET_CATEGORY_PERFORMANCE_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.CategoryPerformance.builder()
+                            .categoryId(rs.getLong("category_id"))
+                            .categoryName(rs.getString("category_name"))
+                            .totalTours(rs.getInt("total_tours"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching category performance: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch category performance statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching category performance: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching category performance statistics");
+        }
+    }
+
+    @Override
+    public List<TourStatisticsResponse.TypeDistribution> getTypeDistributionStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour type distribution statistics.");
+
+            return jdbcTemplate.query(
+                    TourQueries.GET_TYPE_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.TypeDistribution.builder()
+                            .typeId(rs.getLong("type_id"))
+                            .typeName(rs.getString("type_name"))
+                            .totalTours(rs.getInt("total_tours"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching type distribution: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch type distribution statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching type distribution: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching type distribution statistics");
+        }
+    }
+
+    @Override
+    public List<TourStatisticsResponse.LocationDistribution> getLocationDistributionStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour location distribution statistics.");
+
+            return jdbcTemplate.query(
+                    TourQueries.GET_LOCATION_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.LocationDistribution.builder()
+                            .startLocation(rs.getString("start_location"))
+                            .totalTours(rs.getInt("total_tours"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching location distribution: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch location distribution statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching location distribution: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching location distribution statistics");
+        }
+    }
+
+    @Override
+    public TourScheduleStatisticsResponse.Summary getTourScheduleSummeryStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour schedule summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    TourQueries.GET_TOUR_SCHEDULE_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> TourScheduleStatisticsResponse.Summary.builder()
+                            .totalSchedules(rs.getInt("total_schedules"))
+                            .completedSchedules(rs.getInt("completed_schedules"))
+                            .averageRating(rs.getDouble("average_rating"))
+                            .utilizationRate(rs.getDouble("utilization_rate"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching schedule summary: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch schedule summary statistics");
+        }
+    }
+
+    @Override
+    public List<TourScheduleStatisticsResponse.ScheduleTimeline> getScheduleTimelineStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_SCHEDULE_TIMELINE_STATISTICS,
+                (rs, rowNum) -> TourScheduleStatisticsResponse.ScheduleTimeline.builder()
+                        .scheduleDate(rs.getString("schedule_date"))
+                        .totalSchedules(rs.getInt("total_schedules"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourScheduleStatisticsResponse.ParticipationTrend> getParticipationTrendStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_PARTICIPATION_TREND_STATISTICS,
+                (rs, rowNum) -> TourScheduleStatisticsResponse.ParticipationTrend.builder()
+                        .scheduleId(rs.getLong("schedule_id"))
+                        .scheduleName(rs.getString("schedule_name"))
+                        .totalParticipants(rs.getInt("total_participants"))
+                        .build()
+        );
+    }
+
+    @Override
+    public TourCategoryStatisticsResponse.Summary getTourCategorySummaryStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour category summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    TourQueries.GET_CATEGORY_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> TourCategoryStatisticsResponse.Summary.builder()
+                            .totalCategories(rs.getInt("total_categories"))
+                            .activeCategories(rs.getInt("active_categories"))
+                            .averageRating(rs.getDouble("average_rating"))
+                            .totalBookings(rs.getInt("total_bookings"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching category summary: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch category summary statistics");
+        }
+    }
+
+    @Override
+    public List<TourCategoryStatisticsResponse.CategoryDistribution> getCategoryDistributionStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_CATEGORY_DISTRIBUTION_STATISTICS,
+                (rs, rowNum) -> TourCategoryStatisticsResponse.CategoryDistribution.builder()
+                        .categoryName(rs.getString("category_name"))
+                        .totalTours(rs.getInt("total_tours"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourCategoryStatisticsResponse.CategoryBookingPerformance> getCategoryBookingPerformanceStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_CATEGORY_BOOKING_PERFORMANCE_STATISTICS,
+                (rs, rowNum) -> TourCategoryStatisticsResponse.CategoryBookingPerformance.builder()
+                        .categoryId(rs.getLong("category_id"))
+                        .categoryName(rs.getString("category_name"))
+                        .totalBookings(rs.getInt("total_bookings"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourCategoryStatisticsResponse.CategoryRatingOverview> getCategoryRatingOverviewStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_CATEGORY_RATING_OVERVIEW_STATISTICS,
+                (rs, rowNum) -> TourCategoryStatisticsResponse.CategoryRatingOverview.builder()
+                        .categoryId(rs.getLong("category_id"))
+                        .categoryName(rs.getString("category_name"))
+                        .averageRating(rs.getDouble("average_rating"))
+                        .totalReviews(rs.getInt("total_reviews"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourCategoryStatisticsResponse.CategoryPrimarySecondaryUsage> getCategoryPrimarySecondaryUsageStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_CATEGORY_PRIMARY_SECONDARY_USAGE_STATISTICS,
+                (rs, rowNum) -> TourCategoryStatisticsResponse.CategoryPrimarySecondaryUsage.builder()
+                        .categoryName(rs.getString("category_name"))
+                        .primaryUsage(rs.getInt("primary_usage"))
+                        .secondaryUsage(rs.getInt("secondary_usage"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourCategoryStatisticsResponse.CategoryParticipationImpact> getCategoryParticipationImpactStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_CATEGORY_PARTICIPATION_IMPACT_STATISTICS,
+                (rs, rowNum) -> TourCategoryStatisticsResponse.CategoryParticipationImpact.builder()
+                        .categoryId(rs.getLong("category_id"))
+                        .categoryName(rs.getString("category_name"))
+                        .totalParticipants(rs.getInt("total_participants"))
+                        .build()
+        );
+    }
+
+    @Override
+    public TourTypeStatisticsResponse.Summary getTourTypeSummaryStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour type summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    TourQueries.GET_TOUR_TYPE_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> TourTypeStatisticsResponse.Summary.builder()
+                            .totalTypes(rs.getInt("total_types"))
+                            .activeTypes(rs.getInt("active_types"))
+                            .averageRating(rs.getDouble("average_rating"))
+                            .totalBookings(rs.getInt("total_bookings"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching tour type summary: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour type summary statistics");
+        }
+    }
+
+    @Override
+    public List<TourTypeStatisticsResponse.TypeDistribution> getTypesDistributionStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_TYPES_DISTRIBUTION_STATISTICS,
+                (rs, rowNum) -> TourTypeStatisticsResponse.TypeDistribution.builder()
+                        .typeName(rs.getString("type_name"))
+                        .totalTours(rs.getInt("total_tours"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourTypeStatisticsResponse.TypeBookingPerformance> getTypeBookingPerformanceStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_TYPE_BOOKING_PERFORMANCE_STATISTICS,
+                (rs, rowNum) -> TourTypeStatisticsResponse.TypeBookingPerformance.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .totalBookings(rs.getInt("total_bookings"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourTypeStatisticsResponse.TypeRatingOverview> getTypeRatingOverviewStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_TYPE_RATING_OVERVIEW_STATISTICS,
+                (rs, rowNum) -> TourTypeStatisticsResponse.TypeRatingOverview.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .averageRating(rs.getDouble("average_rating"))
+                        .totalReviews(rs.getInt("total_reviews"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourTypeStatisticsResponse.TypeParticipationImpact> getTypeParticipationImpactStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_TYPE_PARTICIPATION_IMPACT_STATISTICS,
+                (rs, rowNum) -> TourTypeStatisticsResponse.TypeParticipationImpact.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .totalParticipants(rs.getInt("total_participants"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourTypeStatisticsResponse.TypePrimarySecondaryUsage> getTypePrimarySecondaryUsageStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_TYPE_PRIMARY_SECONDARY_USAGE_STATISTICS,
+                (rs, rowNum) -> TourTypeStatisticsResponse.TypePrimarySecondaryUsage.builder()
+                        .typeName(rs.getString("type_name"))
+                        .primaryUsage(rs.getInt("primary_usage"))
+                        .secondaryUsage(rs.getInt("secondary_usage"))
+                        .build()
+        );
+    }
+
+
+    @Override
+    public List<TourScheduleStatisticsResponse.ScheduleRatingOverview> getScheduleRatingOverviewStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_SCHEDULE_RATING_OVERVIEW_STATISTICS,
+                (rs, rowNum) -> TourScheduleStatisticsResponse.ScheduleRatingOverview.builder()
+                        .scheduleId(rs.getLong("schedule_id"))
+                        .scheduleName(rs.getString("schedule_name"))
+                        .averageRating(rs.getDouble("average_rating"))
+                        .totalReviews(rs.getInt("total_reviews"))
+                        .build()
+        );
+    }
+
+
+    @Override
+    public List<TourScheduleStatisticsResponse.ScheduleExecutionPerformance> getScheduleExecutionPerformanceStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_SCHEDULE_EXECUTION_PERFORMANCE_STATISTICS,
+                (rs, rowNum) -> TourScheduleStatisticsResponse.ScheduleExecutionPerformance.builder()
+                        .scheduleId(rs.getLong("schedule_id"))
+                        .scheduleName(rs.getString("schedule_name"))
+                        .completedInstances(rs.getInt("completed_instances"))
+                        .build()
+        );
+    }
+
+
+    @Override
+    public List<TourScheduleStatisticsResponse.DurationDistribution> getDurationDistributionStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_DURATION_DISTRIBUTION_STATISTICS,
+                (rs, rowNum) -> TourScheduleStatisticsResponse.DurationDistribution.builder()
+                        .durationStart(rs.getInt("duration_start"))
+                        .durationEnd(rs.getInt("duration_end"))
+                        .totalSchedules(rs.getInt("total_schedules"))
+                        .build()
+        );
+    }
+
 
     private LocalDateTime getLocalDateTime(ResultSet rs, String columnLabel) {
         try {

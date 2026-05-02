@@ -6,6 +6,11 @@ import com.felicita.model.request.TourDataRequest;
 import com.felicita.model.request.TourInsertRequest;
 import com.felicita.model.request.TourUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
+import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.TourStatisticsResponse;
+import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
+
 import java.util.List;
 
 public interface TourService {
@@ -56,4 +61,11 @@ public interface TourService {
 
     CommonResponse<UpdateResponse> updateTour(TourUpdateRequest tourUpdateRequest);
 
+    CommonResponse<TourStatisticsResponse> getTourStatistics();
+
+    CommonResponse<TourScheduleStatisticsResponse> getTourScheduleStatistics();
+
+    CommonResponse<TourCategoryStatisticsResponse> getTourCategoryStatistics();
+
+    CommonResponse<TourTypeStatisticsResponse> getTourTypeStatistics();
 }

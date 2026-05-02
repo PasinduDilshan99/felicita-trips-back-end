@@ -7,6 +7,9 @@ import com.felicita.model.request.ActivityInsertRequest;
 import com.felicita.model.request.ActivityTerminateRequest;
 import com.felicita.model.request.ActivityUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
+import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
+
 import java.util.List;
 
 public interface ActivitiesService {
@@ -46,4 +49,8 @@ public interface ActivitiesService {
     CommonResponse<List<ActivityIdAndNameResponse>> getTourIdsAndTourNames();
 
     CommonResponse<ActivityStatisticsResponse> getActivitiesStatistics();
+
+    CommonResponse<ActivityScheduleStatisticsResponse> getActivitiesScheduleStatistics();
+
+    CommonResponse<ActivityCategoriesStatisticsResponse> getActivityCategoriesStatistics();
 }

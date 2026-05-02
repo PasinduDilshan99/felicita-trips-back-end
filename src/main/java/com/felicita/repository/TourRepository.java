@@ -6,6 +6,11 @@ import com.felicita.model.dto.TourDayDestinationActivityIdsDto;
 import com.felicita.model.dto.TourResponseDto;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
+import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.TourStatisticsResponse;
+import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
+
 import java.util.List;
 
 public interface TourRepository {
@@ -108,4 +113,51 @@ public interface TourRepository {
 
     TourAssignUserDto getTourAssignUserDetailsByTourId(Long tourId);
 
+    TourStatisticsResponse.Summary getToutSummeryStatistics();
+
+    List<TourStatisticsResponse.TourPopularity> getTourPopularityStatistics();
+
+    List<TourStatisticsResponse.BookingStatusDistribution> getBookingStatusDistributionStatistics();
+
+    List<TourStatisticsResponse.CategoryPerformance> getCategoryPerformanceStatistics();
+
+    List<TourStatisticsResponse.TypeDistribution> getTypeDistributionStatistics();
+
+    List<TourStatisticsResponse.LocationDistribution> getLocationDistributionStatistics();
+
+    TourScheduleStatisticsResponse.Summary getTourScheduleSummeryStatistics();
+
+    List<TourScheduleStatisticsResponse.ScheduleTimeline> getScheduleTimelineStatistics();
+
+    List<TourScheduleStatisticsResponse.DurationDistribution> getDurationDistributionStatistics();
+
+    List<TourScheduleStatisticsResponse.ScheduleExecutionPerformance> getScheduleExecutionPerformanceStatistics();
+
+    List<TourScheduleStatisticsResponse.ScheduleRatingOverview> getScheduleRatingOverviewStatistics();
+
+    List<TourScheduleStatisticsResponse.ParticipationTrend> getParticipationTrendStatistics();
+
+    TourCategoryStatisticsResponse.Summary getTourCategorySummaryStatistics();
+
+    List<TourCategoryStatisticsResponse.CategoryDistribution> getCategoryDistributionStatistics();
+
+    List<TourCategoryStatisticsResponse.CategoryBookingPerformance> getCategoryBookingPerformanceStatistics();
+
+    List<TourCategoryStatisticsResponse.CategoryRatingOverview> getCategoryRatingOverviewStatistics();
+
+    List<TourCategoryStatisticsResponse.CategoryPrimarySecondaryUsage> getCategoryPrimarySecondaryUsageStatistics();
+
+    List<TourCategoryStatisticsResponse.CategoryParticipationImpact> getCategoryParticipationImpactStatistics();
+
+    TourTypeStatisticsResponse.Summary getTourTypeSummaryStatistics();
+
+    List<TourTypeStatisticsResponse.TypeDistribution> getTypesDistributionStatistics();
+
+    List<TourTypeStatisticsResponse.TypeBookingPerformance> getTypeBookingPerformanceStatistics();
+
+    List<TourTypeStatisticsResponse.TypeRatingOverview> getTypeRatingOverviewStatistics();
+
+    List<TourTypeStatisticsResponse.TypeParticipationImpact> getTypeParticipationImpactStatistics();
+
+    List<TourTypeStatisticsResponse.TypePrimarySecondaryUsage> getTypePrimarySecondaryUsageStatistics();
 }

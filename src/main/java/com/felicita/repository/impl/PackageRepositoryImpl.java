@@ -8,6 +8,9 @@ import com.felicita.model.dto.*;
 import com.felicita.model.enums.CommonStatus;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.PackageStatisticsResponse;
+import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
 import com.felicita.queries.PackageQueries;
 import com.felicita.repository.PackageRepository;
 import org.slf4j.Logger;
@@ -2130,6 +2133,388 @@ public class PackageRepositoryImpl implements PackageRepository {
             LOGGER.error("Failed to update package feature", e);
             throw new InternalServerErrorExceptionHandler("Failed to update package feature");
         }
+    }
+
+    @Override
+    public PackageStatisticsResponse.Summary getPackageSummaryStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    PackageQueries.GET_PACKAGE_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.Summary.builder()
+                            .totalPackages(rs.getLong("total_packages"))
+                            .activePackages(rs.getLong("active_packages"))
+                            .averagePackageRating(rs.getBigDecimal("average_package_rating"))
+                            .totalParticipants(rs.getLong("total_participants"))
+                            .averagePackagePrice(rs.getBigDecimal("average_package_price"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package summary statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package summary statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package summary statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package summary statistics");
+        }
+    }
+
+    @Override
+    public List<PackageStatisticsResponse.PackagePopularity> getPackagePopularityStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package popularity statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_POPULARITY_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.PackagePopularity.builder()
+                            .packageId(rs.getLong("package_id"))
+                            .packageName(rs.getString("package_name"))
+                            .totalSchedules(rs.getInt("total_schedules"))
+                            .totalParticipants(rs.getInt("total_participants"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package popularity statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package popularity statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package popularity statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package popularity statistics");
+        }
+    }
+
+    @Override
+    public List<PackageStatisticsResponse.PackageRatingOverview> getPackageRatingOverviewStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package rating overview statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_RATING_OVERVIEW_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.PackageRatingOverview.builder()
+                            .packageId(rs.getLong("package_id"))
+                            .packageName(rs.getString("package_name"))
+                            .averageRating(rs.getBigDecimal("average_rating"))
+                            .totalReviews(rs.getInt("total_reviews"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package rating overview statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package rating overview statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package rating overview statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package rating overview statistics");
+        }
+    }
+
+    @Override
+    public List<PackageStatisticsResponse.PackageCapacityUtilization> getPackageCapacityUtilizationStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package capacity utilization statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_CAPACITY_UTILIZATION_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.PackageCapacityUtilization.builder()
+                            .packageId(rs.getLong("package_id"))
+                            .packageName(rs.getString("package_name"))
+                            .minPersonCount(rs.getInt("min_person_count"))
+                            .maxPersonCount(rs.getInt("max_person_count"))
+                            .averageParticipants(rs.getBigDecimal("average_participants"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package capacity utilization statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package capacity utilization statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package capacity utilization statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package capacity utilization statistics");
+        }
+    }
+
+    @Override
+    public List<PackageStatisticsResponse.PackageTypeDistribution> getPackageTypeDistributionStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package type distribution statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_TYPE_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.PackageTypeDistribution.builder()
+                            .packageTypeName(rs.getString("package_type_name"))
+                            .totalPackages(rs.getInt("total_packages"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package type distribution statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package type distribution statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package type distribution statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package type distribution statistics");
+        }
+    }
+
+    @Override
+    public List<PackageStatisticsResponse.PackagePriceDistribution> getPackagePriceDistributionStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package price distribution statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_PRICE_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.PackagePriceDistribution.builder()
+                            .packageId(rs.getLong("package_id"))
+                            .packageName(rs.getString("package_name"))
+                            .totalPrice(rs.getBigDecimal("total_price"))
+                            .pricePerPerson(rs.getBigDecimal("price_per_person"))
+                            .totalParticipants(rs.getInt("total_participants"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package price distribution statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package price distribution statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package price distribution statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package price distribution statistics");
+        }
+    }
+
+    @Override
+    public PackageScheduleStatisticsResponse.Summary getPackageScheduleSummaryStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.Summary.builder()
+                            .totalSchedules(rs.getLong("total_schedules"))
+                            .activeSchedules(rs.getLong("active_schedules"))
+                            .averageScheduleRating(rs.getBigDecimal("average_schedule_rating"))
+                            .totalParticipants(rs.getLong("total_participants"))
+                            .averageDuration(rs.getBigDecimal("average_duration"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule summary statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule summary statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule summary statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule summary statistics");
+        }
+    }
+
+    @Override
+    public List<PackageScheduleStatisticsResponse.ScheduleTimeline> getPackageScheduleTimelineStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule timeline statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_TIMELINE_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.ScheduleTimeline.builder()
+                            .timeline(rs.getString("timeline"))
+                            .totalSchedules(rs.getInt("total_schedules"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule timeline statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule timeline statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule timeline statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule timeline statistics");
+        }
+    }
+
+    @Override
+    public List<PackageScheduleStatisticsResponse.ScheduleStatusDistribution> getPackageScheduleStatusDistributionStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule status distribution statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_STATUS_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.ScheduleStatusDistribution.builder()
+                            .statusId(rs.getInt("status_id"))
+                            .totalSchedules(rs.getInt("total_schedules"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule status distribution statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule status distribution statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule status distribution statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule status distribution statistics");
+        }
+    }
+
+    @Override
+    public List<PackageScheduleStatisticsResponse.DurationDistribution> getPackageScheduleDurationDistributionStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule duration distribution statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_DURATION_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.DurationDistribution.builder()
+                            .scheduleId(rs.getLong("schedule_id"))
+                            .scheduleName(rs.getString("schedule_name"))
+                            .durationStart(rs.getInt("duration_start"))
+                            .durationEnd(rs.getInt("duration_end"))
+                            .averageDuration(rs.getBigDecimal("average_duration"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule duration distribution statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule duration distribution statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule duration distribution statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule duration distribution statistics");
+        }
+    }
+
+    @Override
+    public List<PackageScheduleStatisticsResponse.ScheduleParticipationPerformance> getPackageScheduleParticipationPerformanceStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule participation performance statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_PARTICIPATION_PERFORMANCE_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.ScheduleParticipationPerformance.builder()
+                            .scheduleId(rs.getLong("schedule_id"))
+                            .scheduleName(rs.getString("schedule_name"))
+                            .totalParticipants(rs.getInt("total_participants"))
+                            .averageParticipants(rs.getBigDecimal("average_participants"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule participation performance statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule participation performance statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule participation performance statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule participation performance statistics");
+        }
+    }
+
+    @Override
+    public List<PackageScheduleStatisticsResponse.ScheduleRatingOverview> getPackageScheduleRatingOverviewStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule rating overview statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_RATING_OVERVIEW_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.ScheduleRatingOverview.builder()
+                            .scheduleId(rs.getLong("schedule_id"))
+                            .scheduleName(rs.getString("schedule_name"))
+                            .averageRating(rs.getBigDecimal("average_rating"))
+                            .totalReviews(rs.getInt("total_reviews"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule rating overview statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule rating overview statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule rating overview statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule rating overview statistics");
+        }
+    }
+
+    @Override
+    public PackageTypeStatisticsResponse.Summary getPackageTypeSummaryStatistics() {
+        try {
+            LOGGER.info("Fetching package type summary statistics");
+
+            return jdbcTemplate.queryForObject(
+                    PackageQueries.GET_PACKAGE_TYPE_SUMMARY,
+                    (rs, rowNum) -> PackageTypeStatisticsResponse.Summary.builder()
+                            .totalPackageTypes(rs.getLong("total_package_types"))
+                            .mostUsedTypeCount(rs.getLong("total_packages"))
+                            .highestRatedTypeRating(rs.getBigDecimal("average_rating"))
+                            .highestRevenueTypeValue(rs.getBigDecimal("total_revenue"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching package type summary", ex);
+            throw new RuntimeException("Failed to fetch package type summary");
+        }
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypeDistribution> getPackageTypesDistributionStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_DISTRIBUTION,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypeDistribution.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .totalPackages(rs.getLong("total_packages"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypeRevenuePerformance> getPackageTypeRevenuePerformanceStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_REVENUE_PERFORMANCE,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypeRevenuePerformance.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .totalRevenue(rs.getBigDecimal("total_revenue"))
+                        .averagePackagePrice(rs.getBigDecimal("avg_price"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypeParticipationImpact> getPackageTypeParticipationImpactStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_PARTICIPATION_IMPACT,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypeParticipationImpact.builder()
+                        .typeName(rs.getString("type_name"))
+                        .month(rs.getString("month"))
+                        .totalParticipants(rs.getLong("total_participants"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypePrimarySecondaryUsage> getPackageTypePrimarySecondaryUsageStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_PRIMARY_SECONDARY_USAGE,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypePrimarySecondaryUsage.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .primaryCount(rs.getLong("primary_count"))
+                        .secondaryCount(rs.getLong("secondary_count"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypeBookingPerformance> getPackageTypeBookingPerformanceStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_BOOKING_PERFORMANCE,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypeBookingPerformance.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypeRatingOverview> getPackageTypeRatingOverviewStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_RATING_OVERVIEW,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypeRatingOverview.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .averageRating(rs.getBigDecimal("avg_rating"))
+                        .totalReviews(rs.getLong("total_reviews"))
+                        .build()
+        );
     }
 
 }

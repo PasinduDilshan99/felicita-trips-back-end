@@ -185,7 +185,7 @@ public class RoleServiceImpl implements RoleService {
                 emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
                 String body = roleEmailHelperService.buildRoleCreateSuccessfullBody(roleInsertRequest, roleId, loggedUser);
                 String subject = roleEmailHelperService.buildRoleCreateSuccessfullSubject(roleInsertRequest, roleId, loggedUser);
-                emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+//                emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
             }
 
             return new CommonResponse<>(

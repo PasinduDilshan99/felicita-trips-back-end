@@ -9,6 +9,8 @@ import com.felicita.model.request.ActivityInsertRequest;
 import com.felicita.model.request.ActivityTerminateRequest;
 import com.felicita.model.request.ActivityUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
+import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
 import com.felicita.repository.ActivitiesRepository;
 import com.felicita.repository.WishListRepository;
 import com.felicita.service.ActivitiesService;
@@ -584,6 +586,78 @@ public class ActivitiesServiceImpl implements ActivitiesService {
             throw new InternalServerErrorExceptionHandler("Failed to fetch activities statistics from database");
         } finally {
             LOGGER.info("End fetching activities statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<ActivityScheduleStatisticsResponse> getActivitiesScheduleStatistics() {
+        LOGGER.info("Start fetching activities schedule statistics from repository");
+        try {
+            ActivityScheduleStatisticsResponse activityScheduleStatisticsResponse = new ActivityScheduleStatisticsResponse();
+            ActivityScheduleStatisticsResponse.Summary summary = activitiesRepository.getActivitySchduleSummeryStatsitics();
+            List<ActivityScheduleStatisticsResponse.ActivityParticipationTrend> activityParticipationTrends = activitiesRepository.getActivityParticipationTrendsStatsitics();
+            List<ActivityScheduleStatisticsResponse.PopularActivity> popularActivities = activitiesRepository.getPopularActivitiesStatsitics();
+            List<ActivityScheduleStatisticsResponse.ActivityRatingOverview> activityRatingOverviews = activitiesRepository.getActivityRatingOverviewStatsitics();
+            List<ActivityScheduleStatisticsResponse.ScheduleTimeline> scheduleTimeline = activitiesRepository.getScheduleTimelineStatsitics();
+            List<ActivityScheduleStatisticsResponse.ActivityStatusDistribution> activityStatusDistribution = activitiesRepository.getActivityStatusDistributionStatsitics();
+
+            activityScheduleStatisticsResponse.setSummary(summary);
+            activityScheduleStatisticsResponse.setParticipationTrends(activityParticipationTrends);
+            activityScheduleStatisticsResponse.setPopularActivities(popularActivities);
+            activityScheduleStatisticsResponse.setActivityRatings(activityRatingOverviews);
+            activityScheduleStatisticsResponse.setScheduleTimelines(scheduleTimeline);
+            activityScheduleStatisticsResponse.setStatusDistributions(activityStatusDistribution);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    activityScheduleStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching activities schedule statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch activities schedule statistics from database");
+        } finally {
+            LOGGER.info("End fetching activities schedule statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<ActivityCategoriesStatisticsResponse> getActivityCategoriesStatistics() {
+        LOGGER.info("Start fetching activity categories statistics from repository");
+        try {
+            ActivityCategoriesStatisticsResponse activityCategoriesStatisticsResponse = new ActivityCategoriesStatisticsResponse();
+            ActivityCategoriesStatisticsResponse.Summary summary = activitiesRepository.getActivitySummeryStatistics();
+            List<ActivityCategoriesStatisticsResponse.CategoryActivityCount> categoryActivityCounts = activitiesRepository.getCategoryActivityCountStatistics();
+            List<ActivityCategoriesStatisticsResponse.CategoryParticipationPerformance> categoryParticipationPerformances = activitiesRepository.getCategoryParticipationPerformanceStatistics();
+            List<ActivityCategoriesStatisticsResponse.CategoryRatingOverview> categoryRatingOverviews = activitiesRepository.getCategoryRatingOverviewStatistics();
+            List<ActivityCategoriesStatisticsResponse.CategoryDistribution> categoryDistributions = activitiesRepository.getCategoryDistributionStatistics();
+            List<ActivityCategoriesStatisticsResponse.CategoryPrimarySecondaryUsage> categoryPrimarySecondaryUsages = activitiesRepository.getCategoryPrimarySecondaryUsageStatistics();
+
+            activityCategoriesStatisticsResponse.setSummary(summary);
+            activityCategoriesStatisticsResponse.setCategoryActivityCounts(categoryActivityCounts);
+            activityCategoriesStatisticsResponse.setCategoryParticipationPerformances(categoryParticipationPerformances);
+            activityCategoriesStatisticsResponse.setCategoryRatingOverviews(categoryRatingOverviews);
+            activityCategoriesStatisticsResponse.setCategoryDistributions(categoryDistributions);
+            activityCategoriesStatisticsResponse.setCategoryPrimarySecondaryUsages(categoryPrimarySecondaryUsages);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    activityCategoriesStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching activity categories statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch activity categories statistics from database");
+        } finally {
+            LOGGER.info("End fetching activity categories statistics from repository");
         }
     }
 
