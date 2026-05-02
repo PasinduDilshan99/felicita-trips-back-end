@@ -49,4 +49,9 @@ public interface ActivitiesRepository {
 
     void updateActivityRequirements(Long activityId, List<ActivityRequirementsUpdateRequest> updatedRequirements, Long userId);
 
+    ActivityStatisticsResponse.ActivityDetails getActivityDetailsStatistics();
+
+    ActivityStatisticsResponse.WishDetails getActivityWishStatistics();
+
+    List<ActivityStatisticsResponse.CategoryDetails> getActivityCategoryStatistics();
 }

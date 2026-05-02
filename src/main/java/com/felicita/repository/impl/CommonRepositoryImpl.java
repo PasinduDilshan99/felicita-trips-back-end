@@ -314,6 +314,9 @@ public class CommonRepositoryImpl implements CommonRepository {
 
     @Override
     public Long createNotification(NotificationInsertRequestDto dto) {
+
+        LOGGER.info(dto.toString());
+
         Long typeId = jdbcTemplate.queryForObject(
                 "SELECT id FROM notification_types WHERE name = ?",
                 Long.class,
@@ -594,6 +597,30 @@ public class CommonRepositoryImpl implements CommonRepository {
         params.addAll(supervisorUserIds);
 
         return jdbcTemplate.queryForList(sql, params.toArray(), String.class);
+    }
+
+    @Override
+    public boolean existsByEmployeeCode(String employeeCode) {
+        try {
+            String query = """
+                SELECT COUNT(*)
+                FROM employees
+                WHERE employee_code = ?
+                """;
+
+            Integer count = jdbcTemplate.queryForObject(
+                    query,
+                    Integer.class,
+                    employeeCode
+            );
+            return count != null && count > 0;
+
+        } catch (Exception ex) {
+            LOGGER.error("Error while checking employee code existence", ex);
+            throw new InternalServerErrorExceptionHandler(
+                    "Failed to check employee code existence"
+            );
+        }
     }
 
 }

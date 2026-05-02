@@ -1,5 +1,8 @@
 package com.felicita.model.enums;
 
 public enum SourceModule {
-    DESTINATION
+    DESTINATION,
+    PRIVILEGE,
+    ROLE,
+    EMPLOYEE
 }

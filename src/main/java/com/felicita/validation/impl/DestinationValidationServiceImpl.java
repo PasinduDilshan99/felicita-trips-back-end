@@ -49,4 +49,14 @@ public class DestinationValidationServiceImpl implements DestinationValidationSe
     public void validateDestinationCategoryTerminateRequest(DestinationCategoryTerminateRequest destinationCategoryTerminateRequest) {
 
     }
+
+    @Override
+    public void validateTrendingDestiantionInsertRequest(TrendingDestinationInsertRequest trendingDestinationInsertRequest) {
+
+    }
+
+    @Override
+    public void validateTrendingDestinationTerminateRequest(TrendingDestinationTerminateRequest trendingDestinationTerminateRequest) {
+
+    }
 }

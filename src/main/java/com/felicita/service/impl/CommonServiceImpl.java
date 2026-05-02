@@ -28,8 +28,10 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -79,6 +81,34 @@ public class CommonServiceImpl implements CommonService {
         CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
         User user = principal.getDomainUser();
         return user.getId();
+    }
+
+    @Override
+    public List<Long> extractSupervisorUserIds(List<SupervisorBasicDetailsDto> supervisorDetails) {
+
+        if (supervisorDetails == null || supervisorDetails.isEmpty()) {
+            return List.of();
+        }
+
+        return supervisorDetails.stream()
+                .map(SupervisorBasicDetailsDto::getUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    @Override
+    public String createEmployeeUniqueEmployeeCode() {
+
+        String employeeCode;
+        boolean exists;
+        do {
+            employeeCode = "EMP" + System.currentTimeMillis();
+            exists = commonRepository.existsByEmployeeCode(employeeCode);
+
+        } while (exists);
+
+        return employeeCode;
     }
 
     @Override
@@ -174,6 +204,7 @@ public class CommonServiceImpl implements CommonService {
             return commonRepository.createNotification(notificationInsertRequestDto);
 
         } catch (Exception e) {
+            LOGGER.error(e.toString());
             return null;
         } finally {
             LOGGER.info("End create notification");

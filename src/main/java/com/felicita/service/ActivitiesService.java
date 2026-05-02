@@ -45,4 +45,5 @@ public interface ActivitiesService {
 
     CommonResponse<List<ActivityIdAndNameResponse>> getTourIdsAndTourNames();
 
+    CommonResponse<ActivityStatisticsResponse> getActivitiesStatistics();
 }

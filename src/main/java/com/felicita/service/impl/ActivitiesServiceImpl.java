@@ -557,4 +557,34 @@ public class ActivitiesServiceImpl implements ActivitiesService {
                 Instant.now());
     }
 
+    @Override
+    public CommonResponse<ActivityStatisticsResponse> getActivitiesStatistics() {
+        LOGGER.info("Start fetching activities statistics from repository");
+        try {
+            ActivityStatisticsResponse activityStatisticsResponse = new ActivityStatisticsResponse();
+            ActivityStatisticsResponse.ActivityDetails activityDetails = activitiesRepository.getActivityDetailsStatistics();
+            ActivityStatisticsResponse.WishDetails wishDetails = activitiesRepository.getActivityWishStatistics();
+            List<ActivityStatisticsResponse.CategoryDetails> categoryDetails = activitiesRepository.getActivityCategoryStatistics();
+
+            activityStatisticsResponse.setActivityDetails(activityDetails);
+            activityStatisticsResponse.setWishDetails(wishDetails);
+            activityStatisticsResponse.setCategoryDetails(categoryDetails);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    activityStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching activities statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch activities statistics from database");
+        } finally {
+            LOGGER.info("End fetching activities statistics from repository");
+        }
+    }
+
 }

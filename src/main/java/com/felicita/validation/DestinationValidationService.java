@@ -14,4 +14,8 @@ public interface DestinationValidationService {
     void validateDestinationCategoryUpdateRequest(DestinationCategoryUpdateRequest destinationCategoryUpdateRequest);
 
     void validateDestinationCategoryTerminateRequest(DestinationCategoryTerminateRequest destinationCategoryTerminateRequest);
+
+    void validateTrendingDestiantionInsertRequest(TrendingDestinationInsertRequest trendingDestinationInsertRequest);
+
+    void validateTrendingDestinationTerminateRequest(TrendingDestinationTerminateRequest trendingDestinationTerminateRequest);
 }

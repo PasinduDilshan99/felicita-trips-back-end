@@ -37,4 +37,6 @@ public interface CommonRepository {
     void readAllUnreadNotifications(Long userId);
 
     List<String> getSupervisorEmailsWhichEnableNotificationForGiven(String name, List<Long> supervisorUserIds);
+
+    boolean existsByEmployeeCode(String employeeCode);
 }

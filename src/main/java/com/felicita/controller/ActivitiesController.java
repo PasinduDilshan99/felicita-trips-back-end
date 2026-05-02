@@ -163,5 +163,12 @@ public class ActivitiesController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @GetMapping(path = "/activities-statistics")
+    public ResponseEntity<CommonResponse<ActivityStatisticsResponse>> getActivitiesStatistics() {
+        LOGGER.info("{} Start execute get activities statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<ActivityStatisticsResponse> response = activitiesService.getActivitiesStatistics();
+        LOGGER.info("{} End execute get activities statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 
 }

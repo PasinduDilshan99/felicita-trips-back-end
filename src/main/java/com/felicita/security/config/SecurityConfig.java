@@ -223,7 +223,7 @@ public class SecurityConfig {
 //                        .requestMatchers("/api/v0/faq/insert-faq-request").hasAuthority("FAQ_REQUEST_CREATE")
 
                                 .requestMatchers(PublicEndpoints.ENDPOINTS).permitAll()
-                        .requestMatchers(AuthorizeEndPoints.ENDPOINTS).authenticated()
+                        .requestMatchers(AuthorizeEndPoints.ENDPOINTS).permitAll()
                         .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

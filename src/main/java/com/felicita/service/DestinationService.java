@@ -60,4 +60,8 @@ public interface DestinationService {
     CommonResponse<UpdateResponse> updateDestinationCategory(DestinationCategoryUpdateRequest destinationCategoryUpdateRequest);
 
     CommonResponse<TerminateResponse> terminateDestinationCategory(DestinationCategoryTerminateRequest destinationCategoryTerminateRequest);
+
+    CommonResponse<InsertResponse> addTrendingDestinations(TrendingDestinationInsertRequest trendingDestinationInsertRequest);
+
+    CommonResponse<TerminateResponse> termianteTrendingDestination(TrendingDestinationTerminateRequest trendingDestinationTerminateRequest);
 }

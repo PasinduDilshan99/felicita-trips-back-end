@@ -1,6 +1,6 @@
-package com.felicita.helper.impl;
+package com.felicita.filter.helper.impl;
 
-import com.felicita.helper.BookingHelperService;
+import com.felicita.filter.helper.BookingHelperService;
 import com.felicita.model.dto.*;
 import com.felicita.model.request.BookingRequest;
 import com.felicita.model.response.PrintReceiptForBookingResponse;

@@ -9,6 +9,7 @@ import com.felicita.model.enums.CommonStatus;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
 import com.felicita.queries.ActivitiesQueries;
+import com.felicita.queries.DestinationQueries;
 import com.felicita.repository.ActivitiesRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -833,14 +834,41 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
         }
     }
 
+    private static final List<String> ALLOWED_ACTIVITY_SORT_COLUMNS = List.of(
+            "name",
+            "price_local",
+            "duration_hours",
+            "created_at",
+            "available_from",
+            "available_to"
+    );
+
     @Override
     public ActivityWithParamsResponse getActivitiesWithParams(ActivityDataRequest activityDataRequest) {
-
+LOGGER.info(activityDataRequest.toString());
         try {
             LOGGER.info("Executing query to fetch all activity categories...");
+
+            String sortBy = activityDataRequest.getSortBy();
+            String sortDirection = activityDataRequest.getSortDirection();
+
+            if (sortBy == null || !ALLOWED_ACTIVITY_SORT_COLUMNS.contains(sortBy)) {
+                sortBy = "created_at";
+            }
+
+            if (sortDirection == null ||
+                    (!sortDirection.equalsIgnoreCase("ASC")
+                            && !sortDirection.equalsIgnoreCase("DESC"))) {
+                sortDirection = "ASC";
+            }
+
+            String paginatedQuery = ActivitiesQueries.GET_ACTIVITY_IDS_WITH_FILTERS
+                    + " ORDER BY a." + sortBy + " " + sortDirection
+                    + " LIMIT ? OFFSET ?";
+
             int offset = (activityDataRequest.getPageNumber() - 1) * activityDataRequest.getPageSize();
             List<Long> activitiesIds = jdbcTemplate.query(
-                    ActivitiesQueries.GET_ACTIVITY_IDS_WITH_FILTERS,
+                    paginatedQuery,
                     new Object[]{
                             activityDataRequest.getName(), activityDataRequest.getName(),
                             activityDataRequest.getMinPrice(), activityDataRequest.getMinPrice(),
@@ -873,14 +901,21 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
                 return null;
             }
 
-            LOGGER.info(activitiesIds.toString());
 
             String inSql = String.join(",", Collections.nCopies(activitiesIds.size(), "?"));
-            String sql = String.format(ActivitiesQueries.GET_ACTIVITIES_BY_IDS, inSql);
+            String sql = String.format(
+                    ActivitiesQueries.GET_ACTIVITIES_BY_IDS
+                            + " ORDER BY FIELD(a.id, %s)",
+                    inSql,
+                    inSql
+            );
+
+            List<Object> params = new ArrayList<>(activitiesIds);
+            params.addAll(activitiesIds);
 
             List<ActivityResponseDto> result = jdbcTemplate.query(
                     sql,
-                    activitiesIds.toArray(),
+                    params.toArray(),
                     new ActivityRowMapper()
             );
 
@@ -1201,6 +1236,77 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
         }
     }
 
+    @Override
+    public ActivityStatisticsResponse.ActivityDetails getActivityDetailsStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch activities details statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    ActivitiesQueries.GET_ACTIVITY_DETAILS_STATISTICS,
+                    (rs, rowNum) -> ActivityStatisticsResponse.ActivityDetails.builder()
+                            .totalActivitiesCount(rs.getInt("totalActivityCount"))
+                            .activeActivities(rs.getInt("activeActivities"))
+                            .inActiveActivities(rs.getInt("inActiveActivities"))
+                            .hiddenActivities(rs.getInt("hiddenActivities"))
+                            .recentlyUpdateActivities(rs.getInt("recentlyUpdatedActivities"))
+                            .recentlyAddedActivities(rs.getInt("recentlyAddedActivities"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching activities details statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch activities details statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching activities details statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching activities details statistics");
+        }
+    }
+
+    @Override
+    public ActivityStatisticsResponse.WishDetails getActivityWishStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch activities wish statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    ActivitiesQueries.GET_ACTIVITY_WISH_STATISTICS,
+                    (rs, rowNum) -> ActivityStatisticsResponse.WishDetails.builder()
+                            .wishListCount(rs.getInt("wishListCount"))
+                            .notWishListCount(rs.getInt("notWishListCount"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching activities wish statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch activities wish statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching activities wish statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching activities wish statistics");
+        }
+    }
+
+    @Override
+    public List<ActivityStatisticsResponse.CategoryDetails> getActivityCategoryStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch activities category statistics.");
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_ACTIVITY_CATEGORY_STATISTICS,
+                    (rs, rowNum) -> ActivityStatisticsResponse.CategoryDetails.builder()
+                            .categoryId(rs.getLong("category_id"))
+                            .categoryName(rs.getString("category_name"))
+                            .count(rs.getInt("activity_count"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching activities category statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch activities category statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching activities category statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching activities category statistics");
+        }
+    }
+
     private LocalDateTime getLocalDateTime(ResultSet rs, String column) {
         try {
             Timestamp ts = rs.getTimestamp(column);
@@ -1230,6 +1336,7 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
                 // Basic fields
                 activity.setId(rs.getLong("id"));
                 activity.setDestinationId(rs.getInt("destination_id"));
+                activity.setDestinationName(rs.getString("destination_name"));
                 activity.setName(rs.getString("name"));
                 activity.setDescription(rs.getString("description"));
                 activity.setDurationHours(rs.getBigDecimal("duration_hours"));

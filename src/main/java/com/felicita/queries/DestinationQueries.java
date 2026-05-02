@@ -476,7 +476,7 @@ public class DestinationQueries {
                 FROM popular_destination pd
                 JOIN destination d ON pd.destination_id = d.destination_id
                 JOIN common_status cs_dest ON d.status = cs_dest.id
-                WHERE d.destination_id IN (64,67,66,71)
+                WHERE d.destination_id IN (:destinationIds)
                 ORDER BY pd.popularity DESC, pd.rating DESC
             """;
 

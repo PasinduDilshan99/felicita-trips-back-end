@@ -3,12 +3,15 @@ package com.felicita.email.impl;
 import com.felicita.email.DestinationEmailHelperService;
 import com.felicita.model.dto.DestinationActivityResponseDto;
 import com.felicita.model.dto.DestinationCategoryDetailsDto;
+import com.felicita.model.dto.DestinationResponseDto;
 import com.felicita.model.dto.DestionationImageResponseDto;
 import com.felicita.model.other.ActivityUpdateDetails;
 import com.felicita.model.other.DestinationUpdateComparisonResult;
 import com.felicita.model.other.FieldUpdate;
 import com.felicita.model.request.DestinationInsertRequest;
 import com.felicita.model.request.DestinationUpdateRequest;
+import com.felicita.model.request.TrendingDestinationInsertRequest;
+import com.felicita.model.request.TrendingDestinationTerminateRequest;
 import com.felicita.security.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -173,6 +176,374 @@ public class DestinationEmailHelperServiceImpl implements DestinationEmailHelper
                 "</div>" +
                 "</div>" +
                 "</body></html>";
+    }
+
+    @Override
+    public String buildDestinationTerminateSuccessfullSubject(User loggedUser, DestinationResponseDto destinationDetailsById) {
+        return String.format("[Felicita Trips] Destination Terminated — %s",
+                destinationDetailsById.getDestinationName() != null ? destinationDetailsById.getDestinationName() : "Unknown");
+    }
+
+    @Override
+    public String buildDestinationTerminateSuccessfullBody(User loggedUser, DestinationResponseDto destinationDetailsById) {
+        // Build categories HTML
+        String categoriesHtml = buildTerminateCategoriesHtml(destinationDetailsById.getDestinationCategoryDetailsDtos());
+
+        // Build activities HTML
+        String activitiesHtml = buildTerminateActivitiesHtml(destinationDetailsById.getActivities());
+
+        // Build images HTML
+        String imagesHtml = buildTerminateImagesHtml(destinationDetailsById.getImages());
+
+        return "<!DOCTYPE html>" +
+                "<html lang='en'><head><meta charset='UTF-8'/><meta name='viewport' content='width=device-width,initial-scale=1'/>" +
+                "<title>Destination Terminated</title>" +
+                "<style>" +
+                "body{margin:0;padding:0;background:#f0f7f7;font-family:Georgia,serif;}" +
+                ".wrapper{max-width:640px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,128,128,0.10);}" +
+                ".header{background:linear-gradient(135deg,#8B0000 0%,#b22222 50%,#cd5c5c 100%);padding:36px 40px 28px;text-align:center;}" +
+                ".header img{height:52px;margin-bottom:16px;}" +
+                ".header h1{color:#ffffff;font-size:22px;margin:0;font-weight:normal;letter-spacing:0.5px;}" +
+                ".header p.tagline{color:rgba(255,255,255,0.80);font-size:12px;margin:6px 0 0;letter-spacing:2px;text-transform:uppercase;}" +
+                ".badge{display:inline-block;background:rgba(255,255,255,0.18);color:#ffffff;border:1px solid rgba(255,255,255,0.40);border-radius:20px;padding:4px 16px;font-size:12px;margin-top:14px;letter-spacing:1px;}" +
+                ".content{padding:36px 40px;}" +
+                ".section-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8B0000;margin:0 0 14px;font-family:Arial,sans-serif;}" +
+                ".info-card{background:#f5fbfb;border:1px solid #c8e8e8;border-radius:8px;padding:20px 24px;margin-bottom:24px;}" +
+                ".info-row{display:flex;align-items:flex-start;padding:8px 0;border-bottom:1px solid #e0f0f0;}" +
+                ".info-row:last-child{border-bottom:none;padding-bottom:0;}" +
+                ".info-label{font-family:Arial,sans-serif;font-size:12px;color:#6b8e8e;min-width:130px;padding-top:2px;}" +
+                ".info-value{font-size:14px;color:#1a3333;font-family:Arial,sans-serif;word-break:break-all;}" +
+                ".terminate-warning{background:#fdecea;border:1px solid #e0b0b0;border-radius:8px;padding:16px 20px;margin-bottom:24px;text-align:center;}" +
+                ".terminate-warning p{color:#a33;font-family:Arial,sans-serif;font-size:13px;margin:0;}" +
+                ".terminate-warning .warning-icon{font-size:24px;margin-bottom:8px;display:block;}" +
+                ".status-pill-terminated{display:inline-block;padding:2px 12px;border-radius:12px;font-size:12px;font-family:Arial,sans-serif;background:#fdecea;color:#a33;font-weight:bold;}" +
+                ".coordinates{font-family:monospace;font-size:13px;background:#f0f7f7;padding:2px 8px;border-radius:4px;display:inline-block;}" +
+                ".info-table{width:100%;border-collapse:collapse;margin-top:8px;}" +
+                ".info-table th{background:#e8f5f5;color:#0e7c7b;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:10px 12px;text-align:left;border:1px solid #c8e8e8;}" +
+                ".info-table td{padding:10px 12px;border:1px solid #e0f0f0;font-size:13px;color:#2a4444;font-family:Arial,sans-serif;vertical-align:top;}" +
+                ".info-table tr:nth-child(even) td{background:#f9fdfd;}" +
+                ".actor-row{display:flex;align-items:center;gap:12px;padding:16px 20px;background:#f5fbfb;border:1px solid #c8e8e8;border-radius:8px;margin-bottom:24px;}" +
+                ".actor-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#8B0000,#cd5c5c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:bold;font-family:Arial,sans-serif;flex-shrink:0;}" +
+                ".actor-info{font-family:Arial,sans-serif;}" +
+                ".actor-name{font-size:14px;color:#1a3333;font-weight:bold;}" +
+                ".actor-meta{font-size:12px;color:#6b8e8e;margin-top:2px;}" +
+                ".categories-container{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}" +
+                ".category-tag{display:inline-block;padding:4px 12px;background:#e8f5f5;border:1px solid #c8e8e8;border-radius:16px;font-size:12px;color:#0e7c7b;font-family:Arial,sans-serif;}" +
+                ".footer{background:#e8f5f5;border-top:2px solid #c8e8e8;padding:24px 40px;text-align:center;}" +
+                ".footer p{font-family:Arial,sans-serif;font-size:11px;color:#6b8e8e;margin:4px 0;line-height:1.6;}" +
+                ".footer .brand{font-size:13px;color:#0e7c7b;font-weight:bold;margin-bottom:6px;}" +
+                "</style></head><body>" +
+                "<div class='wrapper'>" +
+                "<div class='header'>" +
+                "<img src='https://res.cloudinary.com/dtzrivqye/image/upload/v1775493945/gi5x2y4vwaplhkwchp0p.png' alt='Felicita Trips'/>" +
+                "<h1>Destination Terminated</h1>" +
+                "<p class='tagline'>See More! Feel More! Live More!</p>" +
+                "<span class='badge'>&#10060; Termination Completed</span>" +
+                "</div>" +
+
+                "<div class='content'>" +
+
+                "<div class='terminate-warning'>" +
+                "<span class='warning-icon'>⚠️</span>" +
+                "<p><strong>This destination has been terminated</strong> and is no longer available for booking or display.</p>" +
+                "</div>" +
+
+                "<p class='section-title'>Terminated By</p>" +
+                "<div class='actor-row'>" +
+                "<div class='actor-avatar'>" + getInitials(loggedUser) + "</div>" +
+                "<div class='actor-info'>" +
+                "<div class='actor-name'>" + getFullName(loggedUser) + "</div>" +
+                "<div class='actor-meta'>" + loggedUser.getEmail() + " &nbsp;|&nbsp; " + loggedUser.getUsername() + "</div>" +
+                "</div>" +
+                "</div>" +
+
+                "<p class='section-title'>Destination Details</p>" +
+                "<div class='info-card'>" +
+                "<div class='info-row'><span class='info-label'>Destination ID</span><span class='info-value'>#" + destinationDetailsById.getDestinationId() + "</span></div>" +
+                "<div class='info-row'><span class='info-label'>Destination Name</span><span class='info-value'>" + escapeHtml(destinationDetailsById.getDestinationName()) + "</span></div>" +
+                "<div class='info-row'><span class='info-label'>Description</span><span class='info-value'>" + escapeHtml(destinationDetailsById.getDestinationDescription()) + "</span></div>" +
+                "<div class='info-row'><span class='info-label'>Status</span><span class='info-value'><span class='status-pill-terminated'>TERMINATED</span></span></div>" +
+                "<div class='info-row'><span class='info-label'>Location</span><span class='info-value'>" + escapeHtml(destinationDetailsById.getLocation()) + "</span></div>" +
+                "<div class='info-row'><span class='info-label'>Coordinates</span><span class='info-value'><span class='coordinates'>" +
+                (destinationDetailsById.getLatitude() != null ? destinationDetailsById.getLatitude() : "—") + ", " +
+                (destinationDetailsById.getLongitude() != null ? destinationDetailsById.getLongitude() : "—") + "</span></span></div>" +
+                "<div class='info-row'><span class='info-label'>Ratings</span><span class='info-value'>" + (destinationDetailsById.getRatings() != null ? destinationDetailsById.getRatings() + " ★" : "—") + "</span></div>" +
+                "</div>" +
+
+                (categoriesHtml.isEmpty() ? "" :
+                        "<p class='section-title'>Categories</p>" +
+                                "<div class='categories-container'>" + categoriesHtml + "</div><br/>") +
+
+                (activitiesHtml.isEmpty() ? "" :
+                        "<p class='section-title'>Activities (" + (destinationDetailsById.getActivities() != null ? destinationDetailsById.getActivities().size() : 0) + ")</p>" +
+                                activitiesHtml + "<br/>") +
+
+                (imagesHtml.isEmpty() ? "" :
+                        "<p class='section-title'>Images (" + (destinationDetailsById.getImages() != null ? destinationDetailsById.getImages().size() : 0) + ")</p>" +
+                                imagesHtml) +
+
+                "</div>" +
+
+                "<div class='footer'>" +
+                "<p class='brand'>Felicita Trips — Admin Portal</p>" +
+                "<p>This is an automated notification from the Felicita Trips admin system.</p>" +
+                "<p>Please do not reply to this email.</p>" +
+                "</div>" +
+                "</div>" +
+                "</body></html>";
+    }
+
+    @Override
+    public String buildTrendingDestinationCreateSuccessfullSubject(TrendingDestinationInsertRequest trendingDestinationInsertRequest, User loggedUser) {
+        return String.format("[Felicita Trips] Trending Destination Added — %s",
+                trendingDestinationInsertRequest.getDestinationName() != null ?
+                        trendingDestinationInsertRequest.getDestinationName() : "Unknown");
+    }
+
+    @Override
+    public String buildTrendingDestinationTerminateSuccessfullSubject(User loggedUser, TrendingDestinationTerminateRequest trendingDestinationTerminateRequest) {
+        return String.format("[Felicita Trips] Trending Destination Removed — %s",
+                trendingDestinationTerminateRequest.getDestinationName() != null ?
+                        trendingDestinationTerminateRequest.getDestinationName() : "Unknown");
+    }
+
+    @Override
+    public String buildTrendingDestinationTerminateSuccessfullBody(User loggedUser, TrendingDestinationTerminateRequest trendingDestinationTerminateRequest) {
+        return "<!DOCTYPE html>" +
+                "<html lang='en'><head><meta charset='UTF-8'/><meta name='viewport' content='width=device-width,initial-scale=1'/>" +
+                "<title>Trending Destination Removed</title>" +
+                "<style>" +
+                "body{margin:0;padding:0;background:#f0f7f7;font-family:Georgia,serif;}" +
+                ".wrapper{max-width:640px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,128,128,0.10);}" +
+                ".header{background:linear-gradient(135deg,#8B0000 0%,#b22222 50%,#cd5c5c 100%);padding:36px 40px 28px;text-align:center;}" +
+                ".header img{height:52px;margin-bottom:16px;}" +
+                ".header h1{color:#ffffff;font-size:22px;margin:0;font-weight:normal;letter-spacing:0.5px;}" +
+                ".header p.tagline{color:rgba(255,255,255,0.80);font-size:12px;margin:6px 0 0;letter-spacing:2px;text-transform:uppercase;}" +
+                ".badge{display:inline-block;background:rgba(255,255,255,0.18);color:#ffffff;border:1px solid rgba(255,255,255,0.40);border-radius:20px;padding:4px 16px;font-size:12px;margin-top:14px;letter-spacing:1px;}" +
+                ".content{padding:36px 40px;}" +
+                ".section-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8B0000;margin:0 0 14px;font-family:Arial,sans-serif;}" +
+                ".info-card{background:#f5fbfb;border:1px solid #c8e8e8;border-radius:8px;padding:20px 24px;margin-bottom:24px;}" +
+                ".info-row{display:flex;align-items:flex-start;padding:8px 0;border-bottom:1px solid #e0f0f0;}" +
+                ".info-row:last-child{border-bottom:none;padding-bottom:0;}" +
+                ".info-label{font-family:Arial,sans-serif;font-size:12px;color:#6b8e8e;min-width:130px;padding-top:2px;}" +
+                ".info-value{font-size:14px;color:#1a3333;font-family:Arial,sans-serif;word-break:break-all;}" +
+                ".terminate-warning{background:#fdecea;border:1px solid #e0b0b0;border-radius:8px;padding:16px 20px;margin-bottom:24px;text-align:center;}" +
+                ".terminate-warning p{color:#a33;font-family:Arial,sans-serif;font-size:13px;margin:0;}" +
+                ".terminate-warning .warning-icon{font-size:24px;margin-bottom:8px;display:block;}" +
+                ".status-pill{display:inline-block;padding:2px 12px;border-radius:12px;font-size:12px;font-family:Arial,sans-serif;}" +
+                ".status-inactive{background:#fdecea;color:#a33;}" +
+                ".actor-row{display:flex;align-items:center;gap:12px;padding:16px 20px;background:#f5fbfb;border:1px solid #c8e8e8;border-radius:8px;margin-bottom:24px;}" +
+                ".actor-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#8B0000,#cd5c5c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:bold;font-family:Arial,sans-serif;flex-shrink:0;}" +
+                ".actor-info{font-family:Arial,sans-serif;}" +
+                ".actor-name{font-size:14px;color:#1a3333;font-weight:bold;}" +
+                ".actor-meta{font-size:12px;color:#6b8e8e;margin-top:2px;}" +
+                ".removed-icon{display:inline-block;font-size:24px;margin-right:8px;vertical-align:middle;}" +
+                ".removed-card{background:#fdecea;border:2px solid #e0b0b0;border-radius:8px;padding:20px 24px;margin-bottom:24px;text-align:center;}" +
+                ".removed-card .removed-icon-large{font-size:32px;color:#a33;display:block;margin-bottom:10px;}" +
+                ".removed-card .removed-text{font-size:16px;color:#a33;font-weight:bold;font-family:Arial,sans-serif;}" +
+                ".footer{background:#e8f5f5;border-top:2px solid #c8e8e8;padding:24px 40px;text-align:center;}" +
+                ".footer p{font-family:Arial,sans-serif;font-size:11px;color:#6b8e8e;margin:4px 0;line-height:1.6;}" +
+                ".footer .brand{font-size:13px;color:#0e7c7b;font-weight:bold;margin-bottom:6px;}" +
+                "</style></head><body>" +
+                "<div class='wrapper'>" +
+                "<div class='header'>" +
+                "<img src='https://res.cloudinary.com/dtzrivqye/image/upload/v1775493945/gi5x2y4vwaplhkwchp0p.png' alt='Felicita Trips'/>" +
+                "<h1>Trending Destination Removed</h1>" +
+                "<p class='tagline'>See More! Feel More! Live More!</p>" +
+                "<span class='badge'>&#10060; Removed from Trending</span>" +
+                "</div>" +
+
+                "<div class='content'>" +
+
+                "<div class='terminate-warning'>" +
+                "<span class='warning-icon'>⚠️</span>" +
+                "<p><strong>This destination has been removed from the Trending list</strong> and will no longer be featured prominently on the homepage.</p>" +
+                "</div>" +
+
+                "<p class='section-title'>Removed By</p>" +
+                "<div class='actor-row'>" +
+                "<div class='actor-avatar'>" + getInitials(loggedUser) + "</div>" +
+                "<div class='actor-info'>" +
+                "<div class='actor-name'>" + getFullName(loggedUser) + "</div>" +
+                "<div class='actor-meta'>" + loggedUser.getEmail() + " &nbsp;|&nbsp; " + loggedUser.getUsername() + "</div>" +
+                "</div>" +
+                "</div>" +
+
+                "<div class='removed-card'>" +
+                "<span class='removed-icon-large'>❌🔥</span>" +
+                "<div class='removed-text'>This destination is no longer in Trending!</div>" +
+                "<div style='font-size:12px;color:#6b8e8e;margin-top:8px;'>It will now appear in regular destination listings only</div>" +
+                "</div>" +
+
+                "<p class='section-title'>Trending Destination Details</p>" +
+                "<div class='info-card'>" +
+                "<div class='info-row'><span class='info-label'>Destination ID</span><span class='info-value'>#" +
+                (trendingDestinationTerminateRequest.getDestinationId() != null ? trendingDestinationTerminateRequest.getDestinationId() : "—") +
+                "</span></div>" +
+                "<div class='info-row'><span class='info-label'>Destination Name</span><span class='info-value'><span class='removed-icon'>❌</span>" +
+                escapeHtml(trendingDestinationTerminateRequest.getDestinationName() != null ? trendingDestinationTerminateRequest.getDestinationName() : "—") +
+                "</span></div>" +
+                "<div class='info-row'><span class='info-label'>Previous Status</span><span class='info-value'>" +
+                buildStatusPill(trendingDestinationTerminateRequest.getStatus()) +
+                "</span></div>" +
+                "<div class='info-row'><span class='info-label'>New Status</span><span class='info-value'><span class='status-pill status-inactive'>REMOVED FROM TRENDING</span></span></div>" +
+                "</div>" +
+
+                "</div>" +
+
+                "<div class='footer'>" +
+                "<p class='brand'>Felicita Trips — Admin Portal</p>" +
+                "<p>This is an automated notification from the Felicita Trips admin system.</p>" +
+                "<p>Please do not reply to this email.</p>" +
+                "</div>" +
+                "</div>" +
+                "</body></html>";
+    }
+
+    @Override
+    public String buildTrendingDestinationCreateSuccessfullBody(TrendingDestinationInsertRequest trendingDestinationInsertRequest, User loggedUser) {
+        return "<!DOCTYPE html>" +
+                "<html lang='en'><head><meta charset='UTF-8'/><meta name='viewport' content='width=device-width,initial-scale=1'/>" +
+                "<title>Trending Destination Added</title>" +
+                "<style>" +
+                "body{margin:0;padding:0;background:#f0f7f7;font-family:Georgia,serif;}" +
+                ".wrapper{max-width:640px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,128,128,0.10);}" +
+                ".header{background:linear-gradient(135deg,#0e7c7b 0%,#1a9e9e 50%,#2bbfbf 100%);padding:36px 40px 28px;text-align:center;}" +
+                ".header img{height:52px;margin-bottom:16px;}" +
+                ".header h1{color:#ffffff;font-size:22px;margin:0;font-weight:normal;letter-spacing:0.5px;}" +
+                ".header p.tagline{color:rgba(255,255,255,0.80);font-size:12px;margin:6px 0 0;letter-spacing:2px;text-transform:uppercase;}" +
+                ".badge{display:inline-block;background:rgba(255,255,255,0.18);color:#ffffff;border:1px solid rgba(255,255,255,0.40);border-radius:20px;padding:4px 16px;font-size:12px;margin-top:14px;letter-spacing:1px;}" +
+                ".content{padding:36px 40px;}" +
+                ".section-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#0e7c7b;margin:0 0 14px;font-family:Arial,sans-serif;}" +
+                ".info-card{background:#f5fbfb;border:1px solid #c8e8e8;border-radius:8px;padding:20px 24px;margin-bottom:24px;}" +
+                ".info-row{display:flex;align-items:flex-start;padding:8px 0;border-bottom:1px solid #e0f0f0;}" +
+                ".info-row:last-child{border-bottom:none;padding-bottom:0;}" +
+                ".info-label{font-family:Arial,sans-serif;font-size:12px;color:#6b8e8e;min-width:130px;padding-top:2px;}" +
+                ".info-value{font-size:14px;color:#1a3333;font-family:Arial,sans-serif;word-break:break-all;}" +
+                ".trending-icon{display:inline-block;font-size:24px;margin-right:8px;vertical-align:middle;}" +
+                ".status-pill{display:inline-block;padding:2px 12px;border-radius:12px;font-size:12px;font-family:Arial,sans-serif;}" +
+                ".status-active{background:#d4f4e8;color:#1a6b40;}" +
+                ".status-inactive{background:#fdecea;color:#a33;}" +
+                ".actor-row{display:flex;align-items:center;gap:12px;padding:16px 20px;background:#f5fbfb;border:1px solid #c8e8e8;border-radius:8px;margin-bottom:24px;}" +
+                ".actor-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#0e7c7b,#2bbfbf);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:bold;font-family:Arial,sans-serif;flex-shrink:0;}" +
+                ".actor-info{font-family:Arial,sans-serif;}" +
+                ".actor-name{font-size:14px;color:#1a3333;font-weight:bold;}" +
+                ".actor-meta{font-size:12px;color:#6b8e8e;margin-top:2px;}" +
+                ".highlight-card{background:linear-gradient(135deg,#fff8e7 0%,#fff4db 100%);border:2px solid #ffd700;border-radius:8px;padding:20px 24px;margin-bottom:24px;text-align:center;}" +
+                ".highlight-card .star{font-size:28px;color:#ffd700;display:block;margin-bottom:10px;}" +
+                ".highlight-card .trending-text{font-size:16px;color:#0e7c7b;font-weight:bold;font-family:Arial,sans-serif;}" +
+                ".footer{background:#e8f5f5;border-top:2px solid #c8e8e8;padding:24px 40px;text-align:center;}" +
+                ".footer p{font-family:Arial,sans-serif;font-size:11px;color:#6b8e8e;margin:4px 0;line-height:1.6;}" +
+                ".footer .brand{font-size:13px;color:#0e7c7b;font-weight:bold;margin-bottom:6px;}" +
+                "</style></head><body>" +
+                "<div class='wrapper'>" +
+                "<div class='header'>" +
+                "<img src='https://res.cloudinary.com/dtzrivqye/image/upload/v1775493945/gi5x2y4vwaplhkwchp0p.png' alt='Felicita Trips'/>" +
+                "<h1>Trending Destination Added</h1>" +
+                "<p class='tagline'>See More! Feel More! Live More!</p>" +
+                "<span class='badge'>&#127775; Added to Trending</span>" +
+                "</div>" +
+
+                "<div class='content'>" +
+
+                "<p class='section-title'>Added By</p>" +
+                "<div class='actor-row'>" +
+                "<div class='actor-avatar'>" + getInitials(loggedUser) + "</div>" +
+                "<div class='actor-info'>" +
+                "<div class='actor-name'>" + getFullName(loggedUser) + "</div>" +
+                "<div class='actor-meta'>" + loggedUser.getEmail() + " &nbsp;|&nbsp; " + loggedUser.getUsername() + "</div>" +
+                "</div>" +
+                "</div>" +
+
+                "<div class='highlight-card'>" +
+                "<span class='star'>⭐🔥</span>" +
+                "<div class='trending-text'>This destination has been added to the Trending list!</div>" +
+                "<div style='font-size:12px;color:#6b8e8e;margin-top:8px;'>It will now be displayed prominently on the homepage</div>" +
+                "</div>" +
+
+                "<p class='section-title'>Trending Destination Details</p>" +
+                "<div class='info-card'>" +
+                "<div class='info-row'><span class='info-label'>Destination ID</span><span class='info-value'>#" +
+                (trendingDestinationInsertRequest.getDestinationId() != null ? trendingDestinationInsertRequest.getDestinationId() : "—") +
+                "</span></div>" +
+                "<div class='info-row'><span class='info-label'>Destination Name</span><span class='info-value'><span class='trending-icon'>🔥</span>" +
+                escapeHtml(trendingDestinationInsertRequest.getDestinationName() != null ? trendingDestinationInsertRequest.getDestinationName() : "—") +
+                "</span></div>" +
+                "<div class='info-row'><span class='info-label'>Status</span><span class='info-value'>" +
+                buildStatusPill(trendingDestinationInsertRequest.getStatus()) +
+                "</span></div>" +
+                "</div>" +
+
+                "</div>" +
+
+                "<div class='footer'>" +
+                "<p class='brand'>Felicita Trips — Admin Portal</p>" +
+                "<p>This is an automated notification from the Felicita Trips admin system.</p>" +
+                "<p>Please do not reply to this email.</p>" +
+                "</div>" +
+                "</div>" +
+                "</body></html>";
+    }
+
+// Helper methods for termination email
+
+    private String buildTerminateCategoriesHtml(List<DestinationCategoryDetailsDto> categories) {
+        if (categories == null || categories.isEmpty()) {
+            return "<span style='color:#6b8e8e;font-style:italic;'>No categories assigned</span>";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (DestinationCategoryDetailsDto category : categories) {
+            sb.append("<span class='category-tag'>")
+                    .append(escapeHtml(category.getName()))
+                    .append(category.getIsPrimary() != null && category.getIsPrimary() ? " <span style='font-size:9px;'>(Primary)</span>" : "")
+                    .append("</span>");
+        }
+        return sb.toString();
+    }
+
+    private String buildTerminateActivitiesHtml(List<DestinationActivityResponseDto> activities) {
+        if (activities == null || activities.isEmpty()) {
+            return "<div class='info-card'><p style='color:#6b8e8e;font-style:italic;margin:0;'>No activities associated</p></div>";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (DestinationActivityResponseDto activity : activities) {
+            sb.append("<div class='info-card' style='margin-bottom:12px;'>")
+                    .append("<div class='info-row'><span class='info-label'>Activity Name</span><span class='info-value'>").append(escapeHtml(activity.getActivityName())).append("</span></div>")
+                    .append("<div class='info-row'><span class='info-label'>Description</span><span class='info-value'>").append(activity.getActivityDescription() != null ? escapeHtml(activity.getActivityDescription()) : "—").append("</span></div>")
+                    .append("<div class='info-row'><span class='info-label'>Prices</span><span class='info-value'>Local: ").append(activity.getPriceLocal() != null ? "$" + activity.getPriceLocal() : "—")
+                    .append(" | Foreigners: ").append(activity.getPriceForeigners() != null ? "$" + activity.getPriceForeigners() : "—").append("</span></div>")
+                    .append("<div class='info-row'><span class='info-label'>Duration</span><span class='info-value'>").append(activity.getDurationHours() != null ? activity.getDurationHours() + " hours" : "—").append("</span></div>");
+
+            if (activity.getActivityCategories() != null && !activity.getActivityCategories().isEmpty()) {
+                sb.append("<div class='info-row'><span class='info-label'>Categories</span><span class='info-value'>");
+                for (String cat : activity.getActivityCategories()) {
+                    sb.append("<span class='category-tag' style='margin-right:4px;'>").append(escapeHtml(cat)).append("</span>");
+                }
+                sb.append("</span></div>");
+            }
+            sb.append("</div>");
+        }
+        return sb.toString();
+    }
+
+    private String buildTerminateImagesHtml(List<DestionationImageResponseDto> images) {
+        if (images == null || images.isEmpty()) {
+            return "<div class='info-card'><p style='color:#6b8e8e;font-style:italic;margin:0;'>No images associated</p></div>";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("<table class='info-table'><thead><tr><th>#</th><th>Name</th><th>Description</th><th>Preview</th></tr></thead><tbody>");
+        int i = 1;
+        for (DestionationImageResponseDto img : images) {
+            sb.append("<tr>")
+                    .append("<td>").append(i++).append("</td>")
+                    .append("<td>").append(escapeHtml(img.getImageName())).append("</td>")
+                    .append("<td>").append(img.getImageDescription() != null ? escapeHtml(img.getImageDescription()) : "—").append("</td>")
+                    .append("<td>").append(img.getImageUrl() != null ?
+                            "<a href='" + img.getImageUrl() + "' style='color:#0e7c7b;text-decoration:none;' target='_blank'>🔗 View</a>" : "—").append("</td>")
+                    .append("</tr>");
+        }
+        sb.append("</tbody></table>");
+        return sb.toString();
     }
 
 // Helper methods for the update email

@@ -13,7 +13,7 @@ public interface DestinationRepository {
 
     List<PopularDestinationResponseDto> getPopularDestinations();
 
-    List<TrendingDestinationResponseDto> getTrendingDestinations();
+    List<TrendingDestinationResponseDto> getTrendingDestinations(List<Long> destinationIds);
 
     List<DestinationsForTourMapDto> getDestinationsForTourMap();
 
@@ -78,4 +78,10 @@ public interface DestinationRepository {
     void terminateDestinationCategory(DestinationCategoryTerminateRequest destinationCategoryTerminateRequest, Long userId);
 
     void insertDestinationCategoryImages(List<InsertDestinationCategoryImagesRequestDto> images, Long destinationCategoryId, Long userId);
+
+    Long addTrendingDestinations(TrendingDestinationInsertRequest trendingDestinationInsertRequest, Long userId);
+
+    void termianteTrendingDestination(TrendingDestinationTerminateRequest trendingDestinationTerminateRequest, Long userId);
+
+    List<Long> getTrendingDestinationIds();
 }

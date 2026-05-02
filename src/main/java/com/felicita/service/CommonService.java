@@ -38,4 +38,8 @@ public interface CommonService {
     CommonResponse<UpdateResponse> readAllUnreadNotifications();
 
     List<String> getSupervisorEmailsWhichEnableNotificationForGiven(String name, List<Long> supervisorUserIds);
+
+    List<Long> extractSupervisorUserIds(List<SupervisorBasicDetailsDto> supervisorDetails);
+
+    String createEmployeeUniqueEmployeeCode();
 }

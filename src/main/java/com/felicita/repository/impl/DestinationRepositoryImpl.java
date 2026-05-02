@@ -10,6 +10,7 @@ import com.felicita.model.request.*;
 import com.felicita.model.response.*;
 import com.felicita.queries.DestinationQueries;
 import com.felicita.repository.DestinationRepository;
+import com.felicita.repository.StatusRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,11 +19,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
 import static com.felicita.queries.DestinationQueries.*;
 
 @Repository
@@ -31,10 +34,12 @@ public class DestinationRepositoryImpl implements DestinationRepository {
     private static final Logger LOGGER = LoggerFactory.getLogger(DestinationRepositoryImpl.class);
 
     private final JdbcTemplate jdbcTemplate;
+    private final StatusRepository statusRepository;
 
     @Autowired
-    public DestinationRepositoryImpl(JdbcTemplate jdbcTemplate) {
+    public DestinationRepositoryImpl(JdbcTemplate jdbcTemplate, StatusRepository statusRepository) {
         this.jdbcTemplate = jdbcTemplate;
+        this.statusRepository = statusRepository;
     }
 
     @Override
@@ -65,7 +70,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                             destination.setDestinationCategoryDetailsDtos(
                                     categoryJson != null
                                             ? mapper.readValue(categoryJson,
-                                            new TypeReference<List<DestinationCategoryDetailsDto>>() {})
+                                            new TypeReference<List<DestinationCategoryDetailsDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -74,7 +80,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                             destination.setActivities(
                                     activitiesJson != null
                                             ? mapper.readValue(activitiesJson,
-                                            new TypeReference<List<DestinationActivityResponseDto>>() {})
+                                            new TypeReference<List<DestinationActivityResponseDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -83,7 +90,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                             destination.setImages(
                                     imagesJson != null
                                             ? mapper.readValue(imagesJson,
-                                            new TypeReference<List<DestionationImageResponseDto>>() {})
+                                            new TypeReference<List<DestionationImageResponseDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -197,7 +205,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                                     categoryJson != null
                                             ? mapper.readValue(
                                             categoryJson,
-                                            new TypeReference<List<DestinationCategoryDetailsDto>>() {})
+                                            new TypeReference<List<DestinationCategoryDetailsDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -207,7 +216,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                                     imagesJson != null
                                             ? mapper.readValue(
                                             imagesJson,
-                                            new TypeReference<List<DestinationImageResponseDto>>() {})
+                                            new TypeReference<List<DestinationImageResponseDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -231,61 +241,77 @@ public class DestinationRepositoryImpl implements DestinationRepository {
     }
 
     @Override
-    public List<TrendingDestinationResponseDto> getTrendingDestinations() {
+    public List<TrendingDestinationResponseDto> getTrendingDestinations(List<Long> destinationIds) {
+
         try {
-            LOGGER.info("Fetching trending destinations...");
+            LOGGER.info("Fetching trending destinations.");
 
-            return jdbcTemplate.query(GET_TRENDING_DESTINATIONS, (rs, rowNum) -> {
-                TrendingDestinationResponseDto dto = new TrendingDestinationResponseDto();
+            if (destinationIds == null || destinationIds.isEmpty()) {
+                return List.of();
+            }
 
-                dto.setPopularId(rs.getInt("popular_id"));
-                dto.setRating(rs.getDouble("rating"));
-                dto.setPopularity(rs.getInt("popularity"));
+            String placeholders = destinationIds.stream()
+                    .map(id -> "?")
+                    .reduce((a, b) -> a + "," + b)
+                    .orElse("");
 
-                Timestamp createdTs = rs.getTimestamp("popular_created_at");
-                dto.setPopularCreatedAt(createdTs != null ? createdTs.toLocalDateTime() : null);
+            String finalQuery = GET_TRENDING_DESTINATIONS
+                    .replace("(:destinationIds)", "(" + placeholders + ")");
 
-                dto.setDestinationId(rs.getInt("destination_id"));
-                dto.setDestinationName(rs.getString("destination_name"));
-                dto.setDestinationDescription(rs.getString("destination_description"));
-                dto.setLocation(rs.getString("location"));
-                dto.setLatitude(rs.getObject("latitude", Double.class));
-                dto.setLongitude(rs.getObject("longitude", Double.class));
-                dto.setDestinationStatus(rs.getString("destination_status"));
+            return jdbcTemplate.query(
+                    finalQuery,
+                    destinationIds.toArray(),
+                    (rs, rowNum) -> {
 
-                ObjectMapper mapper = new ObjectMapper();
+                        TrendingDestinationResponseDto dto = new TrendingDestinationResponseDto();
 
-                try {
-                    // Categories
-                    String categoryJson = rs.getString("destination_categories");
-                    dto.setDestinationCategoryDetailsDtos(
-                            categoryJson != null
-                                    ? mapper.readValue(categoryJson, new TypeReference<List<DestinationCategoryDetailsDto>>() {})
-                                    : List.of()
-                    );
+                        dto.setPopularId(rs.getInt("popular_id"));
+                        dto.setRating(rs.getDouble("rating"));
+                        dto.setPopularity(rs.getInt("popularity"));
 
-                    // Images
-                    String imagesJson = rs.getString("images");
-                    dto.setImages(
-                            imagesJson != null
-                                    ? mapper.readValue(imagesJson, new TypeReference<List<DestinationImageResponseDto>>() {})
-                                    : List.of()
-                    );
+                        Timestamp createdTs = rs.getTimestamp("popular_created_at");
+                        dto.setPopularCreatedAt(createdTs != null ? createdTs.toLocalDateTime() : null);
 
-                    // Activities
-                    String activitiesJson = rs.getString("activities");
-                    dto.setActivities(
-                            activitiesJson != null
-                                    ? mapper.readValue(activitiesJson, new TypeReference<List<DestinationActivityResponseDto>>() {})
-                                    : List.of()
-                    );
+                        dto.setDestinationId(rs.getInt("destination_id"));
+                        dto.setDestinationName(rs.getString("destination_name"));
+                        dto.setDestinationDescription(rs.getString("destination_description"));
+                        dto.setLocation(rs.getString("location"));
+                        dto.setLatitude(rs.getObject("latitude", Double.class));
+                        dto.setLongitude(rs.getObject("longitude", Double.class));
+                        dto.setDestinationStatus(rs.getString("destination_status"));
 
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException("Error parsing trending destination JSON", e);
-                }
+                        ObjectMapper mapper = new ObjectMapper();
 
-                return dto;
-            });
+                        try {
+
+                            String categoryJson = rs.getString("destination_categories");
+                            dto.setDestinationCategoryDetailsDtos(
+                                    categoryJson != null
+                                            ? mapper.readValue(categoryJson, new TypeReference<>() {})
+                                            : List.of()
+                            );
+
+                            String imagesJson = rs.getString("images");
+                            dto.setImages(
+                                    imagesJson != null
+                                            ? mapper.readValue(imagesJson, new TypeReference<>() {})
+                                            : List.of()
+                            );
+
+                            String activitiesJson = rs.getString("activities");
+                            dto.setActivities(
+                                    activitiesJson != null
+                                            ? mapper.readValue(activitiesJson, new TypeReference<>() {})
+                                            : List.of()
+                            );
+
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException("Error parsing trending destination JSON", e);
+                        }
+
+                        return dto;
+                    }
+            );
 
         } catch (DataAccessException ex) {
             LOGGER.error("Database error while fetching trending destinations: {}", ex.getMessage(), ex);
@@ -313,7 +339,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                 String categoriesJson = rs.getString("destination_categories");
                 if (categoriesJson != null) {
                     try {
-                        dto.setDestinationCategories(objectMapper.readValue(categoriesJson, new TypeReference<List<String>>() {}));
+                        dto.setDestinationCategories(objectMapper.readValue(categoriesJson, new TypeReference<List<String>>() {
+                        }));
                     } catch (JsonProcessingException e) {
                         dto.setDestinationCategories(new ArrayList<>());
                     }
@@ -335,7 +362,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                     try {
                         dto.setDestinationImagesForTourMapDtos(objectMapper.readValue(
                                 destinationImagesJson,
-                                new TypeReference<List<DestinationImagesForTourMapDto>>() {}
+                                new TypeReference<List<DestinationImagesForTourMapDto>>() {
+                                }
                         ));
                     } catch (JsonProcessingException e) {
                         dto.setDestinationImagesForTourMapDtos(new ArrayList<>());
@@ -350,7 +378,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                     try {
                         dto.setDestinationCategoryImageForTourMapDtos(objectMapper.readValue(
                                 categoryImagesJson,
-                                new TypeReference<List<DestinationCategoryImageForTourMapDto>>() {}
+                                new TypeReference<List<DestinationCategoryImageForTourMapDto>>() {
+                                }
                         ));
                     } catch (JsonProcessingException e) {
                         dto.setDestinationCategoryImageForTourMapDtos(new ArrayList<>());
@@ -396,7 +425,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                         String categoryJson = rs.getString("destination_categories");
                         dto.setDestinationCategoryDetailsDtos(
                                 categoryJson != null
-                                        ? mapper.readValue(categoryJson, new TypeReference<List<DestinationCategoryDetailsDto>>() {})
+                                        ? mapper.readValue(categoryJson, new TypeReference<List<DestinationCategoryDetailsDto>>() {
+                                })
                                         : List.of()
                         );
 
@@ -404,7 +434,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                         String imagesJson = rs.getString("images");
                         dto.setImages(
                                 imagesJson != null
-                                        ? mapper.readValue(imagesJson, new TypeReference<List<DestionationImageResponseDto>>() {})
+                                        ? mapper.readValue(imagesJson, new TypeReference<List<DestionationImageResponseDto>>() {
+                                })
                                         : List.of()
                         );
 
@@ -412,7 +443,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                         String activitiesJson = rs.getString("activities");
                         dto.setActivities(
                                 activitiesJson != null
-                                        ? mapper.readValue(activitiesJson, new TypeReference<List<DestinationActivityResponseDto>>() {})
+                                        ? mapper.readValue(activitiesJson, new TypeReference<List<DestinationActivityResponseDto>>() {
+                                })
                                         : List.of()
                         );
 
@@ -702,7 +734,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                     String categoryJson = rs.getString("destination_categories");
                     dto.setDestinationCategoryDetailsDtos(
                             categoryJson != null
-                                    ? mapper.readValue(categoryJson, new TypeReference<List<DestinationCategoryDetailsDto>>() {})
+                                    ? mapper.readValue(categoryJson, new TypeReference<List<DestinationCategoryDetailsDto>>() {
+                            })
                                     : List.of()
                     );
 
@@ -710,7 +743,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                     String imagesJson = rs.getString("images");
                     dto.setImages(
                             imagesJson != null
-                                    ? mapper.readValue(imagesJson, new TypeReference<List<DestionationImageResponseDto>>() {})
+                                    ? mapper.readValue(imagesJson, new TypeReference<List<DestionationImageResponseDto>>() {
+                            })
                                     : List.of()
                     );
 
@@ -718,7 +752,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                     String activitiesJson = rs.getString("activities");
                     dto.setActivities(
                             activitiesJson != null
-                                    ? mapper.readValue(activitiesJson, new TypeReference<List<DestinationActivityResponseDto>>() {})
+                                    ? mapper.readValue(activitiesJson, new TypeReference<List<DestinationActivityResponseDto>>() {
+                            })
                                     : List.of()
                     );
 
@@ -1223,7 +1258,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                             destination.setDestinationCategoryDetailsDtos(
                                     categoryJson != null
                                             ? mapper.readValue(categoryJson,
-                                            new TypeReference<List<DestinationCategoryDetailsDto>>() {})
+                                            new TypeReference<List<DestinationCategoryDetailsDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -1232,7 +1268,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                             destination.setActivities(
                                     activitiesJson != null
                                             ? mapper.readValue(activitiesJson,
-                                            new TypeReference<List<DestinationActivityResponseDto>>() {})
+                                            new TypeReference<List<DestinationActivityResponseDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -1241,7 +1278,8 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                             destination.setImages(
                                     imagesJson != null
                                             ? mapper.readValue(imagesJson,
-                                            new TypeReference<List<DestionationImageResponseDto>>() {})
+                                            new TypeReference<List<DestionationImageResponseDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -1784,10 +1822,10 @@ public class DestinationRepositoryImpl implements DestinationRepository {
                 return Collections.emptyList();
             }
             String sql = """
-                SELECT dc.category
-                FROM destination_categories dc
-                WHERE dc.id IN (%s)
-                """.formatted(
+                    SELECT dc.category
+                    FROM destination_categories dc
+                    WHERE dc.id IN (%s)
+                    """.formatted(
                     destinationCategoriesIdList.stream()
                             .map(id -> "?")
                             .collect(Collectors.joining(","))
@@ -1813,50 +1851,50 @@ public class DestinationRepositoryImpl implements DestinationRepository {
     getDestinationCategoriesDetails() {
 
         String GET_DESTINATION_CATEGORIES_DETAILS = """
-            SELECT
-                COUNT(*) AS total_count,
-
-                SUM(
-                    CASE
-                        WHEN cs.name = 'ACTIVE' THEN 1
-                        ELSE 0
-                    END
-                ) AS active_count,
-
-                SUM(
-                    CASE
-                        WHEN cs.name = 'INACTIVE' THEN 1
-                        ELSE 0
-                    END
-                ) AS inactive_count,
-
-                SUM(
-                    CASE
-                        WHEN cs.name = 'TERMINATED' THEN 1
-                        ELSE 0
-                    END
-                ) AS terminated_count,
-
-                SUM(
-                    CASE
-                        WHEN DATE(dc.updated_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                        THEN 1
-                        ELSE 0
-                    END
-                ) AS recently_updated_count,
-
-                SUM(
-                    CASE
-                        WHEN DATE(dc.created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                        THEN 1
-                        ELSE 0
-                    END
-                ) AS recently_added_count
-
-            FROM destination_categories dc
-            JOIN common_status cs
-                ON dc.status = cs.id
-            """;
+                SELECT
+                    COUNT(*) AS total_count,
+                
+                    SUM(
+                        CASE
+                            WHEN cs.name = 'ACTIVE' THEN 1
+                            ELSE 0
+                        END
+                    ) AS active_count,
+                
+                    SUM(
+                        CASE
+                            WHEN cs.name = 'INACTIVE' THEN 1
+                            ELSE 0
+                        END
+                    ) AS inactive_count,
+                
+                    SUM(
+                        CASE
+                            WHEN cs.name = 'TERMINATED' THEN 1
+                            ELSE 0
+                        END
+                    ) AS terminated_count,
+                
+                    SUM(
+                        CASE
+                            WHEN DATE(dc.updated_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS recently_updated_count,
+                
+                    SUM(
+                        CASE
+                            WHEN DATE(dc.created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS recently_added_count
+                
+                FROM destination_categories dc
+                JOIN common_status cs
+                    ON dc.status = cs.id
+                """;
 
         try {
 
@@ -1905,34 +1943,34 @@ public class DestinationRepositoryImpl implements DestinationRepository {
     getCategoryUsedDetails() {
 
         String GET_CATEGORY_USED_DETAILS = """
-            SELECT
-                dc.id AS category_id,
-                dc.category AS category_name,
-                dc.color,
-                dc.hover_color,
-
-                COUNT(dcm.destination_id) AS used_count
-
-            FROM destination_categories dc
-
-            LEFT JOIN destination_category_map dcm
-                ON dc.id = dcm.category_id
-
-            LEFT JOIN common_status cs
-                ON dcm.status = cs.id
-
-            WHERE
-                dcm.status IS NULL
-                OR cs.name != 'TERMINATED'
-
-            GROUP BY
-                dc.id,
-                dc.category,
-                dc.color,
-                dc.hover_color
-
-            ORDER BY used_count DESC
-            """;
+                SELECT
+                    dc.id AS category_id,
+                    dc.category AS category_name,
+                    dc.color,
+                    dc.hover_color,
+                
+                    COUNT(dcm.destination_id) AS used_count
+                
+                FROM destination_categories dc
+                
+                LEFT JOIN destination_category_map dcm
+                    ON dc.id = dcm.category_id
+                
+                LEFT JOIN common_status cs
+                    ON dcm.status = cs.id
+                
+                WHERE
+                    dcm.status IS NULL
+                    OR cs.name != 'TERMINATED'
+                
+                GROUP BY
+                    dc.id,
+                    dc.category,
+                    dc.color,
+                    dc.hover_color
+                
+                ORDER BY used_count DESC
+                """;
 
         try {
 
@@ -1978,34 +2016,34 @@ public class DestinationRepositoryImpl implements DestinationRepository {
     getCategoriesImagesCount() {
 
         String GET_CATEGORIES_IMAGES_COUNT = """
-            SELECT
-                dc.id AS category_id,
-                dc.category AS category_name,
-                dc.color,
-                dc.hover_color,
-
-                COUNT(dci.id) AS images_count
-
-            FROM destination_categories dc
-
-            LEFT JOIN destination_categories_images dci
-                ON dc.id = dci.destination_categories_id
-
-            LEFT JOIN common_status cs
-                ON dci.status = cs.id
-
-            WHERE
-                dci.status IS NULL
-                OR cs.name = 'ACTIVE' 
-
-            GROUP BY
-                dc.id,
-                dc.category,
-                dc.color,
-                dc.hover_color
-
-            ORDER BY images_count DESC
-            """;
+                SELECT
+                    dc.id AS category_id,
+                    dc.category AS category_name,
+                    dc.color,
+                    dc.hover_color,
+                
+                    COUNT(dci.id) AS images_count
+                
+                FROM destination_categories dc
+                
+                LEFT JOIN destination_categories_images dci
+                    ON dc.id = dci.destination_categories_id
+                
+                LEFT JOIN common_status cs
+                    ON dci.status = cs.id
+                
+                WHERE
+                    dci.status IS NULL
+                    OR cs.name = 'ACTIVE' 
+                
+                GROUP BY
+                    dc.id,
+                    dc.category,
+                    dc.color,
+                    dc.hover_color
+                
+                ORDER BY images_count DESC
+                """;
 
         try {
 
@@ -2401,6 +2439,165 @@ public class DestinationRepositoryImpl implements DestinationRepository {
             throw new InternalServerErrorExceptionHandler(
                     "Failed to insert category images"
             );
+        }
+    }
+
+    @Override
+    public Long addTrendingDestinations(
+            TrendingDestinationInsertRequest trendingDestinationInsertRequest,
+            Long userId) {
+
+        try {
+
+            Long destinationId = trendingDestinationInsertRequest.getDestinationId();
+
+            Long ACTIVE_STATUS = statusRepository.getStatusIdByName(CommonStatus.ACTIVE.name());
+            Long TERMINATED_STATUS = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
+
+            String checkSql = """
+                SELECT trending_destination_id, status
+                FROM trending_destinations
+                WHERE destination_id = ?
+                ORDER BY trending_destination_id DESC
+                LIMIT 1
+                """;
+
+            List<Map<String, Object>> existingRecords =
+                    jdbcTemplate.queryForList(checkSql, destinationId);
+
+            if (!existingRecords.isEmpty()) {
+
+                Map<String, Object> existingRecord = existingRecords.get(0);
+
+                Long trendingDestinationId = ((Number) existingRecord.get("trending_destination_id")).longValue();
+
+                Long existingStatus = ((Number) existingRecord.get("status")).longValue();
+
+                if (existingStatus == TERMINATED_STATUS) {
+
+                    String updateSql = """
+                        UPDATE trending_destinations
+                        SET
+                            status = ?,
+                            updated_by = ?,
+                            updated_at = CURRENT_TIMESTAMP,
+                            terminated_at = NULL,
+                            terminated_by = NULL
+                        WHERE trending_destination_id = ?
+                        """;
+
+                    jdbcTemplate.update(
+                            updateSql,
+                            ACTIVE_STATUS,
+                            userId,
+                            trendingDestinationId
+                    );
+                }
+
+                return trendingDestinationId;
+            }
+
+            // If no record exists → INSERT new
+            String insertSql = """
+                INSERT INTO trending_destinations
+                (
+                    destination_id,
+                    status,
+                    created_by,
+                    updated_by
+                )
+                VALUES
+                (
+                    ?, ?, ?, ?
+                )
+                """;
+
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(
+                        insertSql,
+                        Statement.RETURN_GENERATED_KEYS
+                );
+
+                ps.setLong(1, destinationId);
+                ps.setLong(2, ACTIVE_STATUS);
+                ps.setLong(3, userId);
+                ps.setLong(4, userId);
+
+                return ps;
+            }, keyHolder);
+
+            if (keyHolder.getKey() != null) {
+                return keyHolder.getKey().longValue();
+            }
+
+            return 0L;
+
+        } catch (Exception e) {
+
+            LOGGER.error("Error occurred while adding trending destination", e);
+
+            throw new RuntimeException("Failed to add trending destination");
+
+        }
+    }
+
+    @Override
+    public void termianteTrendingDestination(
+            TrendingDestinationTerminateRequest trendingDestinationTerminateRequest,
+            Long userId) {
+
+        try {
+
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
+
+            String sql = """
+                    UPDATE trending_destinations
+                    SET
+                        status = ?,
+                        terminated_at = CURRENT_TIMESTAMP,
+                        terminated_by = ?,
+                        updated_by = ?
+                    WHERE destination_id = ?
+                    """;
+
+            jdbcTemplate.update(
+                    sql,
+                    statusId,
+                    userId,
+                    userId,
+                    trendingDestinationTerminateRequest.getDestinationId()
+            );
+
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while terminating trending destination", e);
+            throw new RuntimeException("Failed to terminate trending destination");
+        }
+    }
+
+    @Override
+    public List<Long> getTrendingDestinationIds() {
+
+        try {
+
+            Long activeStatus = statusRepository.getStatusIdByName(CommonStatus.ACTIVE.name());
+
+            String sql = """
+                SELECT destination_id
+                FROM trending_destinations
+                WHERE status = ?
+                """;
+
+            return jdbcTemplate.query(
+                    sql,
+                    (rs, rowNum) -> rs.getLong("destination_id"),
+                    activeStatus
+            );
+
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching trending destination ids", e);
+            throw new RuntimeException("Failed to fetch trending destination ids");
         }
     }
 

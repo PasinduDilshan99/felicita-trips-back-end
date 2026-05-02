@@ -30,6 +30,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.felicita.util.Constant.COMPANY_EMAIL;
+import static com.felicita.util.FrontEndUrls.VIEW_DESTINATION_CATEGORIES_DETAILS;
 import static com.felicita.util.FrontEndUrls.VIEW_DESTINATION_DETAILS;
 
 @Service
@@ -251,7 +252,8 @@ public class DestinationServiceImpl implements DestinationService {
     public CommonResponse<List<TrendingDestinationResponseDto>> getTrendingDestinations() {
         LOGGER.info("Start fetching trending destinations from repository");
         try {
-            List<TrendingDestinationResponseDto> trendingDestinationResponseDtos = destinationRepository.getTrendingDestinations();
+            List<Long> destinationIds = destinationRepository.getTrendingDestinationIds();
+            List<TrendingDestinationResponseDto> trendingDestinationResponseDtos = destinationRepository.getTrendingDestinations(destinationIds);
 
             if (trendingDestinationResponseDtos.isEmpty()) {
                 LOGGER.warn("No trending destinations found in database");
@@ -658,17 +660,52 @@ public class DestinationServiceImpl implements DestinationService {
             destinationValidationService.validateTerminateDestinationRequest(destinationTerminateRequest);
             DestinationResponseDto destinationDetailsById = getDestinationDetailsById(destinationTerminateRequest.getDestinationId()).getData();
             Long userId = commonService.getUserIdBySecurityContext();
-            User loggeduser = commonService.getLoggedUser();
-            List<SupervisorBasicDetailsDto> supervisorDetails =
-                    commonService.getSupervisorBasicDetailsByUserId(userId);
-            List<String> superviosrList = extractSupervisorEmails(supervisorDetails);
-            superviosrList.add("felicitatrips@gmail.com");
+            User loggedUser = commonService.getLoggedUser();
+
             destinationRepository.terminateDestination(destinationTerminateRequest, userId);
 
-            String subject = emailHelperService.buildDestinationTerminateSuccessfullSubject(loggeduser, destinationDetailsById);
-            String body = emailHelperService.buildDestinationTerminateSuccessfullBody(loggeduser, destinationDetailsById);
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
 
-            emailService.sendFromDev(loggeduser.getEmail(), superviosrList, subject, body);
+            List<Long> supervisorUserIds = extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.DESTINATION_TERMINATED.name())
+                    .priority(Priority.HIGH.name())
+                    .title("Destination Terminated")
+                    .message("The destination '" + destinationDetailsById.getDestinationName() + "' has been terminated.")
+                    .actionUrl(VIEW_DESTINATION_DETAILS + "/" + destinationDetailsById.getDestinationId())
+                    .actionText("View Destination")
+                    .icon("MapPinOff")
+                    .color("#EF4444")
+                    .metadata(Map.of(
+                            "destinationId", destinationDetailsById.getDestinationId(),
+                            "destinationName", destinationDetailsById.getDestinationName(),
+                            "location", destinationDetailsById.getLocation(),
+                            "status", destinationDetailsById.getStatusName(),
+                            "terminatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.DESTINATION_TERMINATE.name())
+                    .sourceModule(SourceModule.DESTINATION.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.DESTINATION_TERMINATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+
+            String subject = destinationEmailHelperService.buildDestinationTerminateSuccessfullSubject(loggedUser, destinationDetailsById);
+            String body = destinationEmailHelperService.buildDestinationTerminateSuccessfullBody(loggedUser, destinationDetailsById);
+
+            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
 
             return new CommonResponse<>(
                     CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
@@ -727,6 +764,12 @@ public class DestinationServiceImpl implements DestinationService {
             Long userId = commonService.getUserIdBySecurityContext();
             User loggedUser = commonService.getLoggedUser();
 
+            destinationRepository.updateBasicDestinationDetails(destinationUpdateRequest, userId);
+            destinationRepository.removeDestinationImages(destinationUpdateRequest.getRemoveImages(), userId);
+            destinationRepository.addNewImagesToDestination(destinationUpdateRequest.getNewImages(), destinationUpdateRequest.getDestinationId(), userId);
+            destinationRepository.removeDestinationActivities(destinationUpdateRequest.getRemoveActivities(), userId);
+            destinationRepository.addNewActivitiesToDestination(destinationUpdateRequest.getNewActivities(), destinationUpdateRequest.getDestinationId(), userId);
+
             List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
 
             List<Long> supervisorUserIds = extractSupervisorUserIds(supervisorDetails);
@@ -758,19 +801,13 @@ public class DestinationServiceImpl implements DestinationService {
 
             commonService.createNotificationRecipients(notificationId, supervisorUserIds);
 
-            destinationRepository.updateBasicDestinationDetails(destinationUpdateRequest, userId);
-            destinationRepository.removeDestinationImages(destinationUpdateRequest.getRemoveImages(), userId);
-            destinationRepository.addNewImagesToDestination(destinationUpdateRequest.getNewImages(), destinationUpdateRequest.getDestinationId(), userId);
-            destinationRepository.removeDestinationActivities(destinationUpdateRequest.getRemoveActivities(), userId);
-            destinationRepository.addNewActivitiesToDestination(destinationUpdateRequest.getNewActivities(), destinationUpdateRequest.getDestinationId(), userId);
-
             DestinationUpdateComparisonResult comparisonResult = destinationComparator.compareUpdates(
                     destinationUpdateRequest,
                     destinationDetailsById
             );
 
 
-            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.DESTINATION_CREATED.name(), supervisorUserIds);
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.DESTINATION_UPDATED.name(), supervisorUserIds);
             emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
             emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
             String subject = destinationEmailHelperService.buildDestinationUpdateSuccessfullSubject(loggedUser);
@@ -891,18 +928,49 @@ public class DestinationServiceImpl implements DestinationService {
             Long userId = commonService.getUserIdBySecurityContext();
             String email = commonService.getUserEmailBySecurityContext();
             User loggedUser = commonService.getLoggedUser();
-            List<SupervisorBasicDetailsDto> supervisorDetails =
-                    commonService.getSupervisorBasicDetailsByUserId(userId);
-            List<String> supervisorsEmails = extractSupervisorEmails(supervisorDetails);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
             Long destinationCategoryId = destinationRepository.insertDestinationCategory(destinationCategoryInsertRequest, userId);
             destinationRepository.insertDestinationCategoryImages(destinationCategoryInsertRequest.getImages(), destinationCategoryId, userId);
 
             if (destinationCategoryId != null) {
-                supervisorsEmails.remove(email);
-                supervisorsEmails.add("felicitatrips@gmail.com");
+                List<Long> supervisorUserIds = extractSupervisorUserIds(supervisorDetails);
+                supervisorUserIds.add(userId);
+                NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                        .notificationType(NotificationType.DESTINATION_CATEGORY_CREATED.name())
+                        .priority(Priority.MEDIUM.name())
+                        .title("New Destination Category Created")
+                        .message("A new destination category '" + destinationCategoryInsertRequest.getCategory() + "' has been created.")
+                        .actionUrl(VIEW_DESTINATION_CATEGORIES_DETAILS)
+                        .actionText("View Categories")
+                        .icon("Tags")
+                        .color("#10B981")
+                        .metadata(Map.of(
+                                "categoryName", destinationCategoryInsertRequest.getCategory(),
+                                "description", destinationCategoryInsertRequest.getDescription(),
+                                "status", destinationCategoryInsertRequest.getStatus(),
+                                "createdBy", userId
+                        ))
+                        .isArchived(false)
+                        .isDeleted(false)
+                        .assignedTo(null)
+                        .targetRole(Privileges.DESTINATION_CATEGORY_CREATE.name())
+                        .sourceModule(SourceModule.DESTINATION.name())
+                        .expiresAt(null)
+                        .createdBy(userId)
+                        .build();
+
+                Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+                commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+                List<String> emailNotificationEnableSupervisors =
+                        commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.DESTINATION_CATEGORY_CREATED.name(), supervisorUserIds);
+                emailNotificationEnableSupervisors.remove(email);
+                emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
                 String body = destinationCategoryEmailHelperService.buildDestinationCategoryCreateSuccessfullBody(destinationCategoryInsertRequest, loggedUser);
                 String subject = destinationCategoryEmailHelperService.buildDestinationCategoryCreateSuccessfullSubject(destinationCategoryInsertRequest, loggedUser);
-                emailService.sendFromDev(email, supervisorsEmails, subject, body);
+                emailService.sendFromDev(email, emailNotificationEnableSupervisors, subject, body);
             }
 
             return new CommonResponse<>(
@@ -932,28 +1000,59 @@ public class DestinationServiceImpl implements DestinationService {
                     = getDestinationsCategoryDetailsById(new DestinationCategoryDetailsRequest(
                     destinationCategoryUpdateRequest.getCategoryId()
             )).getData();
+
             Long userId = commonService.getUserIdBySecurityContext();
             User loggedUser = commonService.getLoggedUser();
-            List<SupervisorBasicDetailsDto> supervisorDetails =
-                    commonService.getSupervisorBasicDetailsByUserId(userId);
-            List<String> supervisorsEmails = extractSupervisorEmails(supervisorDetails);
-            supervisorsEmails.add("felicitatrips@gmail.com");
+
             destinationRepository.updateDestinationCategoryDetails(destinationCategoryUpdateRequest, userId);
             destinationRepository.removeDestinationCategoryImagesDetails(destinationCategoryUpdateRequest.getRemoveImageIds(), userId);
             destinationRepository.insertDestinationCategoryImages(destinationCategoryUpdateRequest.getNewImages(), destinationCategoryUpdateRequest.getCategoryId(), userId);
             destinationRepository.updateDestinationCategoryImagesDetails(destinationCategoryUpdateRequest.getUpdateImages(), userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+
+            List<Long> supervisorUserIds = extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.DESTINATION_CATEGORY_UPDATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("Destination Category Updated")
+                    .message("The destination category '" + destinationCategoryUpdateRequest.getCategory() + "' has been updated.")
+                    .actionUrl(VIEW_DESTINATION_CATEGORIES_DETAILS + "/" + destinationCategoryUpdateRequest.getCategoryId())
+                    .actionText("View Category")
+                    .icon("Tags")
+                    .color("#3B82F6")
+                    .metadata(Map.of(
+                            "categoryId", destinationCategoryUpdateRequest.getCategoryId(),
+                            "categoryName", destinationCategoryUpdateRequest.getCategory(),
+                            "description", destinationCategoryUpdateRequest.getDescription(),
+                            "status", destinationCategoryUpdateRequest.getStatus(),
+                            "updatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.DESTINATION_CATEGORY_UPDATE.name())
+                    .sourceModule(SourceModule.DESTINATION.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
 
             DestinationCategoryUpdateComparisonResult comparisonResult = destinationComparator.compareDestinationCategoryUpdates(
                     destinationCategoryDetailsResponseDto,
                     destinationCategoryUpdateRequest
             );
 
-            LOGGER.info("Update destination category comparison result: {}", comparisonResult);
-
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.DESTINATION_CATEGORY_UPDATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
             String subject = destinationCategoryEmailHelperService.buildDestinationCategoryUpdateSuccessfullSubject(destinationCategoryUpdateRequest, loggedUser);
             String body = destinationCategoryEmailHelperService.buildDestinationCategoryUpdateSuccessfullBody(loggedUser, comparisonResult);
-            emailService.sendFromDev(loggedUser.getEmail(), supervisorsEmails, subject, body);
-
+            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
 
             return new CommonResponse<>(
                     CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
@@ -982,18 +1081,54 @@ public class DestinationServiceImpl implements DestinationService {
                     = getDestinationsCategoryDetailsById(new DestinationCategoryDetailsRequest(
                     destinationCategoryTerminateRequest.getDestinationCategoryId()
             )).getData();
+
             Long userId = commonService.getUserIdBySecurityContext();
-            User loggeduser = commonService.getLoggedUser();
-            List<SupervisorBasicDetailsDto> supervisorDetails =
-                    commonService.getSupervisorBasicDetailsByUserId(userId);
-            List<String> supervisorsEmails = extractSupervisorEmails(supervisorDetails);
-            supervisorsEmails.add("felicitatrips@gmail.com");
+            User loggedUser = commonService.getLoggedUser();
+
             destinationRepository.terminateDestinationCategory(destinationCategoryTerminateRequest, userId);
 
-            String subject = destinationCategoryEmailHelperService.buildDestinationCategoryTerminateSuccessfullSubject(loggeduser, destinationCategoryDetailsResponseDto);
-            String body = destinationCategoryEmailHelperService.buildDestinationCategoryTerminateSuccessfullBody(loggeduser, destinationCategoryDetailsResponseDto);
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
 
-            emailService.sendFromDev(loggeduser.getEmail(), supervisorsEmails, subject, body);
+            List<Long> supervisorUserIds = extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.DESTINATION_CATEGORY_TERMINATED.name())
+                    .priority(Priority.HIGH.name())
+                    .title("Destination Category Terminated")
+                    .message("The destination category '" + destinationCategoryDetailsResponseDto.getCategory() + "' has been terminated.")
+                    .actionUrl(VIEW_DESTINATION_CATEGORIES_DETAILS + "/" + destinationCategoryDetailsResponseDto.getCategoryId())
+                    .actionText("View Category")
+                    .icon("TagOff")
+                    .color("#EF4444")
+                    .metadata(Map.of(
+                            "categoryId", destinationCategoryDetailsResponseDto.getCategoryId(),
+                            "categoryName", destinationCategoryDetailsResponseDto.getCategory(),
+                            "description", destinationCategoryDetailsResponseDto.getCategoryDescription(),
+                            "status", destinationCategoryDetailsResponseDto.getCategoryStatus(),
+                            "terminatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.DESTINATION_CATEGORY_TERMINATE.name())
+                    .sourceModule(SourceModule.DESTINATION.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.DESTINATION_CATEGORY_TERMINATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+
+            String subject = destinationCategoryEmailHelperService.buildDestinationCategoryTerminateSuccessfullSubject(loggedUser, destinationCategoryDetailsResponseDto);
+            String body = destinationCategoryEmailHelperService.buildDestinationCategoryTerminateSuccessfullBody(loggedUser, destinationCategoryDetailsResponseDto);
+
+            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
 
             return new CommonResponse<>(
                     CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
@@ -1004,6 +1139,146 @@ public class DestinationServiceImpl implements DestinationService {
 
         } catch (ValidationFailedErrorExceptionHandler vfe) {
             throw new ValidationFailedErrorExceptionHandler("validation failed in the terminate destination category request", vfe.getValidationFailedResponses());
+        } catch (TerminateFailedErrorExceptionHandler tfe) {
+            throw new TerminateFailedErrorExceptionHandler(tfe.getMessage());
+        } catch (UnAuthenticateErrorExceptionHandler uae) {
+            throw new UnAuthenticateErrorExceptionHandler(uae.getMessage());
+        } catch (Exception e) {
+            throw new InternalServerErrorExceptionHandler("Something went wrong");
+        }
+    }
+
+    @Override
+    public CommonResponse<InsertResponse> addTrendingDestinations(TrendingDestinationInsertRequest trendingDestinationInsertRequest) {
+        LOGGER.info("Start execute insert trending destination request.");
+        try {
+            destinationValidationService.validateTrendingDestiantionInsertRequest(trendingDestinationInsertRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            String email = commonService.getUserEmailBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            Long trendingDestinationId = destinationRepository.addTrendingDestinations(trendingDestinationInsertRequest, userId);
+
+            if (trendingDestinationId != null) {
+                List<Long> supervisorUserIds = extractSupervisorUserIds(supervisorDetails);
+                supervisorUserIds.add(userId);
+                NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                        .notificationType(NotificationType.TRENDING_DESTINATION_CREATED.name())
+                        .priority(Priority.MEDIUM.name())
+                        .title("Trending Destination Added")
+                        .message("The destination '" + trendingDestinationInsertRequest.getDestinationName() + "' has been added to trending destinations.")
+                        .actionUrl(VIEW_DESTINATION_DETAILS + "/" + trendingDestinationInsertRequest.getDestinationId())
+                        .actionText("View Destination")
+                        .icon("TrendingUp")
+                        .color("#F59E0B")
+                        .metadata(Map.of(
+                                "destinationId", trendingDestinationInsertRequest.getDestinationId(),
+                                "destinationName", trendingDestinationInsertRequest.getDestinationName(),
+                                "status", trendingDestinationInsertRequest.getStatus(),
+                                "createdBy", userId
+                        ))
+                        .isArchived(false)
+                        .isDeleted(false)
+                        .assignedTo(null)
+                        .targetRole(Privileges.TRENDING_DESTINATION_CREATE.name())
+                        .sourceModule(SourceModule.DESTINATION.name())
+                        .expiresAt(null)
+                        .createdBy(userId)
+                        .build();
+
+                Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+                commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+                List<String> emailNotificationEnableSupervisors =
+                        commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TRENDING_DESTINATION_CREATED.name(), supervisorUserIds);
+                emailNotificationEnableSupervisors.remove(email);
+                emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+                String body = destinationEmailHelperService.buildTrendingDestinationCreateSuccessfullBody(trendingDestinationInsertRequest, loggedUser);
+                String subject = destinationEmailHelperService.buildTrendingDestinationCreateSuccessfullSubject(trendingDestinationInsertRequest, loggedUser);
+                emailService.sendFromDev(email, emailNotificationEnableSupervisors, subject, body);
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_MESSAGE,
+                    new InsertResponse("Successfully insert trending destination request"),
+                    Instant.now());
+
+        } catch (ValidationFailedErrorExceptionHandler vfe) {
+            throw new ValidationFailedErrorExceptionHandler("validation failed in the insert trending destination request", vfe.getValidationFailedResponses());
+        } catch (InsertFailedErrorExceptionHandler ife) {
+            throw new InsertFailedErrorExceptionHandler(ife.getMessage());
+        } catch (UnAuthenticateErrorExceptionHandler uae) {
+            throw new UnAuthenticateErrorExceptionHandler(uae.getMessage());
+        } catch (Exception e) {
+            throw new InternalServerErrorExceptionHandler("Something went wrong");
+        }
+    }
+
+    @Override
+    public CommonResponse<TerminateResponse> termianteTrendingDestination(TrendingDestinationTerminateRequest trendingDestinationTerminateRequest) {
+        LOGGER.info("Start execute terminate trending destination request.");
+        try {
+            destinationValidationService.validateTrendingDestinationTerminateRequest(trendingDestinationTerminateRequest);
+
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            destinationRepository.termianteTrendingDestination(trendingDestinationTerminateRequest, userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+
+            List<Long> supervisorUserIds = extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.TRENDING_DESTINATION_TERMINATED.name())
+                    .priority(Priority.HIGH.name())
+                    .title("Trending Destination Removed")
+                    .message("The destination '" + trendingDestinationTerminateRequest.getDestinationName() + "' has been removed from trending destinations.")
+                    .actionUrl(VIEW_DESTINATION_DETAILS + "/" + trendingDestinationTerminateRequest.getDestinationId())
+                    .actionText("View Destination")
+                    .icon("TrendingDown")
+                    .color("#EF4444")
+                    .metadata(Map.of(
+                            "destinationId", trendingDestinationTerminateRequest.getDestinationId(),
+                            "destinationName", trendingDestinationTerminateRequest.getDestinationName(),
+                            "status", trendingDestinationTerminateRequest.getStatus(),
+                            "terminatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.TRENDING_DESTINATION_TERMINATE.name())
+                    .sourceModule(SourceModule.DESTINATION.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TRENDING_DESTINATION_TERMINATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+
+            String subject = destinationEmailHelperService.buildTrendingDestinationTerminateSuccessfullSubject(loggedUser, trendingDestinationTerminateRequest);
+            String body = destinationEmailHelperService.buildTrendingDestinationTerminateSuccessfullBody(loggedUser, trendingDestinationTerminateRequest);
+
+            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_MESSAGE,
+                    new TerminateResponse("Successfully terminate trending destination request"),
+                    Instant.now());
+
+        } catch (ValidationFailedErrorExceptionHandler vfe) {
+            throw new ValidationFailedErrorExceptionHandler("validation failed in the terminate trending destination request", vfe.getValidationFailedResponses());
         } catch (TerminateFailedErrorExceptionHandler tfe) {
             throw new TerminateFailedErrorExceptionHandler(tfe.getMessage());
         } catch (UnAuthenticateErrorExceptionHandler uae) {

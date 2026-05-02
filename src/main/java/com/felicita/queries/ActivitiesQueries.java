@@ -704,8 +704,6 @@ public class ActivitiesQueries {
                   AND acm.terminated_at IS NULL
                   AND LOWER(ac.name) = LOWER(?)
               ))
-            ORDER BY a.created_at ASC
-            LIMIT ? OFFSET ?
             """;
 
     public static final String GET_ACTIVITY_COUNT_WITH_FILTERS = """
@@ -733,6 +731,7 @@ public class ActivitiesQueries {
             SELECT
                 a.id,
                 a.destination_id,
+                d.name AS destination_name,
                 a.name,
                 a.description,
                 a.duration_hours,
@@ -815,6 +814,7 @@ public class ActivitiesQueries {
             FROM activities a
             LEFT JOIN common_status cs ON a.status = cs.id
             LEFT JOIN seasons s ON s.id = a.season_id
+            LEFT JOIN destination d ON d.destination_id = a.destination_id
             LEFT JOIN activities_schedule asch ON asch.activity_id = a.id
                 AND asch.terminated_at IS NULL
             WHERE a.id IN (%s)
@@ -911,4 +911,51 @@ public class ActivitiesQueries {
             """;
 
 
+    public static final String GET_ACTIVITY_DETAILS_STATISTICS = """
+        SELECT
+            COUNT(*) AS totalActivityCount,
+            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS activeActivities,
+            SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS inActiveActivities,
+            SUM(CASE
+                WHEN terminated_at IS NOT NULL THEN 1
+                ELSE 0
+            END) AS hiddenActivities,
+            SUM(CASE
+                WHEN updated_at >= NOW() - INTERVAL 7 DAY THEN 1
+                ELSE 0
+            END) AS recentlyUpdatedActivities,
+            SUM(CASE
+                WHEN created_at >= NOW() - INTERVAL 7 DAY THEN 1
+                ELSE 0
+            END) AS recentlyAddedActivities
+        FROM activities
+        """;
+
+
+    public static final String GET_ACTIVITY_WISH_STATISTICS = """
+        SELECT
+            COUNT(DISTINCT activity_id) AS wishListCount,
+            (SELECT COUNT(*) FROM activities)
+              - COUNT(DISTINCT activity_id) AS notWishListCount
+        FROM activity_wishlist
+        WHERE status_id = 1
+        """;
+
+
+    public static final String GET_ACTIVITY_CATEGORY_STATISTICS = """
+        SELECT
+            ac.id AS category_id,
+            ac.name AS category_name,
+            COUNT(acm.activity_id) AS activity_count
+        FROM activity_category ac
+        LEFT JOIN activity_category_map acm
+            ON ac.id = acm.category_id
+            AND acm.status = 1
+        LEFT JOIN activities a
+            ON a.id = acm.activity_id
+            AND a.status = 1
+        WHERE ac.status = 1
+        GROUP BY ac.id, ac.name
+        ORDER BY activity_count DESC
+        """;
 }

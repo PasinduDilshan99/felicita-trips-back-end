@@ -90,6 +90,22 @@ public class DestinationController {
         return new ResponseEntity<>(response,HttpStatus.OK);
     }
 
+    @PostMapping(path = "/trending-destinations-add")
+    public ResponseEntity<CommonResponse<InsertResponse>> addTrendingDestinations(@RequestBody TrendingDestinationInsertRequest trendingDestinationInsertRequest) {
+        LOGGER.info("{} Start execute add trending destinations {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = destinationService.addTrendingDestinations(trendingDestinationInsertRequest);
+        LOGGER.info("{} End execute add trending destinations {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/trending-destinations-terminate")
+    public ResponseEntity<CommonResponse<TerminateResponse>> termianteTrendingDestination(@RequestBody TrendingDestinationTerminateRequest trendingDestinationTerminateRequest) {
+        LOGGER.info("{} Start execute terminate trending destinations {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TerminateResponse> response = destinationService.termianteTrendingDestination(trendingDestinationTerminateRequest);
+        LOGGER.info("{} End execute terminate trending destinations {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
     @GetMapping(path = "/tour-map")
     public ResponseEntity<CommonResponse<List<DestinationsForTourMapDto>>> getDestinationsForTourMap() {
         LOGGER.info("{} Start execute get destinations for tour map {}", Constant.DOTS, Constant.DOTS);
