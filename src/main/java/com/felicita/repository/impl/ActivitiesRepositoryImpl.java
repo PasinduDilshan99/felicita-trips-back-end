@@ -13,6 +13,7 @@ import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse
 import com.felicita.queries.ActivitiesQueries;
 import com.felicita.queries.DestinationQueries;
 import com.felicita.repository.ActivitiesRepository;
+import com.felicita.repository.StatusRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,11 +35,13 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+    private final StatusRepository statusRepository;
 
     @Autowired
-    public ActivitiesRepositoryImpl(JdbcTemplate jdbcTemplate) {
+    public ActivitiesRepositoryImpl(JdbcTemplate jdbcTemplate, ObjectMapper objectMapper, StatusRepository statusRepository) {
         this.jdbcTemplate = jdbcTemplate;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
+        this.statusRepository = statusRepository;
     }
 
     @Override
@@ -392,7 +395,8 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
                             activity.setActivityCategoryDtos(
                                     categoriesJson != null
                                             ? mapper.readValue(categoriesJson,
-                                            new TypeReference<List<ActivityCategoryDto>>() {})
+                                            new TypeReference<List<ActivityCategoryDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -401,7 +405,8 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
                             activity.setSchedules(
                                     schedulesJson != null
                                             ? mapper.readValue(schedulesJson,
-                                            new TypeReference<List<ActivityScheduleDto>>() {})
+                                            new TypeReference<List<ActivityScheduleDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -410,7 +415,8 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
                             activity.setRequirements(
                                     requirementsJson != null
                                             ? mapper.readValue(requirementsJson,
-                                            new TypeReference<List<ActivityRequirementDto>>() {})
+                                            new TypeReference<List<ActivityRequirementDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -419,7 +425,8 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
                             activity.setImages(
                                     imagesJson != null
                                             ? mapper.readValue(imagesJson,
-                                            new TypeReference<List<ActivityImageDto>>() {})
+                                            new TypeReference<List<ActivityImageDto>>() {
+                                            })
                                             : List.of()
                             );
 
@@ -640,7 +647,8 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
                                 categoriesJson != null
                                         ? mapper.readValue(
                                         categoriesJson,
-                                        new TypeReference<List<ActivityCategoryDto>>() {}
+                                        new TypeReference<List<ActivityCategoryDto>>() {
+                                        }
                                 )
                                         : List.of();
 
@@ -847,7 +855,7 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
 
     @Override
     public ActivityWithParamsResponse getActivitiesWithParams(ActivityDataRequest activityDataRequest) {
-LOGGER.info(activityDataRequest.toString());
+        LOGGER.info(activityDataRequest.toString());
         try {
             LOGGER.info("Executing query to fetch all activity categories...");
 
@@ -975,6 +983,8 @@ LOGGER.info(activityDataRequest.toString());
         try {
             KeyHolder keyHolder = new GeneratedKeyHolder();
 
+            Long statusId = statusRepository.getStatusIdByName(activityInsertRequest.getStatus());
+
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(
                         INSERT_ACTIVITY_BASIC_DETAILS,
@@ -984,17 +994,16 @@ LOGGER.info(activityDataRequest.toString());
                 ps.setLong(1, activityInsertRequest.getDestinationId());
                 ps.setString(2, activityInsertRequest.getName());
                 ps.setString(3, activityInsertRequest.getDescription());
-                ps.setString(4, activityInsertRequest.getActivitiesCategory());
-                ps.setBigDecimal(5, activityInsertRequest.getDurationHours());
-                ps.setObject(6, activityInsertRequest.getAvailableFrom());
-                ps.setObject(7, activityInsertRequest.getAvailableTo());
-                ps.setBigDecimal(8, activityInsertRequest.getPriceLocal());
-                ps.setBigDecimal(9, activityInsertRequest.getPriceForeigners());
-                ps.setInt(10, activityInsertRequest.getMinParticipate());
-                ps.setInt(11, activityInsertRequest.getMaxParticipate());
-                ps.setString(12, activityInsertRequest.getSeason());
-                ps.setString(13, activityInsertRequest.getStatus());
-                ps.setLong(14, userId);
+                ps.setBigDecimal(4, activityInsertRequest.getDurationHours());
+                ps.setObject(5, activityInsertRequest.getAvailableFrom());
+                ps.setObject(6, activityInsertRequest.getAvailableTo());
+                ps.setBigDecimal(7, activityInsertRequest.getPriceLocal());
+                ps.setBigDecimal(8, activityInsertRequest.getPriceForeigners());
+                ps.setInt(9, activityInsertRequest.getMinParticipate());
+                ps.setInt(10, activityInsertRequest.getMaxParticipate());
+                ps.setLong(11, activityInsertRequest.getSeasonId());
+                ps.setLong(12, statusId);
+                ps.setLong(13, userId);
 
                 return ps;
             }, keyHolder);
@@ -1095,11 +1104,13 @@ LOGGER.info(activityDataRequest.toString());
         String sql = ActivitiesQueries.UPDATE_BASIC_ACTIVITY_DETAILS;
 
         try {
+
+            Long statusId = statusRepository.getStatusIdByName(request.getStatus());
+
             jdbcTemplate.update(sql,
                     request.getDestinationId(),
                     request.getName(),
                     request.getDescription(),
-                    request.getActivitiesCategory(),
                     request.getDurationHours(),
                     request.getAvailableFrom() != null
                             ? Time.valueOf(request.getAvailableFrom())
@@ -1111,8 +1122,8 @@ LOGGER.info(activityDataRequest.toString());
                     request.getPriceForeigners(),
                     request.getMinParticipate(),
                     request.getMaxParticipate(),
-                    request.getSeason(),
-                    request.getStatus(),
+                    request.getSeasonId(),
+                    statusId,
                     userId,
                     request.getActivityId()
             );
@@ -1604,6 +1615,357 @@ LOGGER.info(activityDataRequest.toString());
         }
     }
 
+    @Override
+    public void insertActivityCategories(
+            Long activityId,
+            List<ActivityInsertRequest.Category> categories,
+            Long userId) {
+
+        try {
+            LOGGER.info("Inserting activity categories for activityId: {}", activityId);
+            if (categories == null || categories.isEmpty()) {
+                LOGGER.warn("No categories provided for activityId: {}", activityId);
+                return;
+            }
+
+            for (ActivityInsertRequest.Category category : categories) {
+                Long statusId = statusRepository.getStatusIdByName(category.getStatus());
+                if (statusId == null) {
+                    LOGGER.error("Invalid status name: {}", category.getStatus());
+                    throw new IllegalArgumentException(
+                            "Invalid status: " + category.getStatus()
+                    );
+                }
+                int rowsAffected = jdbcTemplate.update(
+                        ActivitiesQueries.INSERT_ACTIVITY_CATEGORY_MAP,
+                        activityId,
+                        category.getCategoryId(),
+                        Boolean.TRUE.equals(category.getIsPrimary()),
+                        statusId,
+                        userId,
+                        userId
+                );
+                LOGGER.info(
+                        "Inserted activity category mapping. activityId: {}, categoryId: {}, rowsAffected: {}",
+                        activityId,
+                        category.getCategoryId(),
+                        rowsAffected
+                );
+            }
+
+            LOGGER.info(
+                    "Successfully inserted {} category mappings for activityId: {}",
+                    categories.size(),
+                    activityId
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Database error while inserting activity categories for activityId: {} - {}",
+                    activityId,
+                    ex.getMessage(),
+                    ex
+            );
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to insert activity categories"
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error(
+                    "Unexpected error while inserting activity categories for activityId: {} - {}",
+                    activityId,
+                    ex.getMessage(),
+                    ex
+            );
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while inserting activity categories"
+            );
+        }
+    }
+
+    @Override
+    public void removeActivityCategories(List<Long> removeCategoryIds, Long userId) {
+
+        try {
+
+            LOGGER.info("Removing activity categories. CategoryMapIds: {}", removeCategoryIds);
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
+            if (removeCategoryIds == null || removeCategoryIds.isEmpty()) {
+                LOGGER.warn("No activity category ids provided for removal.");
+                return;
+            }
+
+            for (Long categoryMapId : removeCategoryIds) {
+
+                int rowsAffected = jdbcTemplate.update(
+                        ActivitiesQueries.REMOVE_ACTIVITY_CATEGORIES,
+                        statusId,
+                        userId,
+                        userId,
+                        categoryMapId
+                );
+
+                LOGGER.info(
+                        "Removed activity category mapping. categoryMapId: {}, rowsAffected: {}",
+                        categoryMapId,
+                        rowsAffected
+                );
+            }
+
+            LOGGER.info(
+                    "Successfully removed {} activity category mappings.",
+                    removeCategoryIds.size()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while removing activity categories: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to remove activity categories"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while removing activity categories: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while removing activity categories"
+            );
+        }
+    }
+
+    @Override
+    public void updateActivityCategories(
+            Long activityId,
+            List<ActivityInsertRequest.Category> updatedCategories,
+            Long userId) {
+        try {
+            LOGGER.info("Updating activity categories for activityId: {}", activityId);
+            if (updatedCategories == null || updatedCategories.isEmpty()) {
+                LOGGER.warn("No activity categories provided for update. activityId: {}", activityId);
+                return;
+            }
+            for (ActivityInsertRequest.Category category : updatedCategories) {
+                Long statusId = statusRepository.getStatusIdByName(category.getStatus());
+                if (statusId == null) {
+                    LOGGER.error("Invalid status name: {}", category.getStatus());
+                    throw new IllegalArgumentException(
+                            "Invalid status: " + category.getStatus()
+                    );
+                }
+                int rowsAffected = jdbcTemplate.update(
+                        ActivitiesQueries.UPDATE_ACTIVITY_CATEGORIES,
+                        Boolean.TRUE.equals(category.getIsPrimary()),
+                        statusId,
+                        userId,
+                        activityId,
+                        category.getCategoryId()
+                );
+
+                LOGGER.info(
+                        "Updated activity category mapping. activityId: {}, categoryId: {}, rowsAffected: {}",
+                        activityId,
+                        category.getCategoryId(),
+                        rowsAffected
+                );
+            }
+
+            LOGGER.info(
+                    "Successfully updated {} activity category mappings for activityId: {}",
+                    updatedCategories.size(),
+                    activityId
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while updating activity categories for activityId: {} - {}",
+                    activityId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to update activity categories"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while updating activity categories for activityId: {} - {}",
+                    activityId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while updating activity categories"
+            );
+        }
+    }
+
+    @Override
+    public void termianteActivityCategories(Long activityId, Long userId) {
+
+        try {
+
+            LOGGER.info("Terminating activity categories for activityId: {}", activityId);
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
+            int rowsAffected = jdbcTemplate.update(
+                    ActivitiesQueries.TERMINATE_ACTIVITY_CATEGORIES,
+                    statusId,
+                    userId,
+                    userId,
+                    activityId
+            );
+            LOGGER.info(
+                    "Successfully terminated activity categories for activityId: {}, rowsAffected: {}",
+                    activityId,
+                    rowsAffected
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while terminating activity categories for activityId: {} - {}",
+                    activityId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to terminate activity categories"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while terminating activity categories for activityId: {} - {}",
+                    activityId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while terminating activity categories"
+            );
+        }
+    }
+
+    @Override
+    public List<ActivityBasicDetailsResponse> getActivityByDestinationId(
+            ActivitiesByDestinationId activitiesByDestinationId) {
+
+        try {
+
+            LOGGER.info("Fetching activities for destinationId: {}",
+                    activitiesByDestinationId.getDestinationId());
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_ACTIVITIES_BY_DESTINATION_ID,
+                    rs -> {
+
+                        Map<Long, ActivityBasicDetailsResponse> activityMap = new LinkedHashMap<>();
+
+                        while (rs.next()) {
+
+                            Long activityId = rs.getLong("activity_id");
+
+                            ActivityBasicDetailsResponse activity =
+                                    activityMap.get(activityId);
+
+                            if (activity == null) {
+
+                                activity = ActivityBasicDetailsResponse.builder()
+                                        .activityId(activityId)
+                                        .destinationId(rs.getLong("destination_id"))
+                                        .name(rs.getString("name"))
+                                        .description(rs.getString("description"))
+                                        .durationHours(rs.getBigDecimal("duration_hours"))
+                                        .availableFrom(rs.getTime("available_from") != null
+                                                ? rs.getTime("available_from").toLocalTime()
+                                                : null)
+                                        .availableTo(rs.getTime("available_to") != null
+                                                ? rs.getTime("available_to").toLocalTime()
+                                                : null)
+                                        .priceLocal(rs.getBigDecimal("price_local"))
+                                        .priceForeigners(rs.getBigDecimal("price_foreigners"))
+                                        .minParticipate(rs.getInt("min_participate"))
+                                        .maxParticipate(rs.getInt("max_participate"))
+                                        .season(rs.getString("season"))
+                                        .seasonId(rs.getLong("season_id"))
+                                        .statusId(rs.getLong("status_id"))
+                                        .categories(new ArrayList<>())
+                                        .images(new ArrayList<>())
+                                        .build();
+
+                                activityMap.put(activityId, activity);
+                            }
+
+                            // Categories
+                            Long categoryId = rs.getLong("category_id");
+                            if (categoryId != 0) {
+
+                                ActivityBasicDetailsResponse.Category category =
+                                        ActivityBasicDetailsResponse.Category.builder()
+                                                .categoryId(categoryId)
+                                                .categoryName(rs.getString("category_name"))
+                                                .isPrimary(rs.getBoolean("is_primary"))
+                                                .build();
+
+                                activity.getCategories().add(category);
+                            }
+
+                            // Images
+                            Long imageId = rs.getLong("image_id");
+                            if (imageId != 0) {
+
+                                ActivityBasicDetailsResponse.Image image =
+                                        ActivityBasicDetailsResponse.Image.builder()
+                                                .imageId(imageId)
+                                                .name(rs.getString("image_name"))
+                                                .description(rs.getString("image_description"))
+                                                .imageUrl(rs.getString("image_url"))
+                                                .build();
+
+                                activity.getImages().add(image);
+                            }
+                        }
+
+                        return new ArrayList<>(activityMap.values());
+                    },
+                    activitiesByDestinationId.getDestinationId()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error("Database error while fetching activities by destinationId: {}",
+                    activitiesByDestinationId.getDestinationId(), ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch activities by destination"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Unexpected error while fetching activities by destinationId: {}",
+                    activitiesByDestinationId.getDestinationId(), ex);
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching activities"
+            );
+        }
+    }
+
     private LocalDateTime getLocalDateTime(ResultSet rs, String column) {
         try {
             Timestamp ts = rs.getTimestamp(column);
@@ -1655,7 +2017,8 @@ LOGGER.info(activityDataRequest.toString());
                     String categoriesJson = obj != null ? obj.toString() : null;
 
                     categories = (categoriesJson != null && !categoriesJson.equals("[]"))
-                            ? objectMapper.readValue(categoriesJson, new TypeReference<List<ActivityCategoryDto>>() {})
+                            ? objectMapper.readValue(categoriesJson, new TypeReference<List<ActivityCategoryDto>>() {
+                    })
                             : List.of();
                 } catch (Exception e) {
                     LOGGER.warn("Error parsing categories JSON for activity id {}: {}", rs.getLong("id"), e.getMessage());
@@ -1668,7 +2031,8 @@ LOGGER.info(activityDataRequest.toString());
                 try {
                     String schedulesJson = rs.getString("schedules");
                     schedules = (schedulesJson != null && !schedulesJson.equals("[]"))
-                            ? objectMapper.readValue(schedulesJson, new TypeReference<List<ActivityScheduleDto>>() {})
+                            ? objectMapper.readValue(schedulesJson, new TypeReference<List<ActivityScheduleDto>>() {
+                    })
                             : List.of();
                 } catch (Exception e) {
                     LOGGER.warn("Error parsing schedules JSON for activity id {}: {}", rs.getLong("id"), e.getMessage());
@@ -1681,7 +2045,8 @@ LOGGER.info(activityDataRequest.toString());
                 try {
                     String requirementsJson = rs.getString("requirements");
                     requirements = (requirementsJson != null && !requirementsJson.equals("[]"))
-                            ? objectMapper.readValue(requirementsJson, new TypeReference<List<ActivityRequirementDto>>() {})
+                            ? objectMapper.readValue(requirementsJson, new TypeReference<List<ActivityRequirementDto>>() {
+                    })
                             : List.of();
                 } catch (Exception e) {
                     LOGGER.warn("Error parsing requirements JSON for activity id {}: {}", rs.getLong("id"), e.getMessage());
@@ -1694,7 +2059,8 @@ LOGGER.info(activityDataRequest.toString());
                 try {
                     String imagesJson = rs.getString("images");
                     images = (imagesJson != null && !imagesJson.equals("[]"))
-                            ? objectMapper.readValue(imagesJson, new TypeReference<List<ActivityImageDto>>() {})
+                            ? objectMapper.readValue(imagesJson, new TypeReference<List<ActivityImageDto>>() {
+                    })
                             : List.of();
                 } catch (Exception e) {
                     LOGGER.warn("Error parsing images JSON for activity id {}: {}", rs.getLong("id"), e.getMessage());

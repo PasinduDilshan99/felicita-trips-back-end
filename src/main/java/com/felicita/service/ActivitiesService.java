@@ -2,10 +2,7 @@ package com.felicita.service;
 
 import com.felicita.model.dto.ActivityCategoryResponseDto;
 import com.felicita.model.dto.ActivityResponseDto;
-import com.felicita.model.request.ActivityDataRequest;
-import com.felicita.model.request.ActivityInsertRequest;
-import com.felicita.model.request.ActivityTerminateRequest;
-import com.felicita.model.request.ActivityUpdateRequest;
+import com.felicita.model.request.*;
 import com.felicita.model.response.*;
 import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
 import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
@@ -53,4 +50,6 @@ public interface ActivitiesService {
     CommonResponse<ActivityScheduleStatisticsResponse> getActivitiesScheduleStatistics();
 
     CommonResponse<ActivityCategoriesStatisticsResponse> getActivityCategoriesStatistics();
+
+    CommonResponse<List<ActivityBasicDetailsResponse>> getActivityByDestinationId(ActivitiesByDestinationId activitiesByDestinationId);
 }

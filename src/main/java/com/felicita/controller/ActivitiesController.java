@@ -189,4 +189,11 @@ public class ActivitiesController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PostMapping(path = "/activities-by-destinationId")
+    public ResponseEntity<CommonResponse<List<ActivityBasicDetailsResponse>>> getActivityByDestinationId(@RequestBody ActivitiesByDestinationId activitiesByDestinationId) {
+        LOGGER.info("{} Start execute get activities by destination id {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<ActivityBasicDetailsResponse>> response = activitiesService.getActivityByDestinationId(activitiesByDestinationId);
+        LOGGER.info("{} End execute get activities by destination id {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

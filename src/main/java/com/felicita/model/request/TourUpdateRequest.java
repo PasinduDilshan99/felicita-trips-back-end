@@ -16,8 +16,17 @@ public class TourUpdateRequest {
     private Long tourId;
     private TourBasicDetails tourBasicDetails;
 
-    private List<TourDestinationInsertRequest> addDestinations;
+    private List<Long> addTourTypes;
+    private List<Long> removeTourTypes;
+    private List<TourTypeUpdateRequest> updateTourTypes;
+
+    private List<Long> addTourCategories;
+    private List<Long> removeTourCategories;
+    private List<TourCategoryUpdateRequest> updateTourCategories;
+
+    private List<TourItineraryDayRequest> itinerary;
     private List<Long> removeDestinations;
+    private List<Long> removeActivities;
     private List<TourDestinationUpdateRequest> updateDestinations;
 
     private List<TourImageInsertRequest> addImages;
@@ -47,8 +56,6 @@ public class TourUpdateRequest {
     public static class TourBasicDetails {
         private String tourName;
         private String tourDescription;
-        private Long tourType;
-        private Long tourCategory;
         private Integer duration;
         private BigDecimal latitude;
         private BigDecimal longitude;
@@ -58,5 +65,25 @@ public class TourUpdateRequest {
         private String status;
         private Long assignTo;
         private String assignMessage;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class TourCategoryUpdateRequest {
+        private Long tourCategoryId;
+        private Boolean isPrimary;
+        private String status;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class TourTypeUpdateRequest {
+        private Long tourTypeId;
+        private Boolean isPrimary;
+        private String status;
     }
 }

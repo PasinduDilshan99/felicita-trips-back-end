@@ -63,7 +63,6 @@ public interface TourRepository {
 
     Long insertTourDetails(TourInsertRequest tourInsertRequest, Long userId);
 
-    void insertTourDestinations(Long tourId, List<TourDestinationInsertRequest> destinations, Long userId);
 
     void insertTourImages(Long tourId, List<TourImageInsertRequest> images, Long userId);
 
@@ -160,4 +159,26 @@ public interface TourRepository {
     List<TourTypeStatisticsResponse.TypeParticipationImpact> getTypeParticipationImpactStatistics();
 
     List<TourTypeStatisticsResponse.TypePrimarySecondaryUsage> getTypePrimarySecondaryUsageStatistics();
+
+    void insertTourTypesToTour(Long tourId, List<Long> tourTypes, Long userId);
+
+    void insertTourCategoriesToTour(Long tourId, List<Long> tourCategories, Long userId);
+
+    void removeTourTypesFromTour(Long tourId, List<Long> removeTourTypes, Long userId);
+
+    void updateTourTypesInTour(Long tourId, List<TourUpdateRequest.TourTypeUpdateRequest> updateTourTypes, Long userId);
+
+    void updateTourCategoriesInTour(Long tourId, List<TourUpdateRequest.TourCategoryUpdateRequest> updateTourCategories, Long userId);
+
+    void removeTourCategoriesFromTour(Long tourId, List<Long> removeTourCategories, Long userId);
+
+    void removeActivitiesFromTourDestinations(Long tourId, List<Long> removeActivities, Long userId);
+
+    void terminateTourDestinations(Long tourId, Long userId);
+
+    void terminateTourTypesAssignToTour(Long tourId, Long userId);
+
+    void terminateTourCategoriesAssignToTour(Long tourId, Long userId);
+
+    void insertTourDestinations(Long tourId, List<TourItineraryDayRequest> itinerary, Long userId);
 }

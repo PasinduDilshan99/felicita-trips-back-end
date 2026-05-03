@@ -838,14 +838,12 @@ public class ActivitiesQueries {
             """;
     public static final String INSERT_ACTIVITY_BASIC_DETAILS = """
                         INSERT INTO activities
-                        (destination_id, name, description, activities_category,
+                        (destination_id, name, description,
                          duration_hours, available_from, available_to,
                          price_local, price_foreigners,
                          min_participate, max_participate,
-                         season, status, created_by)
-                        VALUES (?, ?, ?,(SELECT ac.id FROM activity_category ac WHERE ac.name = ? LIMIT 1), ?, ?, ?, ?, ?, ?, ?, ?,
-                         (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1)
-                         , ?)
+                         season_id, status, created_by)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
     public static final String INSERT_ACTIVITY_IMAGE = """
             INSERT INTO activities_images (activity_id, name, description, image_url, status, created_by) VALUES
@@ -860,7 +858,6 @@ public class ActivitiesQueries {
                 destination_id = ?,
                 name = ?,
                 description = ?,
-                activities_category = ?,
                 duration_hours = ?,
                 available_from = ?,
                 available_to = ?,
@@ -868,8 +865,8 @@ public class ActivitiesQueries {
                 price_foreigners = ?,
                 min_participate = ?,
                 max_participate = ?,
-                season = ?,
-                status = (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1),
+                season_id = ?,
+                status = ?,
                 updated_by = ?
             WHERE id = ?
             """;
@@ -1169,5 +1166,93 @@ public class ActivitiesQueries {
                 ORDER BY primary_count DESC
             """;
 
+    public static final String INSERT_ACTIVITY_CATEGORY_MAP = """
+            INSERT INTO activity_category_map
+            (
+                activity_id,
+                category_id,
+                is_primary,
+                status,
+                created_by,
+                updated_by
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """;
+
+    public static final String REMOVE_ACTIVITY_CATEGORIES = """
+            UPDATE activity_category_map
+            SET
+                status = ?,
+                terminated_at = CURRENT_TIMESTAMP,
+                terminated_by = ?,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = ?
+            WHERE id = ?
+            """;
+
+    public static final String UPDATE_ACTIVITY_CATEGORIES = """
+            UPDATE activity_category_map
+            SET
+                is_primary = ?,
+                status = ?,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = ?
+            WHERE activity_id = ?
+              AND category_id = ?
+            """;
+
+    public static final String TERMINATE_ACTIVITY_CATEGORIES = """
+        UPDATE activity_category_map
+        SET
+            status = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?,
+            updated_at = CURRENT_TIMESTAMP,
+            updated_by = ?
+        WHERE activity_id = ?
+        """;
+
+    public static final String GET_ACTIVITIES_BY_DESTINATION_ID = """
+        SELECT
+            a.id AS activity_id,
+            a.destination_id,
+            a.name,
+            a.description,
+            a.duration_hours,
+            a.available_from,
+            a.available_to,
+            a.price_local,
+            a.price_foreigners,
+            a.min_participate,
+            a.max_participate,
+            a.season,
+            a.season_id,
+            a.status AS status_id,
+
+            acm.category_id,
+            ac.name AS category_name,
+            acm.is_primary,
+
+            ai.id AS image_id,
+            ai.name AS image_name,
+            ai.description AS image_description,
+            ai.image_url
+
+        FROM activities a
+
+        LEFT JOIN activity_category_map acm
+            ON a.id = acm.activity_id
+            AND acm.terminated_at IS NULL
+
+        LEFT JOIN activity_category ac
+            ON acm.category_id = ac.id
+
+        LEFT JOIN activities_images ai
+            ON a.id = ai.activity_id
+            AND ai.terminated_at IS NULL
+
+        WHERE a.destination_id = ?
+          AND a.terminated_at IS NULL
+        """;
 
 }

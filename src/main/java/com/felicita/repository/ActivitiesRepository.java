@@ -81,4 +81,14 @@ public interface ActivitiesRepository {
     List<ActivityCategoriesStatisticsResponse.CategoryDistribution> getCategoryDistributionStatistics();
 
     List<ActivityCategoriesStatisticsResponse.CategoryPrimarySecondaryUsage> getCategoryPrimarySecondaryUsageStatistics();
+
+    void insertActivityCategories(Long activityId, List<ActivityInsertRequest.Category> categories, Long userId);
+
+    void removeActivityCategories(List<Long> removeCategoryIds, Long userId);
+
+    void updateActivityCategories(Long activityId, List<ActivityInsertRequest.Category> updatedCategories, Long userId);
+
+    void termianteActivityCategories(Long activityId, Long userId);
+
+    List<ActivityBasicDetailsResponse> getActivityByDestinationId(ActivitiesByDestinationId activitiesByDestinationId);
 }

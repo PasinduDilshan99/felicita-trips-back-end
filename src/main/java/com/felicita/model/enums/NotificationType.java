@@ -21,7 +21,15 @@ public enum NotificationType {
     ROLE_UPDATED("Triggered when a role is updated"),
     ROLE_TERMINATED("Triggered when a role is terminated or deactivated"),
 
-    EMPLOYEE_CREATED("");
+    EMPLOYEE_CREATED(""),
+
+    ACTIVITY_CREATED(""),
+    ACTIVITY_UPDATED(""),
+    ACTIVITY_TERMINATED(""),
+
+    TOUR_CREATED(""),
+    TOUR_UPDATED(""),
+    TOUR_TERMINATED("");
 
     private final String description;
 

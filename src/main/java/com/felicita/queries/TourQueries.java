@@ -1012,12 +1012,38 @@ public class TourQueries {
             """;
     public static final String TOUR_TERMINATE = """
             UPDATE tour
-            SET status = (SELECT id FROM common_status WHERE name = ? LIMIT 1),terminated_at = now(), terminated_by = ?
+            SET status = ? ,terminated_at = now(), terminated_by = ?
             WHERE tour_id = ?
             """;
+
+    public static final String TERMINATE_TOUR_DESTINATIONS_BY_TOUR = """
+        UPDATE tour_destination
+        SET status = ?,
+            terminated_at = now(),
+            terminated_by = ?
+        WHERE tour_id = ?
+        """;
+
+    public static final String TERMINATE_TOUR_TYPES_BY_TOUR = """
+        UPDATE tour_type_map
+        SET status = ?,
+            terminated_at = now(),
+            terminated_by = ?
+        WHERE tour_id = ?
+        """;
+
+    public static final String TERMINATE_TOUR_CATEGORIES_BY_TOUR = """
+        UPDATE tour_category_map
+        SET status = ?,
+            terminated_at = now(),
+            terminated_by = ?
+        WHERE tour_id = ?
+        """;
+
+
     public static final String INSERT_TOUR_BASIC_DETAILS = """
-            INSERT INTO tour (name, description, tour_type, tour_category, duration, latitude, longitude, start_location, end_location, season, status, created_by,assign_to,assign_message) 
-            VALUES (?,?,?,?,?,?,?,?,?,?,(SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1),?,?,?)
+            INSERT INTO tour (name, description, duration, latitude, longitude, start_location, end_location, season, status, created_by,assign_to,assign_message) 
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
             """;
 
     public static final String INSERT_TOUR_TRAVEL_TIP = """
@@ -1026,6 +1052,31 @@ public class TourQueries {
             VALUES (?,?,?,?,(SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1),?)
             """;
 
+    public static final String INSERT_TOUR_TYPE_MAP = """
+            INSERT INTO tour_type_map
+            (
+                tour_id,
+                type_id,
+                is_primary,
+                status,
+                created_by,
+                updated_by
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """;
+
+    public static final String INSERT_TOUR_CATEGORY_MAP = """
+            INSERT INTO tour_category_map
+            (
+                tour_id,
+                category_id,
+                is_primary,
+                status,
+                created_by,
+                updated_by
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """;
 
     public static final String INSERT_TOUR_EXCLUSION = """
             INSERT INTO tour_exclusion
@@ -1139,15 +1190,13 @@ public class TourQueries {
             SET
                 name = ?,
                 description = ?,
-                tour_type = ?,
-                tour_category = ?,
                 duration = ?,
                 latitude = ?,
                 longitude = ?,
                 start_location = ?,
                 end_location = ?,
                 season = ?,
-                status = (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1),
+                status = ?,
                 updated_by = ?,
                 updated_at = CURRENT_TIMESTAMP,
                 assign_to = ?,
@@ -1155,47 +1204,98 @@ public class TourQueries {
             WHERE tour_id = ?
             """;
 
+    public static final String REMOVE_TOUR_TYPE_FROM_TOUR = """
+            UPDATE tour_type_map
+            SET
+                status = ?,
+                terminated_at = CURRENT_TIMESTAMP,
+                terminated_by = ?,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = ?
+            WHERE tour_id = ?
+              AND type_id = ?
+              AND terminated_at IS NULL
+            """;
+
+    public static final String UPDATE_TOUR_TYPES_IN_TOUR = """
+            UPDATE tour_type_map
+            SET
+                is_primary = ?,
+                status = ?,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = ?
+            WHERE tour_id = ?
+              AND type_id = ?
+              AND terminated_at IS NULL
+            """;
+
+    public static final String UPDATE_TOUR_CATEGORIES_IN_TOUR = """
+            UPDATE tour_category_map
+            SET
+                is_primary = ?,
+                status = ?,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = ?
+            WHERE tour_id = ?
+              AND category_id = ?
+              AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_TOUR_CATEGORIES_FROM_TOUR = """
+            UPDATE tour_category_map
+            SET
+                status = ?,
+                terminated_at = CURRENT_TIMESTAMP,
+                terminated_by = ?,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = ?
+            WHERE tour_id = ?
+              AND category_id = ?
+              AND terminated_at IS NULL
+            """;
+
     public static final String TOUR_IMAGES_REMOVE = """
             UPDATE tour_images
-            SET status = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE id = ?
             """;
     public static final String TOUR_INCLUSION_REMOVE = """
             UPDATE tour_inclusion
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE tour_inclusion_id = ?
             """;
     public static final String TOUR_EXCLUSION_REMOVE = """
             UPDATE tour_exclusion
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE tour_exclusion_id = ?
             """;
     public static final String TOUR_CONDITION_REMOVE = """
             UPDATE tour_condition
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE tour_condition_id = ?
             """;
     public static final String TOUR_TRAVEL_TIPS_REMOVE = """
             UPDATE tour_travel_tips
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE tour_travel_tip_id = ?
             """;
     public static final String TOUR_DESTINATION_REMOVE = """
             UPDATE tour_destination
-            SET status = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status = ?,
                 terminated_at = now(),
                 terminated_by = ?
-            WHERE id = ?
+            WHERE tour_id = ?
+              AND destination_id = ?
             """;
     public static final String UPDATE_TOUR_IMAGE = """
             UPDATE tour_images
@@ -1269,361 +1369,372 @@ public class TourQueries {
             WHERE t.tour_id = ?
             """;
 
+    public static final String REMOVE_ACTIVITIES_FROM_TOUR_DESTINATIONS = """
+            UPDATE tour_destination
+            SET
+                status = ?,
+                terminated_at = CURRENT_TIMESTAMP,
+                terminated_by = ?,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = ?
+            WHERE tour_id = ?
+              AND activities_id = ?
+            """;
 
 
     public static final String GET_TOUR_SUMMARY_STATISTICS = """
-        SELECT 
-            (SELECT COUNT(*) 
-             FROM tour 
-             WHERE terminated_at IS NULL) AS total_tours,
-
-            (SELECT COUNT(*) 
-             FROM tour_booking_inquiries) AS total_bookings,
-
-            (SELECT COUNT(*) 
-             FROM tour_booking_inquiries 
-             WHERE booking_status_id IS NULL OR booking_status_id = 1) AS pending_bookings,
-
-            (SELECT COALESCE(AVG(r.rating), 0)
-             FROM tour_review r) AS average_rating
-    """;
+                SELECT 
+                    (SELECT COUNT(*) 
+                     FROM tour 
+                     WHERE terminated_at IS NULL) AS total_tours,
+            
+                    (SELECT COUNT(*) 
+                     FROM tour_booking_inquiries) AS total_bookings,
+            
+                    (SELECT COUNT(*) 
+                     FROM tour_booking_inquiries 
+                     WHERE booking_status_id IS NULL OR booking_status_id = 1) AS pending_bookings,
+            
+                    (SELECT COALESCE(AVG(r.rating), 0)
+                     FROM tour_review r) AS average_rating
+            """;
 
     public static final String GET_TOUR_POPULARITY_STATISTICS = """
-        SELECT 
-            t.tour_id,
-            t.name AS tour_name,
-            COUNT(b.tour_booking_inquiry_id) AS total_bookings
-        FROM tour t
-        LEFT JOIN tour_booking_inquiries b 
-            ON b.tour_id = t.tour_id
-        WHERE t.terminated_at IS NULL
-        GROUP BY t.tour_id, t.name
-        ORDER BY total_bookings DESC
-    """;
+                SELECT 
+                    t.tour_id,
+                    t.name AS tour_name,
+                    COUNT(b.tour_booking_inquiry_id) AS total_bookings
+                FROM tour t
+                LEFT JOIN tour_booking_inquiries b 
+                    ON b.tour_id = t.tour_id
+                WHERE t.terminated_at IS NULL
+                GROUP BY t.tour_id, t.name
+                ORDER BY total_bookings DESC
+            """;
 
 
     public static final String GET_BOOKING_STATUS_DISTRIBUTION_STATISTICS = """
-        SELECT 
-            bs.name AS status_name,
-            COUNT(b.tour_booking_inquiry_id) AS total_count
-        FROM tour_booking_inquiries b
-        LEFT JOIN booking_status bs 
-            ON bs.id = b.booking_status_id
-        GROUP BY bs.name
-        ORDER BY total_count DESC
-    """;
+                SELECT 
+                    bs.name AS status_name,
+                    COUNT(b.tour_booking_inquiry_id) AS total_count
+                FROM tour_booking_inquiries b
+                LEFT JOIN booking_status bs 
+                    ON bs.id = b.booking_status_id
+                GROUP BY bs.name
+                ORDER BY total_count DESC
+            """;
 
 
     public static final String GET_CATEGORY_PERFORMANCE_STATISTICS = """
-        SELECT 
-            c.id AS category_id,
-            c.name AS category_name,
-            COUNT(DISTINCT m.tour_id) AS total_tours
-        FROM tour_category c
-        LEFT JOIN tour_category_map m 
-            ON m.category_id = c.id
-        WHERE c.terminated_at IS NULL
-        GROUP BY c.id, c.name
-        ORDER BY total_tours DESC
-    """;
+                SELECT 
+                    c.id AS category_id,
+                    c.name AS category_name,
+                    COUNT(DISTINCT m.tour_id) AS total_tours
+                FROM tour_category c
+                LEFT JOIN tour_category_map m 
+                    ON m.category_id = c.id
+                WHERE c.terminated_at IS NULL
+                GROUP BY c.id, c.name
+                ORDER BY total_tours DESC
+            """;
 
 
     public static final String GET_TYPE_DISTRIBUTION_STATISTICS = """
-        SELECT 
-            tt.id AS type_id,
-            tt.name AS type_name,
-            COUNT(m.tour_id) AS total_tours
-        FROM tour_type tt
-        LEFT JOIN tour_type_map m 
-            ON m.type_id = tt.id
-        GROUP BY tt.id, tt.name
-        ORDER BY total_tours DESC
-    """;
+                SELECT 
+                    tt.id AS type_id,
+                    tt.name AS type_name,
+                    COUNT(m.tour_id) AS total_tours
+                FROM tour_type tt
+                LEFT JOIN tour_type_map m 
+                    ON m.type_id = tt.id
+                GROUP BY tt.id, tt.name
+                ORDER BY total_tours DESC
+            """;
 
 
     public static final String GET_LOCATION_DISTRIBUTION_STATISTICS = """
-        SELECT 
-            start_location,
-            COUNT(*) AS total_tours
-        FROM tour
-        WHERE terminated_at IS NULL
-        GROUP BY start_location
-        ORDER BY total_tours DESC
-    """;
+                SELECT 
+                    start_location,
+                    COUNT(*) AS total_tours
+                FROM tour
+                WHERE terminated_at IS NULL
+                GROUP BY start_location
+                ORDER BY total_tours DESC
+            """;
 
     public static final String GET_TOUR_SCHEDULE_SUMMARY_STATISTICS = """
-        SELECT 
-            (SELECT COUNT(*) FROM tour_schedule WHERE terminated_at IS NULL) AS total_schedules,
-
-            (SELECT COUNT(DISTINCT h.tour_schedule_id) 
-             FROM tour_history h) AS completed_schedules,
-
-            (SELECT COALESCE(AVG(r.rating), 0)
-             FROM tour_review r) AS average_rating,
-
-            (SELECT 
-                (COUNT(DISTINCT h.tour_schedule_id) * 100.0 /
-                 NULLIF(COUNT(DISTINCT s.id), 0))
-             FROM tour_schedule s
-             LEFT JOIN tour_history h ON h.tour_schedule_id = s.id
-             WHERE s.terminated_at IS NULL
-            ) AS utilization_rate
-    """;
+                SELECT 
+                    (SELECT COUNT(*) FROM tour_schedule WHERE terminated_at IS NULL) AS total_schedules,
+            
+                    (SELECT COUNT(DISTINCT h.tour_schedule_id) 
+                     FROM tour_history h) AS completed_schedules,
+            
+                    (SELECT COALESCE(AVG(r.rating), 0)
+                     FROM tour_review r) AS average_rating,
+            
+                    (SELECT 
+                        (COUNT(DISTINCT h.tour_schedule_id) * 100.0 /
+                         NULLIF(COUNT(DISTINCT s.id), 0))
+                     FROM tour_schedule s
+                     LEFT JOIN tour_history h ON h.tour_schedule_id = s.id
+                     WHERE s.terminated_at IS NULL
+                    ) AS utilization_rate
+            """;
 
 
     public static final String GET_SCHEDULE_TIMELINE_STATISTICS = """
-        SELECT 
-            DATE(created_at) AS schedule_date,
-            COUNT(*) AS total_schedules
-        FROM tour_schedule
-        WHERE terminated_at IS NULL
-        GROUP BY DATE(created_at)
-        ORDER BY schedule_date
-    """;
+                SELECT 
+                    DATE(created_at) AS schedule_date,
+                    COUNT(*) AS total_schedules
+                FROM tour_schedule
+                WHERE terminated_at IS NULL
+                GROUP BY DATE(created_at)
+                ORDER BY schedule_date
+            """;
 
 
     public static final String GET_DURATION_DISTRIBUTION_STATISTICS = """
-        SELECT 
-            duration_start,
-            duration_end,
-            COUNT(*) AS total_schedules
-        FROM tour_schedule
-        WHERE terminated_at IS NULL
-        GROUP BY duration_start, duration_end
-        ORDER BY total_schedules DESC
-    """;
+                SELECT 
+                    duration_start,
+                    duration_end,
+                    COUNT(*) AS total_schedules
+                FROM tour_schedule
+                WHERE terminated_at IS NULL
+                GROUP BY duration_start, duration_end
+                ORDER BY total_schedules DESC
+            """;
 
     public static final String GET_SCHEDULE_EXECUTION_PERFORMANCE_STATISTICS = """
-        SELECT 
-            s.id AS schedule_id,
-            s.name AS schedule_name,
-            COUNT(h.id) AS completed_instances
-        FROM tour_schedule s
-        LEFT JOIN tour_history h 
-            ON h.tour_schedule_id = s.id
-        WHERE s.terminated_at IS NULL
-        GROUP BY s.id, s.name
-        ORDER BY completed_instances DESC
-    """;
+                SELECT 
+                    s.id AS schedule_id,
+                    s.name AS schedule_name,
+                    COUNT(h.id) AS completed_instances
+                FROM tour_schedule s
+                LEFT JOIN tour_history h 
+                    ON h.tour_schedule_id = s.id
+                WHERE s.terminated_at IS NULL
+                GROUP BY s.id, s.name
+                ORDER BY completed_instances DESC
+            """;
 
 
     public static final String GET_SCHEDULE_RATING_OVERVIEW_STATISTICS = """
-        SELECT 
-            s.id AS schedule_id,
-            s.name AS schedule_name,
-            COALESCE(AVG(r.rating), 0) AS average_rating,
-            COUNT(r.id) AS total_reviews
-        FROM tour_schedule s
-        LEFT JOIN tour_review r 
-            ON r.tour_schedule_id = s.id
-        WHERE s.terminated_at IS NULL
-        GROUP BY s.id, s.name
-        ORDER BY average_rating DESC
-    """;
+                SELECT 
+                    s.id AS schedule_id,
+                    s.name AS schedule_name,
+                    COALESCE(AVG(r.rating), 0) AS average_rating,
+                    COUNT(r.id) AS total_reviews
+                FROM tour_schedule s
+                LEFT JOIN tour_review r 
+                    ON r.tour_schedule_id = s.id
+                WHERE s.terminated_at IS NULL
+                GROUP BY s.id, s.name
+                ORDER BY average_rating DESC
+            """;
 
 
     public static final String GET_PARTICIPATION_TREND_STATISTICS = """
-        SELECT 
-            s.id AS schedule_id,
-            s.name AS schedule_name,
-            COALESCE(SUM(h.number_of_participate), 0) AS total_participants
-        FROM tour_schedule s
-        LEFT JOIN tour_history h 
-            ON h.tour_schedule_id = s.id
-        WHERE s.terminated_at IS NULL
-        GROUP BY s.id, s.name
-        ORDER BY total_participants DESC
-    """;
+                SELECT 
+                    s.id AS schedule_id,
+                    s.name AS schedule_name,
+                    COALESCE(SUM(h.number_of_participate), 0) AS total_participants
+                FROM tour_schedule s
+                LEFT JOIN tour_history h 
+                    ON h.tour_schedule_id = s.id
+                WHERE s.terminated_at IS NULL
+                GROUP BY s.id, s.name
+                ORDER BY total_participants DESC
+            """;
 
 
     public static final String GET_CATEGORY_SUMMARY_STATISTICS = """
-        SELECT 
-            (SELECT COUNT(*) FROM tour_category WHERE terminated_at IS NULL) AS total_categories,
-
-            (SELECT COUNT(DISTINCT c.id)
-             FROM tour_category c
-             JOIN tour_category_map m ON m.category_id = c.id
-             WHERE c.terminated_at IS NULL) AS active_categories,
-
-            (SELECT COALESCE(AVG(r.rating), 0)
-             FROM tour_review r) AS average_rating,
-
-            (SELECT COUNT(b.tour_booking_inquiry_id)
-             FROM tour_booking_inquiries b) AS total_bookings
-    """;
+                SELECT 
+                    (SELECT COUNT(*) FROM tour_category WHERE terminated_at IS NULL) AS total_categories,
+            
+                    (SELECT COUNT(DISTINCT c.id)
+                     FROM tour_category c
+                     JOIN tour_category_map m ON m.category_id = c.id
+                     WHERE c.terminated_at IS NULL) AS active_categories,
+            
+                    (SELECT COALESCE(AVG(r.rating), 0)
+                     FROM tour_review r) AS average_rating,
+            
+                    (SELECT COUNT(b.tour_booking_inquiry_id)
+                     FROM tour_booking_inquiries b) AS total_bookings
+            """;
 
 
     public static final String GET_CATEGORY_DISTRIBUTION_STATISTICS = """
-        SELECT 
-            c.name AS category_name,
-            COUNT(m.tour_id) AS total_tours
-        FROM tour_category c
-        LEFT JOIN tour_category_map m 
-            ON m.category_id = c.id
-        WHERE c.terminated_at IS NULL
-        GROUP BY c.name
-        ORDER BY total_tours DESC
-    """;
+                SELECT 
+                    c.name AS category_name,
+                    COUNT(m.tour_id) AS total_tours
+                FROM tour_category c
+                LEFT JOIN tour_category_map m 
+                    ON m.category_id = c.id
+                WHERE c.terminated_at IS NULL
+                GROUP BY c.name
+                ORDER BY total_tours DESC
+            """;
 
 
     public static final String GET_CATEGORY_BOOKING_PERFORMANCE_STATISTICS = """
-        SELECT 
-            c.id AS category_id,
-            c.name AS category_name,
-            COUNT(b.tour_booking_inquiry_id) AS total_bookings
-        FROM tour_category c
-        JOIN tour_category_map m ON m.category_id = c.id
-        JOIN tour t ON t.tour_id = m.tour_id
-        LEFT JOIN tour_booking_inquiries b ON b.tour_id = t.tour_id
-        WHERE c.terminated_at IS NULL
-        GROUP BY c.id, c.name
-        ORDER BY total_bookings DESC
-    """;
+                SELECT 
+                    c.id AS category_id,
+                    c.name AS category_name,
+                    COUNT(b.tour_booking_inquiry_id) AS total_bookings
+                FROM tour_category c
+                JOIN tour_category_map m ON m.category_id = c.id
+                JOIN tour t ON t.tour_id = m.tour_id
+                LEFT JOIN tour_booking_inquiries b ON b.tour_id = t.tour_id
+                WHERE c.terminated_at IS NULL
+                GROUP BY c.id, c.name
+                ORDER BY total_bookings DESC
+            """;
 
 
     public static final String GET_CATEGORY_RATING_OVERVIEW_STATISTICS = """
-        SELECT 
-            c.id AS category_id,
-            c.name AS category_name,
-            COALESCE(AVG(r.rating), 0) AS average_rating,
-            COUNT(r.id) AS total_reviews
-        FROM tour_category c
-        JOIN tour_category_map m ON m.category_id = c.id
-        JOIN tour t ON t.tour_id = m.tour_id
-        JOIN tour_schedule s ON s.tour_id = t.tour_id
-        LEFT JOIN tour_review r ON r.tour_schedule_id = s.id
-        WHERE c.terminated_at IS NULL
-        GROUP BY c.id, c.name
-        ORDER BY average_rating DESC
-    """;
+                SELECT 
+                    c.id AS category_id,
+                    c.name AS category_name,
+                    COALESCE(AVG(r.rating), 0) AS average_rating,
+                    COUNT(r.id) AS total_reviews
+                FROM tour_category c
+                JOIN tour_category_map m ON m.category_id = c.id
+                JOIN tour t ON t.tour_id = m.tour_id
+                JOIN tour_schedule s ON s.tour_id = t.tour_id
+                LEFT JOIN tour_review r ON r.tour_schedule_id = s.id
+                WHERE c.terminated_at IS NULL
+                GROUP BY c.id, c.name
+                ORDER BY average_rating DESC
+            """;
 
 
     public static final String GET_CATEGORY_PRIMARY_SECONDARY_USAGE_STATISTICS = """
-        SELECT 
-            c.name AS category_name,
-            SUM(CASE WHEN m.is_primary = 1 THEN 1 ELSE 0 END) AS primary_usage,
-            SUM(CASE WHEN m.is_primary = 0 THEN 1 ELSE 0 END) AS secondary_usage
-        FROM tour_category c
-        JOIN tour_category_map m 
-            ON m.category_id = c.id
-        WHERE c.terminated_at IS NULL
-        GROUP BY c.name
-        ORDER BY primary_usage DESC
-    """;
+                SELECT 
+                    c.name AS category_name,
+                    SUM(CASE WHEN m.is_primary = 1 THEN 1 ELSE 0 END) AS primary_usage,
+                    SUM(CASE WHEN m.is_primary = 0 THEN 1 ELSE 0 END) AS secondary_usage
+                FROM tour_category c
+                JOIN tour_category_map m 
+                    ON m.category_id = c.id
+                WHERE c.terminated_at IS NULL
+                GROUP BY c.name
+                ORDER BY primary_usage DESC
+            """;
 
 
     public static final String GET_CATEGORY_PARTICIPATION_IMPACT_STATISTICS = """
-        SELECT 
-            c.id AS category_id,
-            c.name AS category_name,
-            COALESCE(SUM(h.number_of_participate), 0) AS total_participants
-        FROM tour_category c
-        JOIN tour_category_map m ON m.category_id = c.id
-        JOIN tour_schedule s ON s.tour_id = m.tour_id
-        LEFT JOIN tour_history h ON h.tour_schedule_id = s.id
-        WHERE c.terminated_at IS NULL
-        GROUP BY c.id, c.name
-        ORDER BY total_participants DESC
-    """;
+                SELECT 
+                    c.id AS category_id,
+                    c.name AS category_name,
+                    COALESCE(SUM(h.number_of_participate), 0) AS total_participants
+                FROM tour_category c
+                JOIN tour_category_map m ON m.category_id = c.id
+                JOIN tour_schedule s ON s.tour_id = m.tour_id
+                LEFT JOIN tour_history h ON h.tour_schedule_id = s.id
+                WHERE c.terminated_at IS NULL
+                GROUP BY c.id, c.name
+                ORDER BY total_participants DESC
+            """;
 
     public static final String GET_TOUR_TYPE_SUMMARY_STATISTICS = """
-        SELECT 
-            (SELECT COUNT(*) FROM tour_type WHERE terminated_at IS NULL) AS total_types,
-
-            (SELECT COUNT(DISTINCT t.id)
-             FROM tour_type t
-             JOIN tour_type_map m ON m.type_id = t.id
-             WHERE t.terminated_at IS NULL) AS active_types,
-
-            (SELECT COALESCE(AVG(r.rating), 0)
-             FROM tour_review r) AS average_rating,
-
-            (SELECT COUNT(b.tour_booking_inquiry_id)
-             FROM tour_booking_inquiries b) AS total_bookings
-    """;
+                SELECT 
+                    (SELECT COUNT(*) FROM tour_type WHERE terminated_at IS NULL) AS total_types,
+            
+                    (SELECT COUNT(DISTINCT t.id)
+                     FROM tour_type t
+                     JOIN tour_type_map m ON m.type_id = t.id
+                     WHERE t.terminated_at IS NULL) AS active_types,
+            
+                    (SELECT COALESCE(AVG(r.rating), 0)
+                     FROM tour_review r) AS average_rating,
+            
+                    (SELECT COUNT(b.tour_booking_inquiry_id)
+                     FROM tour_booking_inquiries b) AS total_bookings
+            """;
 
     // =========================
     // 2. TYPE DISTRIBUTION
     // =========================
     public static final String GET_TYPES_DISTRIBUTION_STATISTICS = """
-        SELECT 
-            tt.name AS type_name,
-            COUNT(m.tour_id) AS total_tours
-        FROM tour_type tt
-        LEFT JOIN tour_type_map m 
-            ON m.type_id = tt.id
-        WHERE tt.terminated_at IS NULL
-        GROUP BY tt.name
-        ORDER BY total_tours DESC
-    """;
+                SELECT 
+                    tt.name AS type_name,
+                    COUNT(m.tour_id) AS total_tours
+                FROM tour_type tt
+                LEFT JOIN tour_type_map m 
+                    ON m.type_id = tt.id
+                WHERE tt.terminated_at IS NULL
+                GROUP BY tt.name
+                ORDER BY total_tours DESC
+            """;
 
     // =========================
     // 3. BOOKING PERFORMANCE
     // =========================
     public static final String GET_TYPE_BOOKING_PERFORMANCE_STATISTICS = """
-        SELECT 
-            tt.id AS type_id,
-            tt.name AS type_name,
-            COUNT(b.tour_booking_inquiry_id) AS total_bookings
-        FROM tour_type tt
-        JOIN tour_type_map m ON m.type_id = tt.id
-        JOIN tour t ON t.tour_id = m.tour_id
-        LEFT JOIN tour_booking_inquiries b ON b.tour_id = t.tour_id
-        WHERE tt.terminated_at IS NULL
-        GROUP BY tt.id, tt.name
-        ORDER BY total_bookings DESC
-    """;
+                SELECT 
+                    tt.id AS type_id,
+                    tt.name AS type_name,
+                    COUNT(b.tour_booking_inquiry_id) AS total_bookings
+                FROM tour_type tt
+                JOIN tour_type_map m ON m.type_id = tt.id
+                JOIN tour t ON t.tour_id = m.tour_id
+                LEFT JOIN tour_booking_inquiries b ON b.tour_id = t.tour_id
+                WHERE tt.terminated_at IS NULL
+                GROUP BY tt.id, tt.name
+                ORDER BY total_bookings DESC
+            """;
 
     // =========================
     // 4. RATING OVERVIEW
     // =========================
     public static final String GET_TYPE_RATING_OVERVIEW_STATISTICS = """
-        SELECT 
-            tt.id AS type_id,
-            tt.name AS type_name,
-            COALESCE(AVG(r.rating), 0) AS average_rating,
-            COUNT(r.id) AS total_reviews
-        FROM tour_type tt
-        JOIN tour_type_map m ON m.type_id = tt.id
-        JOIN tour t ON t.tour_id = m.tour_id
-        JOIN tour_schedule s ON s.tour_id = t.tour_id
-        LEFT JOIN tour_review r ON r.tour_schedule_id = s.id
-        WHERE tt.terminated_at IS NULL
-        GROUP BY tt.id, tt.name
-        ORDER BY average_rating DESC
-    """;
+                SELECT 
+                    tt.id AS type_id,
+                    tt.name AS type_name,
+                    COALESCE(AVG(r.rating), 0) AS average_rating,
+                    COUNT(r.id) AS total_reviews
+                FROM tour_type tt
+                JOIN tour_type_map m ON m.type_id = tt.id
+                JOIN tour t ON t.tour_id = m.tour_id
+                JOIN tour_schedule s ON s.tour_id = t.tour_id
+                LEFT JOIN tour_review r ON r.tour_schedule_id = s.id
+                WHERE tt.terminated_at IS NULL
+                GROUP BY tt.id, tt.name
+                ORDER BY average_rating DESC
+            """;
 
     // =========================
     // 5. PARTICIPATION IMPACT
     // =========================
     public static final String GET_TYPE_PARTICIPATION_IMPACT_STATISTICS = """
-        SELECT 
-            tt.id AS type_id,
-            tt.name AS type_name,
-            COALESCE(SUM(h.number_of_participate), 0) AS total_participants
-        FROM tour_type tt
-        JOIN tour_type_map m ON m.type_id = tt.id
-        JOIN tour_schedule s ON s.tour_id = m.tour_id
-        LEFT JOIN tour_history h ON h.tour_schedule_id = s.id
-        WHERE tt.terminated_at IS NULL
-        GROUP BY tt.id, tt.name
-        ORDER BY total_participants DESC
-    """;
+                SELECT 
+                    tt.id AS type_id,
+                    tt.name AS type_name,
+                    COALESCE(SUM(h.number_of_participate), 0) AS total_participants
+                FROM tour_type tt
+                JOIN tour_type_map m ON m.type_id = tt.id
+                JOIN tour_schedule s ON s.tour_id = m.tour_id
+                LEFT JOIN tour_history h ON h.tour_schedule_id = s.id
+                WHERE tt.terminated_at IS NULL
+                GROUP BY tt.id, tt.name
+                ORDER BY total_participants DESC
+            """;
 
     // =========================
     // 6. PRIMARY VS SECONDARY
     // =========================
     public static final String GET_TYPE_PRIMARY_SECONDARY_USAGE_STATISTICS = """
-        SELECT 
-            tt.name AS type_name,
-            SUM(CASE WHEN m.is_primary = 1 THEN 1 ELSE 0 END) AS primary_usage,
-            SUM(CASE WHEN m.is_primary = 0 THEN 1 ELSE 0 END) AS secondary_usage
-        FROM tour_type tt
-        JOIN tour_type_map m 
-            ON m.type_id = tt.id
-        WHERE tt.terminated_at IS NULL
-        GROUP BY tt.name
-        ORDER BY primary_usage DESC
-    """;
+                SELECT 
+                    tt.name AS type_name,
+                    SUM(CASE WHEN m.is_primary = 1 THEN 1 ELSE 0 END) AS primary_usage,
+                    SUM(CASE WHEN m.is_primary = 0 THEN 1 ELSE 0 END) AS secondary_usage
+                FROM tour_type tt
+                JOIN tour_type_map m 
+                    ON m.type_id = tt.id
+                WHERE tt.terminated_at IS NULL
+                GROUP BY tt.name
+                ORDER BY primary_usage DESC
+            """;
 
 }
