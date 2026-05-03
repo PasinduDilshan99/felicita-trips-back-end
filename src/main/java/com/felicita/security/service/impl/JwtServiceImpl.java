@@ -146,7 +146,7 @@
                     .path("/")
                     .maxAge(Duration.ofSeconds(accessCookieMaxAge))
                     .sameSite("Lax")
-                    .domain(null)
+                    .domain(".felicitatrips.com")
                     .build();
         }
 
@@ -158,7 +158,7 @@
                     .path("/")
                     .maxAge(Duration.ofSeconds(refreshCookieMaxAge))
                     .sameSite("Lax")
-                    .domain(null)
+                    .domain(".felicitatrips.com")
                     .build();
         }
 
@@ -217,7 +217,7 @@
                     .path("/")
                     .maxAge(0)
                     .sameSite("Lax")
-                    .domain(null)
+                    .domain(".felicitatrips.com")
                     .build();
         }
 
@@ -229,7 +229,7 @@
                     .path("/")
                     .maxAge(0)
                     .sameSite("Lax")
-                    .domain(null)
+                    .domain(".felicitatrips.com")
                     .build();
         }
     }
