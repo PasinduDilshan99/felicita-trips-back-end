@@ -1238,4 +1238,275 @@ public class PackageQueries {
             WHERE id = ? AND package_id = ?
             """;
 
+    public static final String GET_PACKAGE_SUMMARY_STATISTICS = """
+                SELECT
+                    COUNT(DISTINCT p.package_id) AS total_packages,
+                    COUNT(DISTINCT CASE WHEN p.status = 1 THEN p.package_id END) AS active_packages,
+                    COALESCE(AVG(pr.rating), 0) AS average_package_rating,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants,
+                    COALESCE(AVG(p.total_price), 0) AS average_package_price
+                FROM packages p
+                LEFT JOIN package_schedule ps
+                    ON ps.package_id = p.package_id
+                LEFT JOIN package_review pr
+                    ON pr.package_schedule_id = ps.id
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE p.terminated_at IS NULL
+            """;
+
+    public static final String GET_PACKAGE_POPULARITY_STATISTICS = """
+                SELECT
+                    p.package_id,
+                    p.name AS package_name,
+                    COUNT(DISTINCT ps.id) AS total_schedules,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants
+                FROM packages p
+                LEFT JOIN package_schedule ps
+                    ON ps.package_id = p.package_id
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE p.terminated_at IS NULL
+                GROUP BY p.package_id, p.name
+                ORDER BY total_participants DESC
+            """;
+
+    public static final String GET_PACKAGE_RATING_OVERVIEW_STATISTICS = """
+                SELECT
+                    p.package_id,
+                    p.name AS package_name,
+                    COALESCE(AVG(pr.rating), 0) AS average_rating,
+                    COUNT(pr.id) AS total_reviews
+                FROM packages p
+                LEFT JOIN package_schedule ps
+                    ON ps.package_id = p.package_id
+                LEFT JOIN package_review pr
+                    ON pr.package_schedule_id = ps.id
+                WHERE p.terminated_at IS NULL
+                GROUP BY p.package_id, p.name
+                ORDER BY average_rating DESC
+            """;
+
+    public static final String GET_PACKAGE_CAPACITY_UTILIZATION_STATISTICS = """
+                SELECT
+                    p.package_id,
+                    p.name AS package_name,
+                    p.min_person_count,
+                    p.max_person_count,
+                    COALESCE(AVG(ph.number_of_participate), 0) AS average_participants
+                FROM packages p
+                LEFT JOIN package_schedule ps
+                    ON ps.package_id = p.package_id
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE p.terminated_at IS NULL
+                GROUP BY
+                    p.package_id,
+                    p.name,
+                    p.min_person_count,
+                    p.max_person_count
+                ORDER BY average_participants DESC
+            """;
+
+    public static final String GET_PACKAGE_TYPE_DISTRIBUTION_STATISTICS = """
+                SELECT
+                    pt.name AS package_type_name,
+                    COUNT(p.package_id) AS total_packages
+                FROM package_type pt
+                LEFT JOIN packages p
+                    ON p.package_type_id = pt.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.name
+                ORDER BY total_packages DESC
+            """;
+
+    public static final String GET_PACKAGE_PRICE_DISTRIBUTION_STATISTICS = """
+                SELECT
+                    p.package_id,
+                    p.name AS package_name,
+                    p.total_price,
+                    p.price_per_person,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants
+                FROM packages p
+                LEFT JOIN package_schedule ps
+                    ON ps.package_id = p.package_id
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE p.terminated_at IS NULL
+                GROUP BY
+                    p.package_id,
+                    p.name,
+                    p.total_price,
+                    p.price_per_person
+                ORDER BY total_participants DESC
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_SUMMARY_STATISTICS = """
+                SELECT
+                    COUNT(DISTINCT ps.id) AS total_schedules,
+                    COUNT(DISTINCT CASE WHEN ps.status = 1 THEN ps.id END) AS active_schedules,
+                    COALESCE(AVG(pr.rating), 0) AS average_schedule_rating,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants,
+                    COALESCE(AVG((ps.duration_start + ps.duration_end) / 2), 0) AS average_duration
+                FROM package_schedule ps
+                LEFT JOIN package_review pr
+                    ON pr.package_schedule_id = ps.id
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE ps.terminated_at IS NULL
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_TIMELINE_STATISTICS = """
+                SELECT
+                    DATE_FORMAT(ps.assume_start_date, '%Y-%m') AS timeline,
+                    COUNT(ps.id) AS total_schedules
+                FROM package_schedule ps
+                WHERE ps.terminated_at IS NULL
+                GROUP BY DATE_FORMAT(ps.assume_start_date, '%Y-%m')
+                ORDER BY timeline ASC
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_STATUS_DISTRIBUTION_STATISTICS = """
+                SELECT
+                    ps.status AS status_id,
+                    COUNT(ps.id) AS total_schedules
+                FROM package_schedule ps
+                WHERE ps.terminated_at IS NULL
+                GROUP BY ps.status
+                ORDER BY total_schedules DESC
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_DURATION_DISTRIBUTION_STATISTICS = """
+                SELECT
+                    ps.id AS schedule_id,
+                    ps.name AS schedule_name,
+                    ps.duration_start,
+                    ps.duration_end,
+                    ((ps.duration_start + ps.duration_end) / 2) AS average_duration
+                FROM package_schedule ps
+                WHERE ps.terminated_at IS NULL
+                ORDER BY average_duration DESC
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_PARTICIPATION_PERFORMANCE_STATISTICS = """
+                SELECT
+                    ps.id AS schedule_id,
+                    ps.name AS schedule_name,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants,
+                    COALESCE(AVG(ph.number_of_participate), 0) AS average_participants
+                FROM package_schedule ps
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE ps.terminated_at IS NULL
+                GROUP BY ps.id, ps.name
+                ORDER BY total_participants DESC
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_RATING_OVERVIEW_STATISTICS = """
+                SELECT
+                    ps.id AS schedule_id,
+                    ps.name AS schedule_name,
+                    COALESCE(AVG(pr.rating), 0) AS average_rating,
+                    COUNT(pr.id) AS total_reviews
+                FROM package_schedule ps
+                LEFT JOIN package_review pr
+                    ON pr.package_schedule_id = ps.id
+                WHERE ps.terminated_at IS NULL
+                GROUP BY ps.id, ps.name
+                ORDER BY average_rating DESC
+            """;
+
+    public static final String GET_PACKAGE_TYPE_SUMMARY = """
+                SELECT
+                    COUNT(DISTINCT pt.id) AS total_package_types,
+                    COUNT(p.package_id) AS total_packages,
+                    COALESCE(AVG(pr.rating), 0) AS average_rating,
+                    COALESCE(SUM(p.total_price), 0) AS total_revenue
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                LEFT JOIN package_schedule ps ON ps.package_id = p.package_id
+                LEFT JOIN package_review pr ON pr.package_schedule_id = ps.id
+                WHERE pt.terminated_at IS NULL;
+            """;
+
+    public static final String GET_TYPE_DISTRIBUTION = """
+                SELECT
+                    pt.id AS type_id,
+                    pt.name AS type_name,
+                    COUNT(p.package_id) AS total_packages
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.id, pt.name
+                ORDER BY total_packages DESC;
+            """;
+
+    public static final String GET_TYPE_REVENUE_PERFORMANCE = """
+                SELECT
+                    pt.id AS type_id,
+                    pt.name AS type_name,
+                    COALESCE(SUM(p.total_price), 0) AS total_revenue,
+                    COALESCE(AVG(p.total_price), 0) AS avg_price
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.id, pt.name
+                ORDER BY total_revenue DESC;
+            """;
+
+    public static final String GET_TYPE_PARTICIPATION_IMPACT = """
+                SELECT
+                    pt.name AS type_name,
+                    DATE_FORMAT(ph.start_date, '%Y-%m') AS month,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                LEFT JOIN package_schedule ps ON ps.package_id = p.package_id
+                LEFT JOIN package_history ph ON ph.package_schedule_id = ps.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.name, DATE_FORMAT(ph.start_date, '%Y-%m')
+                ORDER BY month;
+            """;
+
+    public static final String GET_TYPE_PRIMARY_SECONDARY_USAGE = """
+                SELECT
+                    pt.id AS type_id,
+                    pt.name AS type_name,
+                    SUM(CASE WHEN ttm.is_primary = 1 THEN 1 ELSE 0 END) AS primary_count,
+                    SUM(CASE WHEN ttm.is_primary = 0 THEN 1 ELSE 0 END) AS secondary_count
+                FROM package_type pt
+                LEFT JOIN tour_type_map ttm ON ttm.type_id = pt.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.id, pt.name
+                ORDER BY primary_count DESC;
+            """;
+
+    public static final String GET_TYPE_BOOKING_PERFORMANCE = """
+                SELECT
+                    pt.id AS type_id,
+                    pt.name AS type_name,
+                    COUNT(ps.id) AS schedule_count
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                LEFT JOIN package_schedule ps ON ps.package_id = p.package_id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.id, pt.name
+                ORDER BY schedule_count DESC;
+            """;
+
+    public static final String GET_TYPE_RATING_OVERVIEW = """
+                SELECT
+                    pt.id AS type_id,
+                    pt.name AS type_name,
+                    COALESCE(AVG(pr.rating), 0) AS avg_rating,
+                    COUNT(pr.id) AS total_reviews
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                LEFT JOIN package_schedule ps ON ps.package_id = p.package_id
+                LEFT JOIN package_review pr ON pr.package_schedule_id = ps.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.id, pt.name
+                ORDER BY avg_rating DESC;
+            """;
+
 }

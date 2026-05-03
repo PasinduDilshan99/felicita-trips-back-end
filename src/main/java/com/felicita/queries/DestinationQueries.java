@@ -138,8 +138,6 @@ public class DestinationQueries {
             ))                  AND (? IS NULL OR a.season = ?)
                   AND (? IS NULL OR cs.name = ?)
                 GROUP BY d.destination_id
-                ORDER BY d.name
-                LIMIT ? OFFSET ?
             """;
 
     public static final String GET_DESTINATIONS_BY_IDS = """
@@ -324,6 +322,8 @@ public class DestinationQueries {
                 dc.category,
                 dc.description AS category_description,
                 cs.name AS category_status,
+                dc.color,
+                dc.hover_color,
                 dc.created_at,
                 dc.updated_at,
                 dci.id AS image_id,
@@ -476,7 +476,7 @@ public class DestinationQueries {
                 FROM popular_destination pd
                 JOIN destination d ON pd.destination_id = d.destination_id
                 JOIN common_status cs_dest ON d.status = cs_dest.id
-                WHERE d.destination_id IN (64,67,66,71)
+                WHERE d.destination_id IN (:destinationIds)
                 ORDER BY pd.popularity DESC, pd.rating DESC
             """;
 
@@ -1112,33 +1112,50 @@ public class DestinationQueries {
             """;
 
     public static final String INSERT_DESTINATION_REQUEST = """
-            INSERT INTO destination
-            (
-                name,
-                description,
-                status,
-                destination_category,
-                location,
-                latitude,
-                longitude,
-                created_by,
-                extra_price,
-                extra_price_note
-            )
-            VALUES
-            (
-                ?, 
-                ?, 
-                (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1),
-                (SELECT dc.id FROM destination_categories dc WHERE dc.category = ? LIMIT 1),
-                ?, 
-                ?, 
-                ?, 
-                ?, 
-                ?, 
-                ?
-            )
-            """;
+        INSERT INTO destination
+        (
+            name,
+            description,
+            status,
+            location,
+            latitude,
+            longitude,
+            created_by,
+            extra_price,
+            extra_price_note
+        )
+        VALUES
+        (
+            ?,
+            ?,
+            (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1),
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?
+        )
+        """;
+
+    public static final String INSERT_DESTINATION_CATEGORY_MAP = """
+        INSERT INTO destination_category_map
+        (
+            destination_id,
+            category_id,
+            is_primary,
+            status,
+            created_by
+        )
+        VALUES
+        (
+            ?,
+            ?,
+            ?,
+            (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1),
+            ?
+        )
+        """;
 
     public static final String INSERT_DESTINATION_IMAGES_REQUEST = """
             INSERT INTO destination_images
@@ -1163,20 +1180,29 @@ public class DestinationQueries {
             """;
 
     public static final String UPDATE_BASIC_DESTINATION_DETAILS = """
-            UPDATE destination
-            SET name = ? ,
-            	description = ?,
-                status = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
-                destination_category = (SELECT id FROM destination_categories WHERE category = ? LIMIT 1),
-                location = ?,
-                latitude = ?,
-                longitude = ?,
-                updated_by = ?,
-                updated_at = now(),
-                extra_price = ?,
-                extra_price_note =?
-            WHERE destination_id = ?
-            """;
+        UPDATE destination
+        SET name = ? ,
+            description = ?,
+            status = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            location = ?,
+            latitude = ?,
+            longitude = ?,
+            updated_by = ?,
+            updated_at = NOW(),
+            extra_price = ?,
+            extra_price_note = ?
+        WHERE destination_id = ?
+        """;
+
+    public static final String REMOVE_DESTINATION_CATEGORY_MAP = """
+        UPDATE destination_category_map
+        SET status = (SELECT id FROM common_status WHERE name = 'INACTIVE' LIMIT 1),
+            terminated_at = NOW(),
+            terminated_by = ?
+        WHERE destination_id = ?
+          AND category_id = ?
+        """;
+
 
     public static final String DESTINATION_IMAGES_REMOVE = """
             UPDATE destination_images
@@ -1195,41 +1221,261 @@ public class DestinationQueries {
             """;
 
     public static final String INSERT_DESTINATION_ACTIVITY = """
-            INSERT INTO activities
-            (
-                destination_id,
-                name,
-                description,
-                activities_category,
-                duration_hours,
-                available_from,
-                available_to,
-                price_local,
-                price_foreigners,
-                min_participate,
-                max_participate,
-                season,
-                status,
-                created_by
-            )
-            VALUES
-            (
-                ?, 
-                ?, 
-                ?, 
-                ?, 
-                ?, 
-                ?, 
-                ?,?,?,?,?,?,
-                (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1),
-                ?
-            )
-            """;
+        INSERT INTO activities
+        (
+            destination_id,
+            name,
+            description,
+            duration_hours,
+            available_from,
+            available_to,
+            price_local,
+            price_foreigners,
+            min_participate,
+            max_participate,
+            season_id,
+            status,
+            created_by
+        )
+        VALUES
+        (
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1),
+            ?
+        )
+        """;
+
+    public static final String INSERT_ACTIVITY_CATEGORY_MAP = """
+        INSERT INTO activity_category_map
+        (
+            activity_id,
+            category_id,
+            is_primary,
+            status,
+            created_by
+        )
+        VALUES
+        (
+            ?,
+            ?,
+            ?,
+            (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1),
+            ?
+        )
+        ON DUPLICATE KEY UPDATE
+            status = (SELECT cs.id FROM common_status cs WHERE cs.name = VALUES(status) LIMIT 1),
+            terminated_at = NULL,
+            terminated_by = NULL,
+            updated_at = NOW(),
+            updated_by = VALUES(created_by)
+        """;
 
     public static final String INSERT_DESTINATION_ACTIVITY_IMAGE = """
             INSERT INTO activities_images
             (activity_id, name, description, image_url, status, created_by)
             VALUES (?, ?, ?, ?, (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1), ?)
             """;
+
+    public static final String GET_DESTINATIONS_CATEGORY_BY_ID = """
+        SELECT
+            dc.id AS category_id,
+            dc.category,
+            dc.description AS category_description,
+            cs.name AS category_status,
+            dc.color,
+            dc.hover_color,
+            dc.created_at,
+            dc.updated_at
+        FROM destination_categories dc
+        JOIN common_status cs
+            ON dc.status = cs.id
+        WHERE dc.id = ?
+        """;
+    public static final String GET_DESTINATION_CATEGORY_IMAGES = """
+        SELECT
+            dci.id AS image_id,
+            dci.name AS image_name,
+            dci.description AS image_description,
+            dci.image_url,
+            cs.name AS image_status,
+            dci.created_at AS image_created_at
+        FROM destination_categories_images dci
+        JOIN common_status cs
+            ON dci.status = cs.id
+        WHERE dci.destination_categories_id = ?
+        ORDER BY dci.id
+        """;
+    public static final String GET_DESTINATIONS_BY_CATEGORY_ID = """
+        SELECT
+            d.destination_id,
+            d.name,
+            d.description,
+            d.location,
+            d.ratings,
+            cs.name AS destination_status,
+            dcm.is_primary
+        FROM destination_category_map dcm
+        JOIN destination d
+            ON d.destination_id = dcm.destination_id
+        JOIN common_status cs
+            ON d.status = cs.id
+        JOIN common_status map_status
+            ON dcm.status = map_status.id
+        WHERE dcm.category_id = ?
+          AND map_status.name != 'TERMINATED'
+        ORDER BY d.destination_id
+        """;
+
+    public static final String INSERT_DESTINATION_CATEGORY = """
+        INSERT INTO destination_categories
+        (
+            category,
+            description,
+            status,
+            created_by,
+            color,
+            hover_color
+        )
+        VALUES
+        (
+            ?,
+            ?,
+            (SELECT cs.id
+             FROM common_status cs
+             WHERE cs.name = ?
+             LIMIT 1),
+            ?,
+            ?,
+            ?
+        )
+        """;
+
+    public static final String INSERT_DESTINATION_CATEGORY_IMAGE = """
+        INSERT INTO destination_categories_images
+        (
+            destination_categories_id,
+            name,
+            description,
+            image_url,
+            status,
+            created_by
+        )
+        VALUES
+        (
+            ?,
+            ?,
+            ?,
+            ?,
+            (SELECT cs.id
+             FROM common_status cs
+             WHERE cs.name = ?
+             LIMIT 1),
+            ?
+        )
+        """;
+    public static final String UPDATE_DESTINATION_CATEGORY = """
+        UPDATE destination_categories
+        SET
+            category = ?,
+            description = ?,
+            status = (
+                SELECT cs.id
+                FROM common_status cs
+                WHERE cs.name = ?
+                LIMIT 1
+            ),
+            color = ?,
+            hover_color = ?,
+            updated_by = ?,
+            updated_at = NOW()
+        WHERE id = ?
+        """;
+    public static final String UPDATE_DESTINATION_CATEGORY_IMAGE = """
+        UPDATE destination_categories_images
+        SET
+            name = ?,
+            description = ?,
+            image_url = ?,
+            status = (
+                SELECT cs.id
+                FROM common_status cs
+                WHERE cs.name = ?
+                LIMIT 1
+            ),
+            updated_by = ?,
+            updated_at = NOW()
+        WHERE id = ?
+        """;
+    public static final String REMOVE_DESTINATION_CATEGORY_IMAGE = """
+        UPDATE destination_categories_images
+        SET
+            status = (
+                SELECT cs.id
+                FROM common_status cs
+                WHERE cs.name = 'TERMINATED'
+                LIMIT 1
+            ),
+            terminated_at = NOW(),
+            terminated_by = ?
+        WHERE id = ?
+        """;
+
+    public static final String TERMINATE_DESTINATION_CATEGORY = """
+        UPDATE destination_categories
+        SET
+            status = (
+                SELECT cs.id
+                FROM common_status cs
+                WHERE cs.name = 'TERMINATED'
+                LIMIT 1
+            ),
+            terminated_at = NOW(),
+            terminated_by = ?,
+            updated_at = NOW(),
+            updated_by = ?
+        WHERE id = ?
+        """;
+
+    public static final String TERMINATE_DESTINATION_CATEGORY_IMAGES = """
+        UPDATE destination_categories_images
+        SET
+            status = (
+                SELECT cs.id
+                FROM common_status cs
+                WHERE cs.name = 'TERMINATED'
+                LIMIT 1
+            ),
+            terminated_at = NOW(),
+            terminated_by = ?,
+            updated_at = NOW(),
+            updated_by = ?
+        WHERE destination_categories_id = ?
+        """;
+
+    public static final String TERMINATE_DESTINATION_CATEGORY_MAPPINGS = """
+        UPDATE destination_category_map
+        SET
+            status = (
+                SELECT cs.id
+                FROM common_status cs
+                WHERE cs.name = 'TERMINATED'
+                LIMIT 1
+            ),
+            terminated_at = NOW(),
+            terminated_by = ?,
+            updated_at = NOW(),
+            updated_by = ?
+        WHERE category_id = ?
+        """;
 
 }

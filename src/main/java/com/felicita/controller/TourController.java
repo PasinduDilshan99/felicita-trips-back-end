@@ -4,6 +4,10 @@ import com.felicita.model.dto.PopularTourResponseDto;
 import com.felicita.model.dto.TourResponseDto;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
+import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.TourStatisticsResponse;
+import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
 import com.felicita.service.TourService;
 import com.felicita.util.Constant;
 import org.slf4j.Logger;
@@ -208,6 +212,38 @@ public class TourController {
         LOGGER.info("{} Start execute get tour details for add package {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<TourDetailsForAddPackageResponse> response = tourService.getTourDetailsForAddPackage(tourId);
         LOGGER.info("{} End execute get tour details for add package {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/tour-statistics")
+    public ResponseEntity<CommonResponse<TourStatisticsResponse>> getTourStatistics() {
+        LOGGER.info("{} Start execute get tour statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TourStatisticsResponse> response = tourService.getTourStatistics();
+        LOGGER.info("{} End execute get tour statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/tour-schedule-statistics")
+    public ResponseEntity<CommonResponse<TourScheduleStatisticsResponse>> getTourScheduleStatistics() {
+        LOGGER.info("{} Start execute get tour schedule statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TourScheduleStatisticsResponse> response = tourService.getTourScheduleStatistics();
+        LOGGER.info("{} End execute get tour schedule statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/tour-category-statistics")
+    public ResponseEntity<CommonResponse<TourCategoryStatisticsResponse>> getTourCategoryStatistics() {
+        LOGGER.info("{} Start execute get tour category statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TourCategoryStatisticsResponse> response = tourService.getTourCategoryStatistics();
+        LOGGER.info("{} End execute get tour category statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/tour-type-statistics")
+    public ResponseEntity<CommonResponse<TourTypeStatisticsResponse>> getTourTypeStatistics() {
+        LOGGER.info("{} Start execute get tour type statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TourTypeStatisticsResponse> response = tourService.getTourTypeStatistics();
+        LOGGER.info("{} End execute get tour type statistics {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

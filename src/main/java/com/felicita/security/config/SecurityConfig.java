@@ -223,7 +223,7 @@ public class SecurityConfig {
 //                        .requestMatchers("/api/v0/faq/insert-faq-request").hasAuthority("FAQ_REQUEST_CREATE")
 
                                 .requestMatchers(PublicEndpoints.ENDPOINTS).permitAll()
-                        .requestMatchers(AuthorizeEndPoints.ENDPOINTS).authenticated()
+                        .requestMatchers(AuthorizeEndPoints.ENDPOINTS).permitAll()
                         .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -249,7 +249,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000","http://localhost:3001"));
+        configuration.setAllowedOrigins(List.of("https://stg.felicitatrips.com","https://felicitatrips.com","https://admin-stg.felicitatrips.com"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type","Cookie"));
         configuration.setAllowCredentials(true);

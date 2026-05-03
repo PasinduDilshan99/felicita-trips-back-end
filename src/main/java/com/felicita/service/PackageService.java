@@ -6,6 +6,10 @@ import com.felicita.model.request.PackageInsertRequest;
 import com.felicita.model.request.PackageTerminateRequest;
 import com.felicita.model.request.PackageUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.PackageStatisticsResponse;
+import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
+
 import java.util.List;
 
 public interface PackageService {
@@ -60,4 +64,9 @@ public interface PackageService {
 
     CommonResponse<List<PackageIdAndPackageNameResponse>> getPackageIdsAndPackageNames();
 
+    CommonResponse<PackageStatisticsResponse> getPackageStatistics();
+
+    CommonResponse<PackageScheduleStatisticsResponse> getPackageScheduleStatistics();
+
+    CommonResponse<PackageTypeStatisticsResponse> getPackageTypeStatistics();
 }

@@ -1,4 +1,4 @@
-package com.felicita.helper;
+package com.felicita.filter.helper;
 
 import com.felicita.model.dto.*;
 import com.felicita.model.request.BookingRequest;

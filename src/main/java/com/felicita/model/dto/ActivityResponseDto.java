@@ -19,6 +19,7 @@ public class ActivityResponseDto {
     @JsonProperty("destination_id")
     private Integer destinationId;
 
+    private String destinationName;
     private String name;
     private String description;
 

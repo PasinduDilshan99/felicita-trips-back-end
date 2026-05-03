@@ -17,7 +17,8 @@ public class DestinationUpdateRequest {
     private String name;
     private String description;
     private String status;
-    private String destinationCategory;
+    private List<Long> removedestinationCategoriesIdList;
+    private List<Long> adddestinationCategoriesIdList;
     private String location;
     private Double latitude;
     private Double longitude;
@@ -40,7 +41,8 @@ public class DestinationUpdateRequest {
     public static class Activity{
         private String name;
         private String description;
-        private String activityCategory;
+        private List<Long> addActivityCategoriesId;
+        private List<Long> removeActivityCategoriesId;
         private Double durationHover;
         private LocalTime availableFrom;
         private LocalTime availableTo;
@@ -48,7 +50,7 @@ public class DestinationUpdateRequest {
         private Double priceForeigners;
         private Integer minParticipate;
         private Integer maxParticipate;
-        private List<String> seasons;
+        private Long seasonId;
         private String status;
         private List<DestinationUpdateRequest.Image> activityImages;
     }

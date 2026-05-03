@@ -1,8 +1,6 @@
 package com.felicita.validation;
 
-import com.felicita.model.request.DestinationInsertRequest;
-import com.felicita.model.request.DestinationTerminateRequest;
-import com.felicita.model.request.DestinationUpdateRequest;
+import com.felicita.model.request.*;
 
 public interface DestinationValidationService {
     void validateDestinationInsertRequest(DestinationInsertRequest destinationInsertRequest);
@@ -10,4 +8,14 @@ public interface DestinationValidationService {
     void validateTerminateDestinationRequest(DestinationTerminateRequest destinationTerminateRequest);
 
     void validateDestinationUpdateRequest(DestinationUpdateRequest destinationUpdateRequest);
+
+    void validateDestinationCategoryInsertRequest(DestinationCategoryInsertRequest destinationCategoryInsertRequest);
+
+    void validateDestinationCategoryUpdateRequest(DestinationCategoryUpdateRequest destinationCategoryUpdateRequest);
+
+    void validateDestinationCategoryTerminateRequest(DestinationCategoryTerminateRequest destinationCategoryTerminateRequest);
+
+    void validateTrendingDestiantionInsertRequest(TrendingDestinationInsertRequest trendingDestinationInsertRequest);
+
+    void validateTrendingDestinationTerminateRequest(TrendingDestinationTerminateRequest trendingDestinationTerminateRequest);
 }

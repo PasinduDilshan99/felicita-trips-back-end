@@ -145,8 +145,8 @@
                     .secure(false) // change to true if you serve over HTTPS
                     .path("/")
                     .maxAge(Duration.ofSeconds(accessCookieMaxAge))
-                    .sameSite("Strict") // <- allow cross-site requests
-//                    .domain(".felicitatrips.com") // <- allow cookies for all subdomains
+                    .sameSite("Lax")
+                    .domain(null)
                     .build();
         }
 
@@ -157,8 +157,8 @@
                     .secure(false)
                     .path("/")
                     .maxAge(Duration.ofSeconds(refreshCookieMaxAge))
-                    .sameSite("Strict")
-//                    .domain(".felicitatrips.com")
+                    .sameSite("Lax")
+                    .domain(null)
                     .build();
         }
 
@@ -216,8 +216,8 @@
                     .secure(false)
                     .path("/")
                     .maxAge(0)
-                    .sameSite("Strict")
-//                    .domain(".felicitatrips.com") // Leading dot allows all subdomains
+                    .sameSite("Lax")
+                    .domain(null)
                     .build();
         }
 
@@ -228,8 +228,8 @@
                     .secure(false)
                     .path("/")
                     .maxAge(0)
-                    .sameSite("Strict")
-//                    .domain(".felicitatrips.com") // Leading dot allows all subdomains
+                    .sameSite("Lax")
+                    .domain(null)
                     .build();
         }
     }

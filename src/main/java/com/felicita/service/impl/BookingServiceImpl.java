@@ -1,7 +1,7 @@
 package com.felicita.service.impl;
 
 import com.felicita.exception.*;
-import com.felicita.helper.BookingHelperService;
+import com.felicita.filter.helper.BookingHelperService;
 import com.felicita.model.dto.*;
 import com.felicita.model.enums.BookingStatus;
 import com.felicita.model.request.BookingCancelledRequest;
@@ -15,13 +15,10 @@ import com.felicita.validation.BookingValidationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.sql.Date;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
