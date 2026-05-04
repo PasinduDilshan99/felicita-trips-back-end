@@ -468,7 +468,6 @@ public class ActivitiesServiceImpl implements ActivitiesService {
             activitiesRepository.termianteActivityCategories(activityTerminateRequest.getActivityId(), userId);
 
             List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
-
             List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
             supervisorUserIds.add(userId);
 

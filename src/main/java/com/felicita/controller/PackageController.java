@@ -174,6 +174,15 @@ public class PackageController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PostMapping(path = "/add-package-params")
+    public ResponseEntity<CommonResponse<AddPackageParamResponse>> getInsertPackageParams(@RequestBody AddPackageParamRequest addPackageParamRequest) {
+        LOGGER.info("{} Start execute get insert package params {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<AddPackageParamResponse> response = packageService.getInsertPackageParams(addPackageParamRequest);
+        LOGGER.info("{} End execute get insert package {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+
     @PostMapping(path = "/update-package")
     public ResponseEntity<CommonResponse<UpdateResponse>> updatePackage(@RequestBody PackageUpdateRequest packageUpdateRequest) {
         LOGGER.info("{} Start execute update package {}", Constant.DOTS, Constant.DOTS);

@@ -135,7 +135,7 @@ public class PackageQueries {
                     LEFT JOIN common_status cs3 ON pt.status = cs3.id
                     LEFT JOIN tour t ON p.tour_id = t.tour_id
                     LEFT JOIN package_schedule ps ON p.package_id = ps.package_id
-                    LEFT JOIN features f ON p.package_id = f.package_id
+                    LEFT JOIN package_features f ON p.package_id = f.package_id
                     LEFT JOIN package_images pi ON p.package_id = pi.package_id
                     LEFT JOIN common_status cs_package ON p.status = cs_package.id
                     LEFT JOIN common_status cs_tour ON t.status = cs_tour.id
@@ -972,7 +972,7 @@ public class PackageQueries {
                 INSERT INTO packages 
                 (package_type_id,tour_id, name, description, total_price, discount_percentage, start_date, end_date,
                  color, status, hover_color, min_person_count, max_person_count, price_per_person, created_by)
-                VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1), ?, ?, ?, ?, ?)
+                VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
     public static final String INSERT_PACKAGE_IMAGE = """
@@ -1062,28 +1062,28 @@ public class PackageQueries {
             """;
     public static final String PACKAGE_EXCLUSION_REMOVE = """
             UPDATE tour_exclusion
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE tour_exclusion_id = ?
             """;
     public static final String PACKAGE_CONDITION_REMOVE = """
             UPDATE package_condition
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE package_condition_id = ?
             """;
     public static final String PACKAGE_INCLUSION_REMOVE = """
             UPDATE package_inclusion
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE package_inclusion_id = ?
             """;
     public static final String PACKAGE_TRAVEL_TIPS_REMOVE = """
             UPDATE package_travel_tips
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE package_travel_tip_id = ?
@@ -1152,7 +1152,7 @@ public class PackageQueries {
 
     public static final String PACKAGE_IMAGES_REMOVE = """
             UPDATE package_images
-            SET status = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE id = ?
@@ -1171,7 +1171,7 @@ public class PackageQueries {
 
     public static final String PACKAGE_DAY_ACCOMMODATION_REMOVE = """
             UPDATE package_day_accommodation
-            SET status = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE package_day_accommodation_id = ?
@@ -1203,7 +1203,7 @@ public class PackageQueries {
             """;
 
     public static final String INSERT_PACKAGE_FEATURE = """
-            INSERT INTO features (
+            INSERT INTO package_features (
                 package_id,
                 name,
                 value,
@@ -1217,15 +1217,15 @@ public class PackageQueries {
             """;
 
     public static final String PACKAGE_FEATURE_REMOVE = """
-            UPDATE features
-            SET status = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            UPDATE package_features
+            SET status = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE id = ?
             """;
 
     public static final String UPDATE_PACKAGE_FEATURE = """
-            UPDATE features SET
+            UPDATE package_features SET
                 name = ?,
                 value = ?,
                 description = ?,
@@ -1508,5 +1508,125 @@ public class PackageQueries {
                 GROUP BY pt.id, pt.name
                 ORDER BY avg_rating DESC;
             """;
+
+    public static final String REMOVE_ALL_PACKAGE_IMAGES = """
+            UPDATE package_images
+            SET status = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_PACKAGE_FEATURES = """
+            UPDATE package_features
+            SET status = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_DAY_ACCOMMODATIONS = """
+            UPDATE package_day_accommodation
+            SET status = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_PACKAGE_INCLUSIONS = """
+            UPDATE package_inclusion
+            SET status_id = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_PACKAGE_EXCLUSIONS = """
+            UPDATE tour_exclusion
+            SET status_id = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE tour_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_PACKAGE_CONDITIONS = """
+            UPDATE package_condition
+            SET status_id = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_PACKAGE_TRAVEL_TIPS = """
+            UPDATE package_travel_tips
+            SET status_id = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String GET_HOTEL_NAMES_AND_IDS = """
+        SELECT
+            service_provider_id AS hotel_id,
+            name AS hotel_name,
+            star_rating
+        FROM service_provider
+        WHERE service_provider_type_id = 1
+          AND status_id = 1
+        """;
+
+    public static final String GET_VEHICLE_NUMBER_AND_TYPE = """
+        SELECT
+            v.vehicle_id,
+            v.registration_number,
+            vt.name AS vehicle_type,
+            v.specification_id
+        FROM vehicles v
+        LEFT JOIN vehicle_type vt
+            ON v.vehicle_type_id = vt.vehicle_type_id
+        WHERE v.terminated_at IS NULL
+        """;
+
+    public static final String GET_TOUR_INCLUSIONS = """
+        SELECT inclusion_text
+        FROM tour_inclusion
+        WHERE tour_id = ?
+          AND terminated_at IS NULL
+        ORDER BY display_order ASC
+        """;
+    public static final String GET_TOUR_EXCLUSIONS = """
+        SELECT exclusion_text
+        FROM tour_exclusion
+        WHERE tour_id = ?
+          AND terminated_at IS NULL
+        ORDER BY display_order ASC
+        """;
+
+    public static final String GET_TOUR_CONDITIONS = """
+        SELECT condition_text
+        FROM tour_condition
+        WHERE tour_id = ?
+          AND terminated_at IS NULL
+        ORDER BY display_order ASC
+        """;
+
+    public static final String GET_TOUR_TRAVEL_TIPS = """
+        SELECT
+            tip_title,
+            tip_description
+        FROM tour_travel_tips
+        WHERE tour_id = ?
+          AND terminated_at IS NULL
+        ORDER BY display_order ASC
+        """;
+
+
 
 }

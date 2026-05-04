@@ -1,10 +1,7 @@
 package com.felicita.service;
 
 import com.felicita.model.dto.*;
-import com.felicita.model.request.PackageDataRequest;
-import com.felicita.model.request.PackageInsertRequest;
-import com.felicita.model.request.PackageTerminateRequest;
-import com.felicita.model.request.PackageUpdateRequest;
+import com.felicita.model.request.*;
 import com.felicita.model.response.*;
 import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.PackageStatisticsResponse;
@@ -69,4 +66,6 @@ public interface PackageService {
     CommonResponse<PackageScheduleStatisticsResponse> getPackageScheduleStatistics();
 
     CommonResponse<PackageTypeStatisticsResponse> getPackageTypeStatistics();
+
+    CommonResponse<AddPackageParamResponse> getInsertPackageParams(AddPackageParamRequest addPackageParamRequest);
 }

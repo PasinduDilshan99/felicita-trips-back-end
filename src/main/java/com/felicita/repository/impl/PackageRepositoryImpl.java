@@ -13,6 +13,7 @@ import com.felicita.model.response.statistics.PackageStatisticsResponse;
 import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
 import com.felicita.queries.PackageQueries;
 import com.felicita.repository.PackageRepository;
+import com.felicita.repository.StatusRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,10 +35,12 @@ public class PackageRepositoryImpl implements PackageRepository {
     private static final Logger LOGGER = LoggerFactory.getLogger(PackageRepositoryImpl.class);
 
     private final JdbcTemplate jdbcTemplate;
+    private final StatusRepository statusRepository;
 
     @Autowired
-    public PackageRepositoryImpl(JdbcTemplate jdbcTemplate) {
+    public PackageRepositoryImpl(JdbcTemplate jdbcTemplate, StatusRepository statusRepository) {
         this.jdbcTemplate = jdbcTemplate;
+        this.statusRepository = statusRepository;
     }
 
     @Override
@@ -1495,6 +1498,8 @@ public class PackageRepositoryImpl implements PackageRepository {
     public Long insertPackageDeails(PackageInsertRequest request, Long userId) {
 
         try {
+            Long statusId = statusRepository.getStatusIdByName(request.getStatus());
+
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(
@@ -1510,7 +1515,7 @@ public class PackageRepositoryImpl implements PackageRepository {
                 ps.setObject(7, request.getStartDate());   // LocalDate supported
                 ps.setObject(8, request.getEndDate());
                 ps.setString(9, request.getColor());
-                ps.setString(10, request.getStatus());
+                ps.setLong(10, statusId);
                 ps.setString(11, request.getHoverColor());
                 ps.setInt(12, request.getMinPersonCount());
                 ps.setInt(13, request.getMaxPersonCount());
@@ -1750,12 +1755,13 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePackageImages(Long packageId, List<Long> removedImageIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_IMAGES_REMOVE,
                     removedImageIds,
                     removedImageIds.size(),
                     (ps, imageId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, imageId);
                     }
@@ -1803,12 +1809,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removeDayByDayAccommodations(Long packageId, List<Long> removeDayAccommodationIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_DAY_ACCOMMODATION_REMOVE,
                     removeDayAccommodationIds,
                     removeDayAccommodationIds.size(),
                     (ps, dayAccommodationId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, dayAccommodationId);
                     }
@@ -1869,12 +1877,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePcakageInclusions(Long packageId, List<Long> removeInclusionIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_INCLUSION_REMOVE,
                     removeInclusionIds,
                     removeInclusionIds.size(),
                     (ps, inclusionId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, inclusionId);
                     }
@@ -1916,12 +1926,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePackageExclusions(Long packageId, List<Long> removeExclusionIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_EXCLUSION_REMOVE,
                     removeExclusionIds,
                     removeExclusionIds.size(),
                     (ps, exclusionId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1,statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, exclusionId);
                     }
@@ -1963,12 +1975,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePcakageConditions(Long packageId, List<Long> removeConditionIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_CONDITION_REMOVE,
                     removeConditionIds,
                     removeConditionIds.size(),
                     (ps, conditionId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, conditionId);
                     }
@@ -2010,12 +2024,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePcakageTravelTips(Long packageId, List<Long> removeTravelTipIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_TRAVEL_TIPS_REMOVE,
                     removeTravelTipIds,
                     removeTravelTipIds.size(),
                     (ps, travelTipId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, travelTipId);
                     }
@@ -2087,12 +2103,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePackageFeatures(Long packageId, List<Long> removeFeatureIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_FEATURE_REMOVE,
                     removeFeatureIds,
                     removeFeatureIds.size(),
                     (ps, featureId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, featureId);
                     }
@@ -2515,6 +2533,253 @@ public class PackageRepositoryImpl implements PackageRepository {
                         .totalReviews(rs.getLong("total_reviews"))
                         .build()
         );
+    }
+
+    @Override
+    public void removeAllPackageImages(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_IMAGES,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package images", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package images", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package images");
+        }
+    }
+
+    @Override
+    public void removeAllPackageFeatures(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_FEATURES,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package features", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package features", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package features");
+        }
+    }
+
+    @Override
+    public void removeAllPcakageInclusions(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_INCLUSIONS,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package inclusions", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package inclusions", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package inclusions");
+        }
+    }
+
+    @Override
+    public void removeAllPackageExclusions(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_EXCLUSIONS,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package exclusions", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package exclusions", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package exclusions");
+        }
+    }
+
+    @Override
+    public void removeAllPcakageConditions(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_CONDITIONS,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package conditions", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package conditions", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package conditions");
+        }
+    }
+
+    @Override
+    public void removeAllPcakageTravelTips(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_TRAVEL_TIPS,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package travel tips", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package travel tips", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package travel tips");
+        }
+    }
+
+    @Override
+    public List<HotelsNamesAndIdsDto> getHotelNamesAndIds(AddPackageParamRequest req) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_HOTEL_NAMES_AND_IDS,
+                    (rs, rowNum) -> HotelsNamesAndIdsDto.builder()
+                            .hotelId(rs.getLong("hotel_id"))
+                            .hotelName(rs.getString("hotel_name"))
+                            .starRating(rs.getInt("star_rating"))
+                            .build()
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch hotels", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch hotels");
+        }
+    }
+
+    @Override
+    public List<VehicleNumberIdTypeDto> getVehicleNumberIdType(AddPackageParamRequest res) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_VEHICLE_NUMBER_AND_TYPE,
+                    (rs, rowNum) -> VehicleNumberIdTypeDto.builder()
+                            .vehicleId(rs.getLong("vehicle_id"))
+                            .vehicleNumber(rs.getString("registration_number"))
+                            .vehicleType(rs.getString("vehicle_type"))
+                            .specificationId(rs.getLong("specification_id"))
+                            .build()
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch vehicles", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch vehicles");
+        }
+    }
+
+    @Override
+    public List<String> getTourInclusionsNames(AddPackageParamRequest res) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_TOUR_INCLUSIONS,
+                    new Object[]{res.getTourId()},
+                    (rs, rowNum) -> rs.getString("inclusion_text")
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch inclusions", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch inclusions");
+        }
+    }
+
+    @Override
+    public List<String> getTourExclusionsNames(AddPackageParamRequest res) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_TOUR_EXCLUSIONS,
+                    new Object[]{res.getTourId()},
+                    (rs, rowNum) -> rs.getString("exclusion_text")
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch exclusions", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch exclusions");
+        }
+    }
+
+    @Override
+    public List<String> getTourConditions(AddPackageParamRequest res) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_TOUR_CONDITIONS,
+                    new Object[]{res.getTourId()},
+                    (rs, rowNum) -> rs.getString("condition_text")
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch conditions", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch conditions");
+        }
+    }
+
+    @Override
+    public List<AddPackageParamResponse.TravelTips> getTourTravelTips(AddPackageParamRequest res) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_TOUR_TRAVEL_TIPS,
+                    new Object[]{res.getTourId()},
+                    (rs, rowNum) -> AddPackageParamResponse.TravelTips.builder()
+                            .title(rs.getString("tip_title"))
+                            .description(rs.getString("tip_description"))
+                            .build()
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch travel tips", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch travel tips");
+        }
+    }
+
+    @Override
+    public void removeAllDayByDayAccommodations(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_DAY_ACCOMMODATIONS,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all day accommodations", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all day accommodations", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all day accommodations");
+        }
     }
 
 }

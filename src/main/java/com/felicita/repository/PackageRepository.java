@@ -148,4 +148,30 @@ public interface PackageRepository {
     List<PackageTypeStatisticsResponse.TypeBookingPerformance> getPackageTypeBookingPerformanceStatistics();
 
     List<PackageTypeStatisticsResponse.TypeRatingOverview> getPackageTypeRatingOverviewStatistics();
+
+    void removeAllPackageImages(Long packageId, Long userId);
+
+    void removeAllPackageFeatures(Long packageId, Long userId);
+
+    void removeAllDayByDayAccommodations(Long packageId, Long userId);
+
+    void removeAllPcakageInclusions(Long packageId, Long userId);
+
+    void removeAllPackageExclusions(Long packageId, Long userId);
+
+    void removeAllPcakageConditions(Long packageId, Long userId);
+
+    void removeAllPcakageTravelTips(Long packageId, Long userId);
+
+    List<HotelsNamesAndIdsDto> getHotelNamesAndIds(AddPackageParamRequest addPackageParamRequest);
+
+    List<VehicleNumberIdTypeDto> getVehicleNumberIdType(AddPackageParamRequest addPackageParamRequest);
+
+    List<String> getTourInclusionsNames(AddPackageParamRequest addPackageParamRequest);
+
+    List<String> getTourExclusionsNames(AddPackageParamRequest addPackageParamRequest);
+
+    List<String> getTourConditions(AddPackageParamRequest addPackageParamRequest);
+
+    List<AddPackageParamResponse.TravelTips> getTourTravelTips(AddPackageParamRequest addPackageParamRequest);
 }

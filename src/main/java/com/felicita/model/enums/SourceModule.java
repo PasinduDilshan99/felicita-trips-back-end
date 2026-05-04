@@ -4,6 +4,7 @@ public enum SourceModule {
     DESTINATION,
     ACTIVITY,
     TOUR,
+    PACKAGE,
     PRIVILEGE,
     ROLE,
     EMPLOYEE

@@ -249,7 +249,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://stg.felicitatrips.com","https://felicitatrips.com","http://admin-stg.felicitatrips.com"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3001","http://localhost:3000","http://stg.felicitatrips.com","https://felicitatrips.com","http://admin-stg.felicitatrips.com"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type","Cookie"));
         configuration.setAllowCredentials(true);

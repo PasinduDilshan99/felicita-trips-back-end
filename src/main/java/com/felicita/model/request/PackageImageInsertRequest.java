@@ -15,5 +15,4 @@ public class PackageImageInsertRequest {
     private String status;
     private String imageUrl;
     private String color;
-    private Long createdBy;
 }

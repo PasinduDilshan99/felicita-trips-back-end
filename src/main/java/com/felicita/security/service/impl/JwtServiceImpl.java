@@ -145,8 +145,8 @@
                     .secure(false) // change to true if you serve over HTTPS
                     .path("/")
                     .maxAge(Duration.ofSeconds(accessCookieMaxAge))
-                    .sameSite("Lax")
-                    .domain(".felicitatrips.com")
+                    .sameSite("Strict")
+//                    .domain("None")
                     .build();
         }
 
@@ -157,8 +157,8 @@
                     .secure(false)
                     .path("/")
                     .maxAge(Duration.ofSeconds(refreshCookieMaxAge))
-                    .sameSite("Lax")
-                    .domain(".felicitatrips.com")
+                    .sameSite("Strict")
+//                    .domain("None")
                     .build();
         }
 
@@ -216,8 +216,8 @@
                     .secure(false)
                     .path("/")
                     .maxAge(0)
-                    .sameSite("Lax")
-                    .domain(".felicitatrips.com")
+                    .sameSite("Strict")
+//                    .domain("None")
                     .build();
         }
 
@@ -228,8 +228,8 @@
                     .secure(false)
                     .path("/")
                     .maxAge(0)
-                    .sameSite("Lax")
-                    .domain(".felicitatrips.com")
+                    .sameSite("Strict")
+//                    .domain("None")
                     .build();
         }
     }
