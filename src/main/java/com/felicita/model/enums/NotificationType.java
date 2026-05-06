@@ -29,7 +29,11 @@ public enum NotificationType {
 
     TOUR_CREATED(""),
     TOUR_UPDATED(""),
-    TOUR_TERMINATED("");
+    TOUR_TERMINATED(""),
+
+    PACKAGE_CREATED(""),
+    PACKAGE_UPDATED(""),
+    PACKAGE_TERMINATED("");
 
     private final String description;
 

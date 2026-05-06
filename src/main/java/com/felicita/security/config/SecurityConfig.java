@@ -224,7 +224,7 @@ public class SecurityConfig {
 
                                 .requestMatchers(PublicEndpoints.ENDPOINTS).permitAll()
                         .requestMatchers(AuthorizeEndPoints.ENDPOINTS).permitAll()
-                        .anyRequest().permitAll()
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())

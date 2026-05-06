@@ -31,6 +31,7 @@ public class PackageInsertRequest {
     private BigDecimal pricePerPerson;
 
     private List<PackageImageInsertRequest> images;
+    private List<PackageFeaturesInsertRequest> addFeatures;
     private List<PackageDayAccommodationInsertRequest> dayAccommodations;
     private List<PackageInclusionInsertRequest> inclusions;
     private List<PackageExclusionInsertRequest> exclusions;
