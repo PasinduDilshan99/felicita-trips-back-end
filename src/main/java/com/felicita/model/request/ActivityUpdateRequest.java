@@ -18,7 +18,6 @@ public class ActivityUpdateRequest {
     private Long destinationId;
     private String name;
     private String description;
-    private String activitiesCategory;
     private BigDecimal durationHours;
     private LocalTime availableFrom;
     private LocalTime availableTo;
@@ -26,11 +25,17 @@ public class ActivityUpdateRequest {
     private BigDecimal priceForeigners;
     private Integer minParticipate;
     private Integer maxParticipate;
-    private String season;
+    private Long seasonId;
     private String status;
+
+    private List<Long> removeCategoryIds;
+    private List<ActivityInsertRequest.Category> addCategories;
+    private List<ActivityInsertRequest.Category> updatedCategories;
+
     private List<Long> removeImagesIds;
     private List<ActivityImageInsertRequest> addImages;
     private List<ActivityImageUpdateRequest> updatedImages;
+
     private List<Long> removeRequirementsIds;
     private List<ActivityRequirementInsertRequest> addRequirements;
     private List<ActivityRequirementsUpdateRequest> updatedRequirements;

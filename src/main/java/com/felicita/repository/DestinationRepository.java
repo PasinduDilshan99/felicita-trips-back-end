@@ -1,10 +1,7 @@
 package com.felicita.repository;
 
 import com.felicita.model.dto.*;
-import com.felicita.model.request.DestinationDataRequest;
-import com.felicita.model.request.DestinationInsertRequest;
-import com.felicita.model.request.DestinationTerminateRequest;
-import com.felicita.model.request.DestinationUpdateRequest;
+import com.felicita.model.request.*;
 import com.felicita.model.response.*;
 import java.util.List;
 
@@ -16,7 +13,7 @@ public interface DestinationRepository {
 
     List<PopularDestinationResponseDto> getPopularDestinations();
 
-    List<TrendingDestinationResponseDto> getTrendingDestinations();
+    List<TrendingDestinationResponseDto> getTrendingDestinations(List<Long> destinationIds);
 
     List<DestinationsForTourMapDto> getDestinationsForTourMap();
 
@@ -38,7 +35,7 @@ public interface DestinationRepository {
 
     DestinationsWithParamsResponse getDestinationWithParams(DestinationDataRequest destinationDataRequest);
 
-    void insertDestination(DestinationInsertRequest destinationInsertRequest, Long userId);
+    Long insertDestination(DestinationInsertRequest destinationInsertRequest, Long userId);
 
     void terminateDestination(DestinationTerminateRequest destinationTerminateRequest, Long userId);
 
@@ -59,4 +56,32 @@ public interface DestinationRepository {
     DestinationStatisticsResponse.WishDetails getDestinationWishStatistics();
 
     List<DestinationStatisticsResponse.CategoryDetails> getDestinationCategoryStatistics();
+
+    List<String> getDestinationCategoriesNamesByIds(List<Long> destinationCategoriesIdList);
+
+    DestinationCategoriesStatisticsResponse.DestinationCategoriesDetails getDestinationCategoriesDetails();
+
+    List<DestinationCategoriesStatisticsResponse.CategoryUsedDetails> getCategoryUsedDetails();
+
+    List<DestinationCategoriesStatisticsResponse.CategoriesImagesCount> getCategoriesImagesCount();
+
+    DestinationCategoryDetailsResponseDto getDestinationsCategoryDetailsById(DestinationCategoryDetailsRequest destinationCategoryDetailsRequest);
+
+    Long insertDestinationCategory(DestinationCategoryInsertRequest destinationCategoryInsertRequest, Long userId);
+
+    void updateDestinationCategoryDetails(DestinationCategoryUpdateRequest destinationCategoryUpdateRequest, Long userId);
+
+    void removeDestinationCategoryImagesDetails(List<Long> removeImageIds, Long userId);
+
+    void updateDestinationCategoryImagesDetails(List<DestinationCategoryUpdateRequest.UpdateImage> updateImages, Long userId);
+
+    void terminateDestinationCategory(DestinationCategoryTerminateRequest destinationCategoryTerminateRequest, Long userId);
+
+    void insertDestinationCategoryImages(List<InsertDestinationCategoryImagesRequestDto> images, Long destinationCategoryId, Long userId);
+
+    Long addTrendingDestinations(TrendingDestinationInsertRequest trendingDestinationInsertRequest, Long userId);
+
+    void termianteTrendingDestination(TrendingDestinationTerminateRequest trendingDestinationTerminateRequest, Long userId);
+
+    List<Long> getTrendingDestinationIds();
 }

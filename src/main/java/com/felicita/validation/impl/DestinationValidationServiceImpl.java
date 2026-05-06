@@ -1,8 +1,6 @@
 package com.felicita.validation.impl;
 
-import com.felicita.model.request.DestinationInsertRequest;
-import com.felicita.model.request.DestinationTerminateRequest;
-import com.felicita.model.request.DestinationUpdateRequest;
+import com.felicita.model.request.*;
 import com.felicita.validation.CommonValidationService;
 import com.felicita.validation.DestinationValidationService;
 import org.slf4j.Logger;
@@ -34,6 +32,31 @@ public class DestinationValidationServiceImpl implements DestinationValidationSe
 
     @Override
     public void validateDestinationUpdateRequest(DestinationUpdateRequest destinationUpdateRequest) {
+
+    }
+
+    @Override
+    public void validateDestinationCategoryInsertRequest(DestinationCategoryInsertRequest destinationCategoryInsertRequest) {
+
+    }
+
+    @Override
+    public void validateDestinationCategoryUpdateRequest(DestinationCategoryUpdateRequest destinationCategoryUpdateRequest) {
+
+    }
+
+    @Override
+    public void validateDestinationCategoryTerminateRequest(DestinationCategoryTerminateRequest destinationCategoryTerminateRequest) {
+
+    }
+
+    @Override
+    public void validateTrendingDestiantionInsertRequest(TrendingDestinationInsertRequest trendingDestinationInsertRequest) {
+
+    }
+
+    @Override
+    public void validateTrendingDestinationTerminateRequest(TrendingDestinationTerminateRequest trendingDestinationTerminateRequest) {
 
     }
 }

@@ -8,8 +8,12 @@ import com.felicita.model.dto.*;
 import com.felicita.model.enums.CommonStatus;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.PackageStatisticsResponse;
+import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
 import com.felicita.queries.PackageQueries;
 import com.felicita.repository.PackageRepository;
+import com.felicita.repository.StatusRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,10 +35,12 @@ public class PackageRepositoryImpl implements PackageRepository {
     private static final Logger LOGGER = LoggerFactory.getLogger(PackageRepositoryImpl.class);
 
     private final JdbcTemplate jdbcTemplate;
+    private final StatusRepository statusRepository;
 
     @Autowired
-    public PackageRepositoryImpl(JdbcTemplate jdbcTemplate) {
+    public PackageRepositoryImpl(JdbcTemplate jdbcTemplate, StatusRepository statusRepository) {
         this.jdbcTemplate = jdbcTemplate;
+        this.statusRepository = statusRepository;
     }
 
     @Override
@@ -1492,6 +1498,8 @@ public class PackageRepositoryImpl implements PackageRepository {
     public Long insertPackageDeails(PackageInsertRequest request, Long userId) {
 
         try {
+            Long statusId = statusRepository.getStatusIdByName(request.getStatus());
+
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(
@@ -1507,7 +1515,7 @@ public class PackageRepositoryImpl implements PackageRepository {
                 ps.setObject(7, request.getStartDate());   // LocalDate supported
                 ps.setObject(8, request.getEndDate());
                 ps.setString(9, request.getColor());
-                ps.setString(10, request.getStatus());
+                ps.setLong(10, statusId);
                 ps.setString(11, request.getHoverColor());
                 ps.setInt(12, request.getMinPersonCount());
                 ps.setInt(13, request.getMaxPersonCount());
@@ -1747,12 +1755,13 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePackageImages(Long packageId, List<Long> removedImageIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_IMAGES_REMOVE,
                     removedImageIds,
                     removedImageIds.size(),
                     (ps, imageId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, imageId);
                     }
@@ -1800,12 +1809,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removeDayByDayAccommodations(Long packageId, List<Long> removeDayAccommodationIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_DAY_ACCOMMODATION_REMOVE,
                     removeDayAccommodationIds,
                     removeDayAccommodationIds.size(),
                     (ps, dayAccommodationId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, dayAccommodationId);
                     }
@@ -1866,12 +1877,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePcakageInclusions(Long packageId, List<Long> removeInclusionIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_INCLUSION_REMOVE,
                     removeInclusionIds,
                     removeInclusionIds.size(),
                     (ps, inclusionId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, inclusionId);
                     }
@@ -1913,12 +1926,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePackageExclusions(Long packageId, List<Long> removeExclusionIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_EXCLUSION_REMOVE,
                     removeExclusionIds,
                     removeExclusionIds.size(),
                     (ps, exclusionId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1,statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, exclusionId);
                     }
@@ -1960,12 +1975,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePcakageConditions(Long packageId, List<Long> removeConditionIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_CONDITION_REMOVE,
                     removeConditionIds,
                     removeConditionIds.size(),
                     (ps, conditionId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, conditionId);
                     }
@@ -2007,12 +2024,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePcakageTravelTips(Long packageId, List<Long> removeTravelTipIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_TRAVEL_TIPS_REMOVE,
                     removeTravelTipIds,
                     removeTravelTipIds.size(),
                     (ps, travelTipId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, travelTipId);
                     }
@@ -2084,12 +2103,14 @@ public class PackageRepositoryImpl implements PackageRepository {
     @Override
     public void removePackageFeatures(Long packageId, List<Long> removeFeatureIds, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     PackageQueries.PACKAGE_FEATURE_REMOVE,
                     removeFeatureIds,
                     removeFeatureIds.size(),
                     (ps, featureId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, featureId);
                     }
@@ -2129,6 +2150,635 @@ public class PackageRepositoryImpl implements PackageRepository {
         } catch (Exception e) {
             LOGGER.error("Failed to update package feature", e);
             throw new InternalServerErrorExceptionHandler("Failed to update package feature");
+        }
+    }
+
+    @Override
+    public PackageStatisticsResponse.Summary getPackageSummaryStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    PackageQueries.GET_PACKAGE_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.Summary.builder()
+                            .totalPackages(rs.getLong("total_packages"))
+                            .activePackages(rs.getLong("active_packages"))
+                            .averagePackageRating(rs.getBigDecimal("average_package_rating"))
+                            .totalParticipants(rs.getLong("total_participants"))
+                            .averagePackagePrice(rs.getBigDecimal("average_package_price"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package summary statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package summary statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package summary statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package summary statistics");
+        }
+    }
+
+    @Override
+    public List<PackageStatisticsResponse.PackagePopularity> getPackagePopularityStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package popularity statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_POPULARITY_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.PackagePopularity.builder()
+                            .packageId(rs.getLong("package_id"))
+                            .packageName(rs.getString("package_name"))
+                            .totalSchedules(rs.getInt("total_schedules"))
+                            .totalParticipants(rs.getInt("total_participants"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package popularity statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package popularity statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package popularity statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package popularity statistics");
+        }
+    }
+
+    @Override
+    public List<PackageStatisticsResponse.PackageRatingOverview> getPackageRatingOverviewStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package rating overview statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_RATING_OVERVIEW_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.PackageRatingOverview.builder()
+                            .packageId(rs.getLong("package_id"))
+                            .packageName(rs.getString("package_name"))
+                            .averageRating(rs.getBigDecimal("average_rating"))
+                            .totalReviews(rs.getInt("total_reviews"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package rating overview statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package rating overview statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package rating overview statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package rating overview statistics");
+        }
+    }
+
+    @Override
+    public List<PackageStatisticsResponse.PackageCapacityUtilization> getPackageCapacityUtilizationStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package capacity utilization statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_CAPACITY_UTILIZATION_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.PackageCapacityUtilization.builder()
+                            .packageId(rs.getLong("package_id"))
+                            .packageName(rs.getString("package_name"))
+                            .minPersonCount(rs.getInt("min_person_count"))
+                            .maxPersonCount(rs.getInt("max_person_count"))
+                            .averageParticipants(rs.getBigDecimal("average_participants"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package capacity utilization statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package capacity utilization statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package capacity utilization statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package capacity utilization statistics");
+        }
+    }
+
+    @Override
+    public List<PackageStatisticsResponse.PackageTypeDistribution> getPackageTypeDistributionStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package type distribution statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_TYPE_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.PackageTypeDistribution.builder()
+                            .packageTypeName(rs.getString("package_type_name"))
+                            .totalPackages(rs.getInt("total_packages"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package type distribution statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package type distribution statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package type distribution statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package type distribution statistics");
+        }
+    }
+
+    @Override
+    public List<PackageStatisticsResponse.PackagePriceDistribution> getPackagePriceDistributionStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package price distribution statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_PRICE_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> PackageStatisticsResponse.PackagePriceDistribution.builder()
+                            .packageId(rs.getLong("package_id"))
+                            .packageName(rs.getString("package_name"))
+                            .totalPrice(rs.getBigDecimal("total_price"))
+                            .pricePerPerson(rs.getBigDecimal("price_per_person"))
+                            .totalParticipants(rs.getInt("total_participants"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package price distribution statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package price distribution statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package price distribution statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package price distribution statistics");
+        }
+    }
+
+    @Override
+    public PackageScheduleStatisticsResponse.Summary getPackageScheduleSummaryStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.Summary.builder()
+                            .totalSchedules(rs.getLong("total_schedules"))
+                            .activeSchedules(rs.getLong("active_schedules"))
+                            .averageScheduleRating(rs.getBigDecimal("average_schedule_rating"))
+                            .totalParticipants(rs.getLong("total_participants"))
+                            .averageDuration(rs.getBigDecimal("average_duration"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule summary statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule summary statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule summary statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule summary statistics");
+        }
+    }
+
+    @Override
+    public List<PackageScheduleStatisticsResponse.ScheduleTimeline> getPackageScheduleTimelineStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule timeline statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_TIMELINE_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.ScheduleTimeline.builder()
+                            .timeline(rs.getString("timeline"))
+                            .totalSchedules(rs.getInt("total_schedules"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule timeline statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule timeline statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule timeline statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule timeline statistics");
+        }
+    }
+
+    @Override
+    public List<PackageScheduleStatisticsResponse.ScheduleStatusDistribution> getPackageScheduleStatusDistributionStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule status distribution statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_STATUS_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.ScheduleStatusDistribution.builder()
+                            .statusId(rs.getInt("status_id"))
+                            .totalSchedules(rs.getInt("total_schedules"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule status distribution statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule status distribution statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule status distribution statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule status distribution statistics");
+        }
+    }
+
+    @Override
+    public List<PackageScheduleStatisticsResponse.DurationDistribution> getPackageScheduleDurationDistributionStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule duration distribution statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_DURATION_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.DurationDistribution.builder()
+                            .scheduleId(rs.getLong("schedule_id"))
+                            .scheduleName(rs.getString("schedule_name"))
+                            .durationStart(rs.getInt("duration_start"))
+                            .durationEnd(rs.getInt("duration_end"))
+                            .averageDuration(rs.getBigDecimal("average_duration"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule duration distribution statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule duration distribution statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule duration distribution statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule duration distribution statistics");
+        }
+    }
+
+    @Override
+    public List<PackageScheduleStatisticsResponse.ScheduleParticipationPerformance> getPackageScheduleParticipationPerformanceStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule participation performance statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_PARTICIPATION_PERFORMANCE_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.ScheduleParticipationPerformance.builder()
+                            .scheduleId(rs.getLong("schedule_id"))
+                            .scheduleName(rs.getString("schedule_name"))
+                            .totalParticipants(rs.getInt("total_participants"))
+                            .averageParticipants(rs.getBigDecimal("average_participants"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule participation performance statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule participation performance statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule participation performance statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule participation performance statistics");
+        }
+    }
+
+    @Override
+    public List<PackageScheduleStatisticsResponse.ScheduleRatingOverview> getPackageScheduleRatingOverviewStatistics() {
+        try {
+            LOGGER.info("Executing query to fetch package schedule rating overview statistics.");
+
+            return jdbcTemplate.query(
+                    PackageQueries.GET_PACKAGE_SCHEDULE_RATING_OVERVIEW_STATISTICS,
+                    (rs, rowNum) -> PackageScheduleStatisticsResponse.ScheduleRatingOverview.builder()
+                            .scheduleId(rs.getLong("schedule_id"))
+                            .scheduleName(rs.getString("schedule_name"))
+                            .averageRating(rs.getBigDecimal("average_rating"))
+                            .totalReviews(rs.getInt("total_reviews"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching package schedule rating overview statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch package schedule rating overview statistics from database");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching package schedule rating overview statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching package schedule rating overview statistics");
+        }
+    }
+
+    @Override
+    public PackageTypeStatisticsResponse.Summary getPackageTypeSummaryStatistics() {
+        try {
+            LOGGER.info("Fetching package type summary statistics");
+
+            return jdbcTemplate.queryForObject(
+                    PackageQueries.GET_PACKAGE_TYPE_SUMMARY,
+                    (rs, rowNum) -> PackageTypeStatisticsResponse.Summary.builder()
+                            .totalPackageTypes(rs.getLong("total_package_types"))
+                            .mostUsedTypeCount(rs.getLong("total_packages"))
+                            .highestRatedTypeRating(rs.getBigDecimal("average_rating"))
+                            .highestRevenueTypeValue(rs.getBigDecimal("total_revenue"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching package type summary", ex);
+            throw new RuntimeException("Failed to fetch package type summary");
+        }
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypeDistribution> getPackageTypesDistributionStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_DISTRIBUTION,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypeDistribution.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .totalPackages(rs.getLong("total_packages"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypeRevenuePerformance> getPackageTypeRevenuePerformanceStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_REVENUE_PERFORMANCE,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypeRevenuePerformance.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .totalRevenue(rs.getBigDecimal("total_revenue"))
+                        .averagePackagePrice(rs.getBigDecimal("avg_price"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypeParticipationImpact> getPackageTypeParticipationImpactStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_PARTICIPATION_IMPACT,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypeParticipationImpact.builder()
+                        .typeName(rs.getString("type_name"))
+                        .month(rs.getString("month"))
+                        .totalParticipants(rs.getLong("total_participants"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypePrimarySecondaryUsage> getPackageTypePrimarySecondaryUsageStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_PRIMARY_SECONDARY_USAGE,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypePrimarySecondaryUsage.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .primaryCount(rs.getLong("primary_count"))
+                        .secondaryCount(rs.getLong("secondary_count"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypeBookingPerformance> getPackageTypeBookingPerformanceStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_BOOKING_PERFORMANCE,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypeBookingPerformance.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<PackageTypeStatisticsResponse.TypeRatingOverview> getPackageTypeRatingOverviewStatistics() {
+        return jdbcTemplate.query(
+                PackageQueries.GET_TYPE_RATING_OVERVIEW,
+                (rs, rowNum) -> PackageTypeStatisticsResponse.TypeRatingOverview.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .averageRating(rs.getBigDecimal("avg_rating"))
+                        .totalReviews(rs.getLong("total_reviews"))
+                        .build()
+        );
+    }
+
+    @Override
+    public void removeAllPackageImages(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_IMAGES,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package images", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package images", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package images");
+        }
+    }
+
+    @Override
+    public void removeAllPackageFeatures(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_FEATURES,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package features", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package features", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package features");
+        }
+    }
+
+    @Override
+    public void removeAllPcakageInclusions(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_INCLUSIONS,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package inclusions", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package inclusions", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package inclusions");
+        }
+    }
+
+    @Override
+    public void removeAllPackageExclusions(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_EXCLUSIONS,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package exclusions", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package exclusions", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package exclusions");
+        }
+    }
+
+    @Override
+    public void removeAllPcakageConditions(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_CONDITIONS,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package conditions", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package conditions", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package conditions");
+        }
+    }
+
+    @Override
+    public void removeAllPcakageTravelTips(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_PACKAGE_TRAVEL_TIPS,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all package travel tips", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all package travel tips", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all package travel tips");
+        }
+    }
+
+    @Override
+    public List<HotelsNamesAndIdsDto> getHotelNamesAndIds(AddPackageParamRequest req) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_HOTEL_NAMES_AND_IDS,
+                    (rs, rowNum) -> HotelsNamesAndIdsDto.builder()
+                            .hotelId(rs.getLong("hotel_id"))
+                            .hotelName(rs.getString("hotel_name"))
+                            .starRating(rs.getInt("star_rating"))
+                            .build()
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch hotels", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch hotels");
+        }
+    }
+
+    @Override
+    public List<VehicleNumberIdTypeDto> getVehicleNumberIdType(AddPackageParamRequest res) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_VEHICLE_NUMBER_AND_TYPE,
+                    (rs, rowNum) -> VehicleNumberIdTypeDto.builder()
+                            .vehicleId(rs.getLong("vehicle_id"))
+                            .vehicleNumber(rs.getString("registration_number"))
+                            .vehicleType(rs.getString("vehicle_type"))
+                            .specificationId(rs.getLong("specification_id"))
+                            .build()
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch vehicles", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch vehicles");
+        }
+    }
+
+    @Override
+    public List<String> getTourInclusionsNames(AddPackageParamRequest res) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_TOUR_INCLUSIONS,
+                    new Object[]{res.getTourId()},
+                    (rs, rowNum) -> rs.getString("inclusion_text")
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch inclusions", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch inclusions");
+        }
+    }
+
+    @Override
+    public List<String> getTourExclusionsNames(AddPackageParamRequest res) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_TOUR_EXCLUSIONS,
+                    new Object[]{res.getTourId()},
+                    (rs, rowNum) -> rs.getString("exclusion_text")
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch exclusions", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch exclusions");
+        }
+    }
+
+    @Override
+    public List<String> getTourConditions(AddPackageParamRequest res) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_TOUR_CONDITIONS,
+                    new Object[]{res.getTourId()},
+                    (rs, rowNum) -> rs.getString("condition_text")
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch conditions", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch conditions");
+        }
+    }
+
+    @Override
+    public List<AddPackageParamResponse.TravelTips> getTourTravelTips(AddPackageParamRequest res) {
+        try {
+            return jdbcTemplate.query(
+                    PackageQueries.GET_TOUR_TRAVEL_TIPS,
+                    new Object[]{res.getTourId()},
+                    (rs, rowNum) -> AddPackageParamResponse.TravelTips.builder()
+                            .title(rs.getString("tip_title"))
+                            .description(rs.getString("tip_description"))
+                            .build()
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to fetch travel tips", e);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch travel tips");
+        }
+    }
+
+    @Override
+    public void removeAllDayByDayAccommodations(Long packageId, Long userId) {
+        try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            jdbcTemplate.update(
+                    PackageQueries.REMOVE_ALL_DAY_ACCOMMODATIONS,
+                    statusId,
+                    userId,
+                    packageId
+            );
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to remove all day accommodations", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Failed to remove all day accommodations", e);
+            throw new InternalServerErrorExceptionHandler("Failed to remove all day accommodations");
         }
     }
 

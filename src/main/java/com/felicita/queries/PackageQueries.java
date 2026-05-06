@@ -135,7 +135,7 @@ public class PackageQueries {
                     LEFT JOIN common_status cs3 ON pt.status = cs3.id
                     LEFT JOIN tour t ON p.tour_id = t.tour_id
                     LEFT JOIN package_schedule ps ON p.package_id = ps.package_id
-                    LEFT JOIN features f ON p.package_id = f.package_id
+                    LEFT JOIN package_features f ON p.package_id = f.package_id
                     LEFT JOIN package_images pi ON p.package_id = pi.package_id
                     LEFT JOIN common_status cs_package ON p.status = cs_package.id
                     LEFT JOIN common_status cs_tour ON t.status = cs_tour.id
@@ -972,7 +972,7 @@ public class PackageQueries {
                 INSERT INTO packages 
                 (package_type_id,tour_id, name, description, total_price, discount_percentage, start_date, end_date,
                  color, status, hover_color, min_person_count, max_person_count, price_per_person, created_by)
-                VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, (SELECT cs.id FROM common_status cs WHERE cs.name = ? LIMIT 1), ?, ?, ?, ?, ?)
+                VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
     public static final String INSERT_PACKAGE_IMAGE = """
@@ -1062,28 +1062,28 @@ public class PackageQueries {
             """;
     public static final String PACKAGE_EXCLUSION_REMOVE = """
             UPDATE tour_exclusion
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE tour_exclusion_id = ?
             """;
     public static final String PACKAGE_CONDITION_REMOVE = """
             UPDATE package_condition
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE package_condition_id = ?
             """;
     public static final String PACKAGE_INCLUSION_REMOVE = """
             UPDATE package_inclusion
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE package_inclusion_id = ?
             """;
     public static final String PACKAGE_TRAVEL_TIPS_REMOVE = """
             UPDATE package_travel_tips
-            SET status_id = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status_id = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE package_travel_tip_id = ?
@@ -1152,7 +1152,7 @@ public class PackageQueries {
 
     public static final String PACKAGE_IMAGES_REMOVE = """
             UPDATE package_images
-            SET status = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE id = ?
@@ -1171,7 +1171,7 @@ public class PackageQueries {
 
     public static final String PACKAGE_DAY_ACCOMMODATION_REMOVE = """
             UPDATE package_day_accommodation
-            SET status = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            SET status = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE package_day_accommodation_id = ?
@@ -1203,7 +1203,7 @@ public class PackageQueries {
             """;
 
     public static final String INSERT_PACKAGE_FEATURE = """
-            INSERT INTO features (
+            INSERT INTO package_features (
                 package_id,
                 name,
                 value,
@@ -1217,15 +1217,15 @@ public class PackageQueries {
             """;
 
     public static final String PACKAGE_FEATURE_REMOVE = """
-            UPDATE features
-            SET status = (SELECT id FROM common_status WHERE name = ? LIMIT 1),
+            UPDATE package_features
+            SET status = ?,
                 terminated_at = now(),
                 terminated_by = ?
             WHERE id = ?
             """;
 
     public static final String UPDATE_PACKAGE_FEATURE = """
-            UPDATE features SET
+            UPDATE package_features SET
                 name = ?,
                 value = ?,
                 description = ?,
@@ -1237,5 +1237,396 @@ public class PackageQueries {
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ? AND package_id = ?
             """;
+
+    public static final String GET_PACKAGE_SUMMARY_STATISTICS = """
+                SELECT
+                    COUNT(DISTINCT p.package_id) AS total_packages,
+                    COUNT(DISTINCT CASE WHEN p.status = 1 THEN p.package_id END) AS active_packages,
+                    COALESCE(AVG(pr.rating), 0) AS average_package_rating,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants,
+                    COALESCE(AVG(p.total_price), 0) AS average_package_price
+                FROM packages p
+                LEFT JOIN package_schedule ps
+                    ON ps.package_id = p.package_id
+                LEFT JOIN package_review pr
+                    ON pr.package_schedule_id = ps.id
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE p.terminated_at IS NULL
+            """;
+
+    public static final String GET_PACKAGE_POPULARITY_STATISTICS = """
+                SELECT
+                    p.package_id,
+                    p.name AS package_name,
+                    COUNT(DISTINCT ps.id) AS total_schedules,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants
+                FROM packages p
+                LEFT JOIN package_schedule ps
+                    ON ps.package_id = p.package_id
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE p.terminated_at IS NULL
+                GROUP BY p.package_id, p.name
+                ORDER BY total_participants DESC
+            """;
+
+    public static final String GET_PACKAGE_RATING_OVERVIEW_STATISTICS = """
+                SELECT
+                    p.package_id,
+                    p.name AS package_name,
+                    COALESCE(AVG(pr.rating), 0) AS average_rating,
+                    COUNT(pr.id) AS total_reviews
+                FROM packages p
+                LEFT JOIN package_schedule ps
+                    ON ps.package_id = p.package_id
+                LEFT JOIN package_review pr
+                    ON pr.package_schedule_id = ps.id
+                WHERE p.terminated_at IS NULL
+                GROUP BY p.package_id, p.name
+                ORDER BY average_rating DESC
+            """;
+
+    public static final String GET_PACKAGE_CAPACITY_UTILIZATION_STATISTICS = """
+                SELECT
+                    p.package_id,
+                    p.name AS package_name,
+                    p.min_person_count,
+                    p.max_person_count,
+                    COALESCE(AVG(ph.number_of_participate), 0) AS average_participants
+                FROM packages p
+                LEFT JOIN package_schedule ps
+                    ON ps.package_id = p.package_id
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE p.terminated_at IS NULL
+                GROUP BY
+                    p.package_id,
+                    p.name,
+                    p.min_person_count,
+                    p.max_person_count
+                ORDER BY average_participants DESC
+            """;
+
+    public static final String GET_PACKAGE_TYPE_DISTRIBUTION_STATISTICS = """
+                SELECT
+                    pt.name AS package_type_name,
+                    COUNT(p.package_id) AS total_packages
+                FROM package_type pt
+                LEFT JOIN packages p
+                    ON p.package_type_id = pt.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.name
+                ORDER BY total_packages DESC
+            """;
+
+    public static final String GET_PACKAGE_PRICE_DISTRIBUTION_STATISTICS = """
+                SELECT
+                    p.package_id,
+                    p.name AS package_name,
+                    p.total_price,
+                    p.price_per_person,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants
+                FROM packages p
+                LEFT JOIN package_schedule ps
+                    ON ps.package_id = p.package_id
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE p.terminated_at IS NULL
+                GROUP BY
+                    p.package_id,
+                    p.name,
+                    p.total_price,
+                    p.price_per_person
+                ORDER BY total_participants DESC
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_SUMMARY_STATISTICS = """
+                SELECT
+                    COUNT(DISTINCT ps.id) AS total_schedules,
+                    COUNT(DISTINCT CASE WHEN ps.status = 1 THEN ps.id END) AS active_schedules,
+                    COALESCE(AVG(pr.rating), 0) AS average_schedule_rating,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants,
+                    COALESCE(AVG((ps.duration_start + ps.duration_end) / 2), 0) AS average_duration
+                FROM package_schedule ps
+                LEFT JOIN package_review pr
+                    ON pr.package_schedule_id = ps.id
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE ps.terminated_at IS NULL
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_TIMELINE_STATISTICS = """
+                SELECT
+                    DATE_FORMAT(ps.assume_start_date, '%Y-%m') AS timeline,
+                    COUNT(ps.id) AS total_schedules
+                FROM package_schedule ps
+                WHERE ps.terminated_at IS NULL
+                GROUP BY DATE_FORMAT(ps.assume_start_date, '%Y-%m')
+                ORDER BY timeline ASC
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_STATUS_DISTRIBUTION_STATISTICS = """
+                SELECT
+                    ps.status AS status_id,
+                    COUNT(ps.id) AS total_schedules
+                FROM package_schedule ps
+                WHERE ps.terminated_at IS NULL
+                GROUP BY ps.status
+                ORDER BY total_schedules DESC
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_DURATION_DISTRIBUTION_STATISTICS = """
+                SELECT
+                    ps.id AS schedule_id,
+                    ps.name AS schedule_name,
+                    ps.duration_start,
+                    ps.duration_end,
+                    ((ps.duration_start + ps.duration_end) / 2) AS average_duration
+                FROM package_schedule ps
+                WHERE ps.terminated_at IS NULL
+                ORDER BY average_duration DESC
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_PARTICIPATION_PERFORMANCE_STATISTICS = """
+                SELECT
+                    ps.id AS schedule_id,
+                    ps.name AS schedule_name,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants,
+                    COALESCE(AVG(ph.number_of_participate), 0) AS average_participants
+                FROM package_schedule ps
+                LEFT JOIN package_history ph
+                    ON ph.package_schedule_id = ps.id
+                WHERE ps.terminated_at IS NULL
+                GROUP BY ps.id, ps.name
+                ORDER BY total_participants DESC
+            """;
+
+    public static final String GET_PACKAGE_SCHEDULE_RATING_OVERVIEW_STATISTICS = """
+                SELECT
+                    ps.id AS schedule_id,
+                    ps.name AS schedule_name,
+                    COALESCE(AVG(pr.rating), 0) AS average_rating,
+                    COUNT(pr.id) AS total_reviews
+                FROM package_schedule ps
+                LEFT JOIN package_review pr
+                    ON pr.package_schedule_id = ps.id
+                WHERE ps.terminated_at IS NULL
+                GROUP BY ps.id, ps.name
+                ORDER BY average_rating DESC
+            """;
+
+    public static final String GET_PACKAGE_TYPE_SUMMARY = """
+                SELECT
+                    COUNT(DISTINCT pt.id) AS total_package_types,
+                    COUNT(p.package_id) AS total_packages,
+                    COALESCE(AVG(pr.rating), 0) AS average_rating,
+                    COALESCE(SUM(p.total_price), 0) AS total_revenue
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                LEFT JOIN package_schedule ps ON ps.package_id = p.package_id
+                LEFT JOIN package_review pr ON pr.package_schedule_id = ps.id
+                WHERE pt.terminated_at IS NULL;
+            """;
+
+    public static final String GET_TYPE_DISTRIBUTION = """
+                SELECT
+                    pt.id AS type_id,
+                    pt.name AS type_name,
+                    COUNT(p.package_id) AS total_packages
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.id, pt.name
+                ORDER BY total_packages DESC;
+            """;
+
+    public static final String GET_TYPE_REVENUE_PERFORMANCE = """
+                SELECT
+                    pt.id AS type_id,
+                    pt.name AS type_name,
+                    COALESCE(SUM(p.total_price), 0) AS total_revenue,
+                    COALESCE(AVG(p.total_price), 0) AS avg_price
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.id, pt.name
+                ORDER BY total_revenue DESC;
+            """;
+
+    public static final String GET_TYPE_PARTICIPATION_IMPACT = """
+                SELECT
+                    pt.name AS type_name,
+                    DATE_FORMAT(ph.start_date, '%Y-%m') AS month,
+                    COALESCE(SUM(ph.number_of_participate), 0) AS total_participants
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                LEFT JOIN package_schedule ps ON ps.package_id = p.package_id
+                LEFT JOIN package_history ph ON ph.package_schedule_id = ps.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.name, DATE_FORMAT(ph.start_date, '%Y-%m')
+                ORDER BY month;
+            """;
+
+    public static final String GET_TYPE_PRIMARY_SECONDARY_USAGE = """
+                SELECT
+                    pt.id AS type_id,
+                    pt.name AS type_name,
+                    SUM(CASE WHEN ttm.is_primary = 1 THEN 1 ELSE 0 END) AS primary_count,
+                    SUM(CASE WHEN ttm.is_primary = 0 THEN 1 ELSE 0 END) AS secondary_count
+                FROM package_type pt
+                LEFT JOIN tour_type_map ttm ON ttm.type_id = pt.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.id, pt.name
+                ORDER BY primary_count DESC;
+            """;
+
+    public static final String GET_TYPE_BOOKING_PERFORMANCE = """
+                SELECT
+                    pt.id AS type_id,
+                    pt.name AS type_name,
+                    COUNT(ps.id) AS schedule_count
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                LEFT JOIN package_schedule ps ON ps.package_id = p.package_id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.id, pt.name
+                ORDER BY schedule_count DESC;
+            """;
+
+    public static final String GET_TYPE_RATING_OVERVIEW = """
+                SELECT
+                    pt.id AS type_id,
+                    pt.name AS type_name,
+                    COALESCE(AVG(pr.rating), 0) AS avg_rating,
+                    COUNT(pr.id) AS total_reviews
+                FROM package_type pt
+                LEFT JOIN packages p ON p.package_type_id = pt.id
+                LEFT JOIN package_schedule ps ON ps.package_id = p.package_id
+                LEFT JOIN package_review pr ON pr.package_schedule_id = ps.id
+                WHERE pt.terminated_at IS NULL
+                GROUP BY pt.id, pt.name
+                ORDER BY avg_rating DESC;
+            """;
+
+    public static final String REMOVE_ALL_PACKAGE_IMAGES = """
+            UPDATE package_images
+            SET status = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_PACKAGE_FEATURES = """
+            UPDATE package_features
+            SET status = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_DAY_ACCOMMODATIONS = """
+            UPDATE package_day_accommodation
+            SET status = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_PACKAGE_INCLUSIONS = """
+            UPDATE package_inclusion
+            SET status_id = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_PACKAGE_EXCLUSIONS = """
+            UPDATE tour_exclusion
+            SET status_id = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE tour_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_PACKAGE_CONDITIONS = """
+            UPDATE package_condition
+            SET status_id = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String REMOVE_ALL_PACKAGE_TRAVEL_TIPS = """
+            UPDATE package_travel_tips
+            SET status_id = ?,
+                terminated_at = now(),
+                terminated_by = ?
+            WHERE package_id = ?
+            AND terminated_at IS NULL
+            """;
+
+    public static final String GET_HOTEL_NAMES_AND_IDS = """
+        SELECT
+            service_provider_id AS hotel_id,
+            name AS hotel_name,
+            star_rating
+        FROM service_provider
+        WHERE service_provider_type_id = 1
+          AND status_id = 1
+        """;
+
+    public static final String GET_VEHICLE_NUMBER_AND_TYPE = """
+        SELECT
+            v.vehicle_id,
+            v.registration_number,
+            vt.name AS vehicle_type,
+            v.specification_id
+        FROM vehicles v
+        LEFT JOIN vehicle_type vt
+            ON v.vehicle_type_id = vt.vehicle_type_id
+        WHERE v.terminated_at IS NULL
+        """;
+
+    public static final String GET_TOUR_INCLUSIONS = """
+        SELECT inclusion_text
+        FROM tour_inclusion
+        WHERE tour_id = ?
+          AND terminated_at IS NULL
+        ORDER BY display_order ASC
+        """;
+    public static final String GET_TOUR_EXCLUSIONS = """
+        SELECT exclusion_text
+        FROM tour_exclusion
+        WHERE tour_id = ?
+          AND terminated_at IS NULL
+        ORDER BY display_order ASC
+        """;
+
+    public static final String GET_TOUR_CONDITIONS = """
+        SELECT condition_text
+        FROM tour_condition
+        WHERE tour_id = ?
+          AND terminated_at IS NULL
+        ORDER BY display_order ASC
+        """;
+
+    public static final String GET_TOUR_TRAVEL_TIPS = """
+        SELECT
+            tip_title,
+            tip_description
+        FROM tour_travel_tips
+        WHERE tour_id = ?
+          AND terminated_at IS NULL
+        ORDER BY display_order ASC
+        """;
+
+
 
 }

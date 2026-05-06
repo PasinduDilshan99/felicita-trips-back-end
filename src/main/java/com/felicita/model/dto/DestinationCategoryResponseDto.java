@@ -15,6 +15,8 @@ public class DestinationCategoryResponseDto {
     private String category;
     private String categoryDescription;
     private String categoryStatus;
+    private String color;
+    private String hoverColor;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<DestinationsCategoryImageResponseDto> images;

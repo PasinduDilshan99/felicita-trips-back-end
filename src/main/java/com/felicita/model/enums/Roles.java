@@ -1,0 +1,35 @@
+package com.felicita.model.enums;
+
+public enum Roles {
+
+    SUPER_ADMIN("SUPER_ADMIN"),
+    ROLE_ADMIN("ROLE_ADMIN"),
+    ROLE_MODERATOR("ROLE_MODERATOR"),
+    ROLE_USER("ROLE_USER"),
+
+    ACCOUNTANT("ACCOUNTANT"),
+    API_USER("API_USER"),
+    BLOG_AUTHOR("BLOG_AUTHOR"),
+    CONTENT_CREATOR("CONTENT_CREATOR"),
+    CUSTOMER_SUPPORT("CUSTOMER_SUPPORT"),
+    DRIVER("DRIVER"),
+    FINANCE_MANAGER("FINANCE_MANAGER"),
+    GUIDE("GUIDE"),
+    HR_MANAGER("HR_MANAGER"),
+    MARKETING_MANAGER("MARKETING_MANAGER"),
+    OPERATIONS_MANAGER("OPERATIONS_MANAGER"),
+    PARTNER_MANAGER("PARTNER_MANAGER"),
+    REVIEW_MODERATOR("REVIEW_MODERATOR"),
+    SALES_EXECUTIVE("SALES_EXECUTIVE"),
+    TOUR_MANAGER("TOUR_MANAGER");
+
+    private final String roleName;
+
+    Roles(String roleName) {
+        this.roleName = roleName;
+    }
+
+    public String getRoleName() {
+        return roleName;
+    }
+}

@@ -8,7 +8,12 @@ import com.felicita.model.dto.*;
 import com.felicita.model.enums.CommonStatus;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
+import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.TourStatisticsResponse;
+import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
 import com.felicita.queries.TourQueries;
+import com.felicita.repository.StatusRepository;
 import com.felicita.repository.TourRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,12 +39,13 @@ public class TourRepositoryImpl implements TourRepository {
     private static final Logger LOGGER = LoggerFactory.getLogger(TourRepositoryImpl.class);
 
     private final JdbcTemplate jdbcTemplate;
+    private final StatusRepository statusRepository;
 
     @Autowired
-    public TourRepositoryImpl(JdbcTemplate jdbcTemplate) {
+    public TourRepositoryImpl(JdbcTemplate jdbcTemplate, StatusRepository statusRepository) {
         this.jdbcTemplate = jdbcTemplate;
+        this.statusRepository = statusRepository;
     }
-
 
     @Override
     public List<TourResponseDto> getAllTours() {
@@ -1581,7 +1587,8 @@ public class TourRepositoryImpl implements TourRepository {
     public void terminateTour(TourTerminateRequest tourTerminateRequest, Long userId) {
         String TOUR_TERMINATE = TourQueries.TOUR_TERMINATE;
         try {
-            jdbcTemplate.update(TOUR_TERMINATE, new Object[]{CommonStatus.TERMINATED.toString(), userId, tourTerminateRequest.getTourId()});
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+            jdbcTemplate.update(TOUR_TERMINATE, new Object[]{statusId, userId, tourTerminateRequest.getTourId()});
         } catch (DataAccessException tfe) {
             LOGGER.error(tfe.toString());
             throw new TerminateFailedErrorExceptionHandler(tfe.getMessage());
@@ -1596,6 +1603,9 @@ public class TourRepositoryImpl implements TourRepository {
     public Long insertTourDetails(TourInsertRequest request, Long userId) {
 
         try {
+
+            Long statusId = statusRepository.getStatusIdByName(request.getStatus());
+
             KeyHolder keyHolder = new GeneratedKeyHolder();
 
             jdbcTemplate.update(connection -> {
@@ -1606,18 +1616,16 @@ public class TourRepositoryImpl implements TourRepository {
 
                 ps.setString(1, request.getName());
                 ps.setString(2, request.getDescription());
-                ps.setLong(3, request.getTourType());
-                ps.setLong(4, request.getTourCategory());
-                ps.setInt(5, request.getDuration());
-                ps.setBigDecimal(6, request.getLatitude());
-                ps.setBigDecimal(7, request.getLongitude());
-                ps.setString(8, request.getStartLocation());
-                ps.setString(9, request.getEndLocation());
-                ps.setLong(10, request.getSeason());
-                ps.setString(11, request.getStatus()); // for subquery
-                ps.setLong(12, userId);
-                ps.setLong(13, request.getAssignTo());
-                ps.setString(14, request.getAssignMessage());
+                ps.setInt(3, request.getDuration());
+                ps.setBigDecimal(4, request.getLatitude());
+                ps.setBigDecimal(5, request.getLongitude());
+                ps.setString(6, request.getStartLocation());
+                ps.setString(7, request.getEndLocation());
+                ps.setLong(8, request.getSeason());
+                ps.setLong(9, statusId);
+                ps.setLong(10, userId);
+                ps.setLong(11, request.getAssignTo());
+                ps.setString(12, request.getAssignMessage());
 
                 return ps;
             }, keyHolder);
@@ -1640,30 +1648,7 @@ public class TourRepositoryImpl implements TourRepository {
         }
     }
 
-    @Override
-    public void insertTourDestinations(Long tourId,
-                                       List<TourDestinationInsertRequest> destinations,
-                                       Long userId) {
 
-        if (destinations == null || destinations.isEmpty()) {
-            return;
-        }
-
-        try {
-            for (TourDestinationInsertRequest destination : destinations) {
-                jdbcTemplate.update(
-                        TourQueries.INSERT_TOUR_DESTINATION,
-                        tourId,
-                        destination.getDestinationId(),
-                        destination.getActivityId(),
-                        destination.getDayNumber()
-                );
-            }
-        } catch (DataAccessException dae) {
-            LOGGER.error("DB error while inserting tour destinations", dae);
-            throw new InsertFailedErrorExceptionHandler(dae.getMessage());
-        }
-    }
 
 
     @Override
@@ -1973,24 +1958,23 @@ public class TourRepositoryImpl implements TourRepository {
 
         String UPDATE_TOUR_BASIC_DETAILS = TourQueries.UPDATE_TOUR_BASIC_DETAILS;
 
+        Long statusId = statusRepository.getStatusIdByName(tourBasicDetails.getStatus());
         try {
             jdbcTemplate.update(
                     UPDATE_TOUR_BASIC_DETAILS,
-                    tourBasicDetails.getTourName(),          // 1 name
-                    tourBasicDetails.getTourDescription(),   // 2 description
-                    tourBasicDetails.getTourType(),          // 3 tour_type
-                    tourBasicDetails.getTourCategory(),      // 4 tour_category
-                    tourBasicDetails.getDuration(),          // 5 duration
-                    tourBasicDetails.getLatitude(),          // 6 latitude
-                    tourBasicDetails.getLongitude(),         // 7 longitude
-                    tourBasicDetails.getStartLocation(),     // 8 start_location
-                    tourBasicDetails.getEndLocation(),       // 9 end_location
-                    tourBasicDetails.getSeason(),            // 10 season
-                    tourBasicDetails.getStatus(),            // 11 status (name -> subquery)
-                    userId,                                  // 12 updated_by
+                    tourBasicDetails.getTourName(),
+                    tourBasicDetails.getTourDescription(),
+                    tourBasicDetails.getDuration(),
+                    tourBasicDetails.getLatitude(),
+                    tourBasicDetails.getLongitude(),
+                    tourBasicDetails.getStartLocation(),
+                    tourBasicDetails.getEndLocation(),
+                    tourBasicDetails.getSeason(),
+                    statusId,
+                    userId,
                     tourBasicDetails.getAssignTo(),
-                    tourBasicDetails.getAssignMessage(),     // 13 assign_message
-                    tourId                                   // 13 where tour_id
+                    tourBasicDetails.getAssignMessage(),
+                    tourId
             );
 
         } catch (DataAccessException dae) {
@@ -2007,16 +1991,21 @@ public class TourRepositoryImpl implements TourRepository {
     @Override
     public void removeTourDestinations(Long tourId, List<Long> removeDestinations, Long userId) {
         try {
+
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
             jdbcTemplate.batchUpdate(
                     TourQueries.TOUR_DESTINATION_REMOVE,
                     removeDestinations,
                     removeDestinations.size(),
-                    (ps, tourDestinationId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                    (ps, destinationId) -> {
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
-                        ps.setLong(3, tourDestinationId);
+                        ps.setLong(3, tourId);
+                        ps.setLong(4, destinationId);
                     }
             );
+
         } catch (DataAccessException e) {
             LOGGER.error("Failed to remove tour destination", e);
             throw new TerminateFailedErrorExceptionHandler(e.getMessage());
@@ -2060,12 +2049,14 @@ public class TourRepositoryImpl implements TourRepository {
     @Override
     public void removeTourImages(Long tourId, List<Long> removeImages, Long userId) {
         try {
+
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
             jdbcTemplate.batchUpdate(
                     TourQueries.TOUR_IMAGES_REMOVE,
                     removeImages,
                     removeImages.size(),
                     (ps, imageId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, imageId);
                     }
@@ -2113,12 +2104,13 @@ public class TourRepositoryImpl implements TourRepository {
     @Override
     public void removeTourInclusions(Long tourId, List<Long> removeInclusions, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
             jdbcTemplate.batchUpdate(
                     TourQueries.TOUR_INCLUSION_REMOVE,
                     removeInclusions,
                     removeInclusions.size(),
                     (ps, inclusionId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, inclusionId);
                     }
@@ -2165,12 +2157,13 @@ public class TourRepositoryImpl implements TourRepository {
     @Override
     public void removeTourExclusions(Long tourId, List<Long> removeExclusions, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
             jdbcTemplate.batchUpdate(
                     TourQueries.TOUR_EXCLUSION_REMOVE,
                     removeExclusions,
                     removeExclusions.size(),
                     (ps, exclusionId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, exclusionId);
                     }
@@ -2188,12 +2181,13 @@ public class TourRepositoryImpl implements TourRepository {
     @Override
     public void removeTourConditions(Long tourId, List<Long> removeConditions, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
             jdbcTemplate.batchUpdate(
                     TourQueries.TOUR_CONDITION_REMOVE,
                     removeConditions,
                     removeConditions.size(),
                     (ps, conditionId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, conditionId);
                     }
@@ -2211,12 +2205,13 @@ public class TourRepositoryImpl implements TourRepository {
     @Override
     public void removeTourTravelTips(Long tourId, List<Long> removeTravelTips, Long userId) {
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
             jdbcTemplate.batchUpdate(
                     TourQueries.TOUR_TRAVEL_TIPS_REMOVE,
                     removeTravelTips,
                     removeTravelTips.size(),
                     (ps, travelTipId) -> {
-                        ps.setString(1, CommonStatus.TERMINATED.toString());
+                        ps.setLong(1, statusId);
                         ps.setLong(2, userId);
                         ps.setLong(3, travelTipId);
                     }
@@ -2325,6 +2320,998 @@ public class TourRepositoryImpl implements TourRepository {
             throw new InternalServerErrorExceptionHandler("Failed to fetch tour assign user details");
         }
     }
+
+    @Override
+    public TourStatisticsResponse.Summary getToutSummeryStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    TourQueries.GET_TOUR_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.Summary.builder()
+                            .totalTours(rs.getInt("total_tours"))
+                            .totalBookings(rs.getInt("total_bookings"))
+                            .pendingBookings(rs.getInt("pending_bookings"))
+                            .averageRating(rs.getDouble("average_rating"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching tour summary statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch tour summary statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching tour summary statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching tour summary statistics");
+        }
+    }
+
+    @Override
+    public List<TourStatisticsResponse.TourPopularity> getTourPopularityStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour popularity statistics.");
+
+            return jdbcTemplate.query(
+                    TourQueries.GET_TOUR_POPULARITY_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.TourPopularity.builder()
+                            .tourId(rs.getLong("tour_id"))
+                            .tourName(rs.getString("tour_name"))
+                            .totalBookings(rs.getInt("total_bookings"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching tour popularity statistics: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch tour popularity statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching tour popularity statistics: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching tour popularity statistics");
+        }
+    }
+
+    @Override
+    public List<TourStatisticsResponse.BookingStatusDistribution> getBookingStatusDistributionStatistics() {
+
+        try {
+            LOGGER.info("Fetching booking status distribution statistics.");
+
+            return jdbcTemplate.query(
+                    TourQueries.GET_BOOKING_STATUS_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.BookingStatusDistribution.builder()
+                            .statusName(rs.getString("status_name"))
+                            .totalCount(rs.getInt("total_count"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching booking status distribution: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch booking status distribution statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching booking status distribution: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching booking status distribution statistics");
+        }
+    }
+
+    @Override
+    public List<TourStatisticsResponse.CategoryPerformance> getCategoryPerformanceStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour category performance statistics.");
+
+            return jdbcTemplate.query(
+                    TourQueries.GET_CATEGORY_PERFORMANCE_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.CategoryPerformance.builder()
+                            .categoryId(rs.getLong("category_id"))
+                            .categoryName(rs.getString("category_name"))
+                            .totalTours(rs.getInt("total_tours"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching category performance: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch category performance statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching category performance: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching category performance statistics");
+        }
+    }
+
+    @Override
+    public List<TourStatisticsResponse.TypeDistribution> getTypeDistributionStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour type distribution statistics.");
+
+            return jdbcTemplate.query(
+                    TourQueries.GET_TYPE_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.TypeDistribution.builder()
+                            .typeId(rs.getLong("type_id"))
+                            .typeName(rs.getString("type_name"))
+                            .totalTours(rs.getInt("total_tours"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching type distribution: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch type distribution statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching type distribution: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching type distribution statistics");
+        }
+    }
+
+    @Override
+    public List<TourStatisticsResponse.LocationDistribution> getLocationDistributionStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour location distribution statistics.");
+
+            return jdbcTemplate.query(
+                    TourQueries.GET_LOCATION_DISTRIBUTION_STATISTICS,
+                    (rs, rowNum) -> TourStatisticsResponse.LocationDistribution.builder()
+                            .startLocation(rs.getString("start_location"))
+                            .totalTours(rs.getInt("total_tours"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching location distribution: {}", ex.getMessage(), ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch location distribution statistics");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching location distribution: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching location distribution statistics");
+        }
+    }
+
+    @Override
+    public TourScheduleStatisticsResponse.Summary getTourScheduleSummeryStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour schedule summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    TourQueries.GET_TOUR_SCHEDULE_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> TourScheduleStatisticsResponse.Summary.builder()
+                            .totalSchedules(rs.getInt("total_schedules"))
+                            .completedSchedules(rs.getInt("completed_schedules"))
+                            .averageRating(rs.getDouble("average_rating"))
+                            .utilizationRate(rs.getDouble("utilization_rate"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching schedule summary: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch schedule summary statistics");
+        }
+    }
+
+    @Override
+    public List<TourScheduleStatisticsResponse.ScheduleTimeline> getScheduleTimelineStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_SCHEDULE_TIMELINE_STATISTICS,
+                (rs, rowNum) -> TourScheduleStatisticsResponse.ScheduleTimeline.builder()
+                        .scheduleDate(rs.getString("schedule_date"))
+                        .totalSchedules(rs.getInt("total_schedules"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourScheduleStatisticsResponse.ParticipationTrend> getParticipationTrendStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_PARTICIPATION_TREND_STATISTICS,
+                (rs, rowNum) -> TourScheduleStatisticsResponse.ParticipationTrend.builder()
+                        .scheduleId(rs.getLong("schedule_id"))
+                        .scheduleName(rs.getString("schedule_name"))
+                        .totalParticipants(rs.getInt("total_participants"))
+                        .build()
+        );
+    }
+
+    @Override
+    public TourCategoryStatisticsResponse.Summary getTourCategorySummaryStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour category summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    TourQueries.GET_CATEGORY_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> TourCategoryStatisticsResponse.Summary.builder()
+                            .totalCategories(rs.getInt("total_categories"))
+                            .activeCategories(rs.getInt("active_categories"))
+                            .averageRating(rs.getDouble("average_rating"))
+                            .totalBookings(rs.getInt("total_bookings"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching category summary: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch category summary statistics");
+        }
+    }
+
+    @Override
+    public List<TourCategoryStatisticsResponse.CategoryDistribution> getCategoryDistributionStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_CATEGORY_DISTRIBUTION_STATISTICS,
+                (rs, rowNum) -> TourCategoryStatisticsResponse.CategoryDistribution.builder()
+                        .categoryName(rs.getString("category_name"))
+                        .totalTours(rs.getInt("total_tours"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourCategoryStatisticsResponse.CategoryBookingPerformance> getCategoryBookingPerformanceStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_CATEGORY_BOOKING_PERFORMANCE_STATISTICS,
+                (rs, rowNum) -> TourCategoryStatisticsResponse.CategoryBookingPerformance.builder()
+                        .categoryId(rs.getLong("category_id"))
+                        .categoryName(rs.getString("category_name"))
+                        .totalBookings(rs.getInt("total_bookings"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourCategoryStatisticsResponse.CategoryRatingOverview> getCategoryRatingOverviewStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_CATEGORY_RATING_OVERVIEW_STATISTICS,
+                (rs, rowNum) -> TourCategoryStatisticsResponse.CategoryRatingOverview.builder()
+                        .categoryId(rs.getLong("category_id"))
+                        .categoryName(rs.getString("category_name"))
+                        .averageRating(rs.getDouble("average_rating"))
+                        .totalReviews(rs.getInt("total_reviews"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourCategoryStatisticsResponse.CategoryPrimarySecondaryUsage> getCategoryPrimarySecondaryUsageStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_CATEGORY_PRIMARY_SECONDARY_USAGE_STATISTICS,
+                (rs, rowNum) -> TourCategoryStatisticsResponse.CategoryPrimarySecondaryUsage.builder()
+                        .categoryName(rs.getString("category_name"))
+                        .primaryUsage(rs.getInt("primary_usage"))
+                        .secondaryUsage(rs.getInt("secondary_usage"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourCategoryStatisticsResponse.CategoryParticipationImpact> getCategoryParticipationImpactStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_CATEGORY_PARTICIPATION_IMPACT_STATISTICS,
+                (rs, rowNum) -> TourCategoryStatisticsResponse.CategoryParticipationImpact.builder()
+                        .categoryId(rs.getLong("category_id"))
+                        .categoryName(rs.getString("category_name"))
+                        .totalParticipants(rs.getInt("total_participants"))
+                        .build()
+        );
+    }
+
+    @Override
+    public TourTypeStatisticsResponse.Summary getTourTypeSummaryStatistics() {
+
+        try {
+            LOGGER.info("Fetching tour type summary statistics.");
+
+            return jdbcTemplate.queryForObject(
+                    TourQueries.GET_TOUR_TYPE_SUMMARY_STATISTICS,
+                    (rs, rowNum) -> TourTypeStatisticsResponse.Summary.builder()
+                            .totalTypes(rs.getInt("total_types"))
+                            .activeTypes(rs.getInt("active_types"))
+                            .averageRating(rs.getDouble("average_rating"))
+                            .totalBookings(rs.getInt("total_bookings"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching tour type summary: {}", ex.getMessage(), ex);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour type summary statistics");
+        }
+    }
+
+    @Override
+    public List<TourTypeStatisticsResponse.TypeDistribution> getTypesDistributionStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_TYPES_DISTRIBUTION_STATISTICS,
+                (rs, rowNum) -> TourTypeStatisticsResponse.TypeDistribution.builder()
+                        .typeName(rs.getString("type_name"))
+                        .totalTours(rs.getInt("total_tours"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourTypeStatisticsResponse.TypeBookingPerformance> getTypeBookingPerformanceStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_TYPE_BOOKING_PERFORMANCE_STATISTICS,
+                (rs, rowNum) -> TourTypeStatisticsResponse.TypeBookingPerformance.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .totalBookings(rs.getInt("total_bookings"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourTypeStatisticsResponse.TypeRatingOverview> getTypeRatingOverviewStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_TYPE_RATING_OVERVIEW_STATISTICS,
+                (rs, rowNum) -> TourTypeStatisticsResponse.TypeRatingOverview.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .averageRating(rs.getDouble("average_rating"))
+                        .totalReviews(rs.getInt("total_reviews"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourTypeStatisticsResponse.TypeParticipationImpact> getTypeParticipationImpactStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_TYPE_PARTICIPATION_IMPACT_STATISTICS,
+                (rs, rowNum) -> TourTypeStatisticsResponse.TypeParticipationImpact.builder()
+                        .typeId(rs.getLong("type_id"))
+                        .typeName(rs.getString("type_name"))
+                        .totalParticipants(rs.getInt("total_participants"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<TourTypeStatisticsResponse.TypePrimarySecondaryUsage> getTypePrimarySecondaryUsageStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_TYPE_PRIMARY_SECONDARY_USAGE_STATISTICS,
+                (rs, rowNum) -> TourTypeStatisticsResponse.TypePrimarySecondaryUsage.builder()
+                        .typeName(rs.getString("type_name"))
+                        .primaryUsage(rs.getInt("primary_usage"))
+                        .secondaryUsage(rs.getInt("secondary_usage"))
+                        .build()
+        );
+    }
+
+    @Override
+    public void insertTourTypesToTour(Long tourId, List<Long> tourTypes, Long userId) {
+        try {
+            LOGGER.info("Inserting tour types for tourId: {}", tourId);
+
+            if (tourTypes == null || tourTypes.isEmpty()) {
+                LOGGER.warn("No tour types provided for tourId: {}", tourId);
+                return;
+            }
+
+            Long activeStatusId = statusRepository.getStatusIdByName("ACTIVE");
+
+            if (activeStatusId == null) {
+                LOGGER.error("ACTIVE status not found.");
+                throw new IllegalArgumentException("ACTIVE status not found");
+            }
+
+            for (int i = 0; i < tourTypes.size(); i++) {
+                Long typeId = tourTypes.get(i);
+                boolean isPrimary = i == 0;
+
+                int rowsAffected = jdbcTemplate.update(
+                        TourQueries.INSERT_TOUR_TYPE_MAP,
+                        tourId,
+                        typeId,
+                        isPrimary,
+                        activeStatusId,
+                        userId,
+                        userId
+                );
+
+                LOGGER.info(
+                        "Inserted tour type mapping. tourId: {}, typeId: {}, isPrimary: {}, rowsAffected: {}",
+                        tourId,
+                        typeId,
+                        isPrimary,
+                        rowsAffected
+                );
+            }
+
+            LOGGER.info(
+                    "Successfully inserted {} tour type mappings for tourId: {}",
+                    tourTypes.size(),
+                    tourId
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Database error while inserting tour types for tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler("Failed to insert tour types");
+
+        } catch (Exception ex) {
+            LOGGER.error(
+                    "Unexpected error while inserting tour types for tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while inserting tour types"
+            );
+        }
+    }
+
+    @Override
+    public void insertTourCategoriesToTour(Long tourId, List<Long> tourCategories, Long userId) {
+        try {
+            LOGGER.info("Inserting tour categories for tourId: {}", tourId);
+
+            if (tourCategories == null || tourCategories.isEmpty()) {
+                LOGGER.warn("No tour categories provided for tourId: {}", tourId);
+                return;
+            }
+
+            Long activeStatusId = statusRepository.getStatusIdByName("ACTIVE");
+
+            if (activeStatusId == null) {
+                LOGGER.error("ACTIVE status not found.");
+                throw new IllegalArgumentException("ACTIVE status not found");
+            }
+
+            for (int i = 0; i < tourCategories.size(); i++) {
+                Long categoryId = tourCategories.get(i);
+                boolean isPrimary = i == 0;
+
+                int rowsAffected = jdbcTemplate.update(
+                        TourQueries.INSERT_TOUR_CATEGORY_MAP,
+                        tourId,
+                        categoryId,
+                        isPrimary,
+                        activeStatusId,
+                        userId,
+                        userId
+                );
+
+                LOGGER.info(
+                        "Inserted tour category mapping. tourId: {}, categoryId: {}, isPrimary: {}, rowsAffected: {}",
+                        tourId,
+                        categoryId,
+                        isPrimary,
+                        rowsAffected
+                );
+            }
+
+            LOGGER.info(
+                    "Successfully inserted {} tour category mappings for tourId: {}",
+                    tourCategories.size(),
+                    tourId
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Database error while inserting tour categories for tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler("Failed to insert tour categories");
+
+        } catch (Exception ex) {
+            LOGGER.error(
+                    "Unexpected error while inserting tour categories for tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while inserting tour categories"
+            );
+        }
+    }
+
+    @Override
+    public void removeTourTypesFromTour(Long tourId, List<Long> removeTourTypes, Long userId) {
+        try {
+            LOGGER.info("Removing tour types from tourId: {}", tourId);
+
+            if (removeTourTypes == null || removeTourTypes.isEmpty()) {
+                LOGGER.warn("No tour types provided for removal. tourId: {}", tourId);
+                return;
+            }
+
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
+
+            for (Long typeId : removeTourTypes) {
+                int rowsAffected = jdbcTemplate.update(
+                        TourQueries.REMOVE_TOUR_TYPE_FROM_TOUR,
+                        statusId,
+                        userId,
+                        userId,
+                        tourId,
+                        typeId
+                );
+
+                LOGGER.info(
+                        "Removed tour type mapping. tourId: {}, typeId: {}, rowsAffected: {}",
+                        tourId,
+                        typeId,
+                        rowsAffected
+                );
+            }
+
+            LOGGER.info(
+                    "Successfully removed {} tour type mappings from tourId: {}",
+                    removeTourTypes.size(),
+                    tourId
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Database error while removing tour types from tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler("Failed to remove tour types from tour");
+
+        } catch (Exception ex) {
+            LOGGER.error(
+                    "Unexpected error while removing tour types from tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while removing tour types from tour"
+            );
+        }
+    }
+
+    @Override
+    public void updateTourTypesInTour(
+            Long tourId,
+            List<TourUpdateRequest.TourTypeUpdateRequest> updateTourTypes,
+            Long userId) {
+
+        try {
+            LOGGER.info("Updating tour types for tourId: {}", tourId);
+
+            if (updateTourTypes == null || updateTourTypes.isEmpty()) {
+                LOGGER.warn("No tour types provided for update. tourId: {}", tourId);
+                return;
+            }
+
+            for (TourUpdateRequest.TourTypeUpdateRequest tourType : updateTourTypes) {
+
+                Long statusId = statusRepository.getStatusIdByName(tourType.getStatus());
+
+                if (statusId == null) {
+                    LOGGER.error("Invalid status name: {}", tourType.getStatus());
+                    throw new IllegalArgumentException(
+                            "Invalid status: " + tourType.getStatus()
+                    );
+                }
+
+                int rowsAffected = jdbcTemplate.update(
+                        TourQueries.UPDATE_TOUR_TYPES_IN_TOUR,
+                        Boolean.TRUE.equals(tourType.getIsPrimary()),
+                        statusId,
+                        userId,
+                        tourId,
+                        tourType.getTourTypeId()
+                );
+
+                LOGGER.info(
+                        "Updated tour type mapping. tourId: {}, typeId: {}, rowsAffected: {}",
+                        tourId,
+                        tourType.getTourTypeId(),
+                        rowsAffected
+                );
+            }
+
+            LOGGER.info(
+                    "Successfully updated {} tour type mappings for tourId: {}",
+                    updateTourTypes.size(),
+                    tourId
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Database error while updating tour types for tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler("Failed to update tour types");
+
+        } catch (Exception ex) {
+            LOGGER.error(
+                    "Unexpected error while updating tour types for tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while updating tour types"
+            );
+        }
+    }
+
+    @Override
+    public void updateTourCategoriesInTour(
+            Long tourId,
+            List<TourUpdateRequest.TourCategoryUpdateRequest> updateTourCategories,
+            Long userId) {
+
+        try {
+            LOGGER.info("Updating tour categories for tourId: {}", tourId);
+
+            if (updateTourCategories == null || updateTourCategories.isEmpty()) {
+                LOGGER.warn("No tour categories provided for update. tourId: {}", tourId);
+                return;
+            }
+
+            for (TourUpdateRequest.TourCategoryUpdateRequest category : updateTourCategories) {
+
+                Long statusId = statusRepository.getStatusIdByName(category.getStatus());
+
+                if (statusId == null) {
+                    LOGGER.error("Invalid status name: {}", category.getStatus());
+                    throw new IllegalArgumentException(
+                            "Invalid status: " + category.getStatus()
+                    );
+                }
+
+                int rowsAffected = jdbcTemplate.update(
+                        TourQueries.UPDATE_TOUR_CATEGORIES_IN_TOUR,
+                        Boolean.TRUE.equals(category.getIsPrimary()),
+                        statusId,
+                        userId,
+                        tourId,
+                        category.getTourCategoryId()
+                );
+
+                LOGGER.info(
+                        "Updated tour category mapping. tourId: {}, categoryId: {}, rowsAffected: {}",
+                        tourId,
+                        category.getTourCategoryId(),
+                        rowsAffected
+                );
+            }
+
+            LOGGER.info(
+                    "Successfully updated {} tour category mappings for tourId: {}",
+                    updateTourCategories.size(),
+                    tourId
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Database error while updating tour categories for tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler("Failed to update tour categories");
+
+        } catch (Exception ex) {
+            LOGGER.error(
+                    "Unexpected error while updating tour categories for tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while updating tour categories"
+            );
+        }
+    }
+
+    @Override
+    public void removeTourCategoriesFromTour(Long tourId, List<Long> removeTourCategories, Long userId) {
+        try {
+            LOGGER.info("Removing tour categories from tourId: {}", tourId);
+
+            if (removeTourCategories == null || removeTourCategories.isEmpty()) {
+                LOGGER.warn("No tour categories provided for removal. tourId: {}", tourId);
+                return;
+            }
+
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
+
+            for (Long categoryId : removeTourCategories) {
+                int rowsAffected = jdbcTemplate.update(
+                        TourQueries.REMOVE_TOUR_CATEGORIES_FROM_TOUR,
+                        statusId,
+                        userId,
+                        userId,
+                        tourId,
+                        categoryId
+                );
+
+                LOGGER.info(
+                        "Removed tour category mapping. tourId: {}, categoryId: {}, rowsAffected: {}",
+                        tourId,
+                        categoryId,
+                        rowsAffected
+                );
+            }
+
+            LOGGER.info(
+                    "Successfully removed {} tour category mappings from tourId: {}",
+                    removeTourCategories.size(),
+                    tourId
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Database error while removing tour categories from tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler("Failed to remove tour categories from tour");
+
+        } catch (Exception ex) {
+            LOGGER.error(
+                    "Unexpected error while removing tour categories from tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while removing tour categories from tour"
+            );
+        }
+    }
+
+    @Override
+    public void removeActivitiesFromTourDestinations(
+            Long tourId,
+            List<Long> removeActivities,
+            Long userId) {
+
+        try {
+            LOGGER.info("Removing activities from tour destinations for tourId: {}", tourId);
+
+            if (removeActivities == null || removeActivities.isEmpty()) {
+                LOGGER.warn("No activities provided for removal from tourId: {}", tourId);
+                return;
+            }
+
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
+
+            for (Long activityId : removeActivities) {
+                int rowsAffected = jdbcTemplate.update(
+                        TourQueries.REMOVE_ACTIVITIES_FROM_TOUR_DESTINATIONS,
+                        statusId,
+                        userId,
+                        userId,
+                        tourId,
+                        activityId
+                );
+
+                LOGGER.info(
+                        "Removed activity from tour destination. tourId: {}, activityId: {}, rowsAffected: {}",
+                        tourId,
+                        activityId,
+                        rowsAffected
+                );
+            }
+
+            LOGGER.info(
+                    "Successfully removed {} activities from tour destinations for tourId: {}",
+                    removeActivities.size(),
+                    tourId
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Database error while removing activities from tour destinations for tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to remove activities from tour destinations"
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error(
+                    "Unexpected error while removing activities from tour destinations for tourId: {} - {}",
+                    tourId,
+                    ex.getMessage(),
+                    ex
+            );
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while removing activities from tour destinations"
+            );
+        }
+    }
+
+    @Override
+    public void terminateTourDestinations(Long tourId, Long userId) {
+        try {
+
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            int rowsAffected = jdbcTemplate.update(
+                    TourQueries.TERMINATE_TOUR_DESTINATIONS_BY_TOUR,
+                    statusId,
+                    userId,
+                    tourId
+            );
+
+            LOGGER.info("Terminated tour destinations. tourId: {}, rowsAffected: {}", tourId, rowsAffected);
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to terminate tour destinations", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Unexpected error while terminating tour destinations", e);
+            throw new InternalServerErrorExceptionHandler("Failed to terminate tour destinations");
+        }
+    }
+
+    @Override
+    public void terminateTourTypesAssignToTour(Long tourId, Long userId) {
+        try {
+
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            int rowsAffected = jdbcTemplate.update(
+                    TourQueries.TERMINATE_TOUR_TYPES_BY_TOUR,
+                    statusId,
+                    userId,
+                    tourId
+            );
+
+            LOGGER.info("Terminated tour types. tourId: {}, rowsAffected: {}", tourId, rowsAffected);
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to terminate tour types", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Unexpected error while terminating tour types", e);
+            throw new InternalServerErrorExceptionHandler("Failed to terminate tour types");
+        }
+    }
+
+    @Override
+    public void terminateTourCategoriesAssignToTour(Long tourId, Long userId) {
+        try {
+
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+
+            int rowsAffected = jdbcTemplate.update(
+                    TourQueries.TERMINATE_TOUR_CATEGORIES_BY_TOUR,
+                    statusId,
+                    userId,
+                    tourId
+            );
+
+            LOGGER.info("Terminated tour categories. tourId: {}, rowsAffected: {}", tourId, rowsAffected);
+
+        } catch (DataAccessException e) {
+            LOGGER.error("Failed to terminate tour categories", e);
+            throw new TerminateFailedErrorExceptionHandler(e.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Unexpected error while terminating tour categories", e);
+            throw new InternalServerErrorExceptionHandler("Failed to terminate tour categories");
+        }
+    }
+
+    @Override
+    public void insertTourDestinations(Long tourId,
+                                       List<TourItineraryDayRequest> itinerary,  // Changed parameter
+                                       Long userId) {
+
+        if (itinerary == null || itinerary.isEmpty()) {
+            return;
+        }
+
+        try {
+            for (TourItineraryDayRequest day : itinerary) {
+                if (day.getDestinations() != null && !day.getDestinations().isEmpty()) {
+                    for (TourItineraryDestinationRequest destination : day.getDestinations()) {
+                        Long destinationId = destination.getDestinationId();
+                        List<Long> activityIds = destination.getActivities();
+
+                        if (activityIds != null && !activityIds.isEmpty()) {
+                            for (Long activityId : activityIds) {
+                                jdbcTemplate.update(
+                                        TourQueries.INSERT_TOUR_DESTINATION,
+                                        tourId,
+                                        destinationId,
+                                        activityId,
+                                        day.getDayNumber()
+                                );
+                            }
+                        } else {
+                            jdbcTemplate.update(
+                                    TourQueries.INSERT_TOUR_DESTINATION,
+                                    tourId,
+                                    destinationId,
+                                    null,
+                                    day.getDayNumber()
+                            );
+                        }
+                    }
+                }
+            }
+        } catch (DataAccessException dae) {
+            LOGGER.error("DB error while inserting tour destinations", dae);
+            throw new InsertFailedErrorExceptionHandler(dae.getMessage());
+        }
+    }
+
+
+    @Override
+    public List<TourScheduleStatisticsResponse.ScheduleRatingOverview> getScheduleRatingOverviewStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_SCHEDULE_RATING_OVERVIEW_STATISTICS,
+                (rs, rowNum) -> TourScheduleStatisticsResponse.ScheduleRatingOverview.builder()
+                        .scheduleId(rs.getLong("schedule_id"))
+                        .scheduleName(rs.getString("schedule_name"))
+                        .averageRating(rs.getDouble("average_rating"))
+                        .totalReviews(rs.getInt("total_reviews"))
+                        .build()
+        );
+    }
+
+
+    @Override
+    public List<TourScheduleStatisticsResponse.ScheduleExecutionPerformance> getScheduleExecutionPerformanceStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_SCHEDULE_EXECUTION_PERFORMANCE_STATISTICS,
+                (rs, rowNum) -> TourScheduleStatisticsResponse.ScheduleExecutionPerformance.builder()
+                        .scheduleId(rs.getLong("schedule_id"))
+                        .scheduleName(rs.getString("schedule_name"))
+                        .completedInstances(rs.getInt("completed_instances"))
+                        .build()
+        );
+    }
+
+
+    @Override
+    public List<TourScheduleStatisticsResponse.DurationDistribution> getDurationDistributionStatistics() {
+
+        return jdbcTemplate.query(
+                TourQueries.GET_DURATION_DISTRIBUTION_STATISTICS,
+                (rs, rowNum) -> TourScheduleStatisticsResponse.DurationDistribution.builder()
+                        .durationStart(rs.getInt("duration_start"))
+                        .durationEnd(rs.getInt("duration_end"))
+                        .totalSchedules(rs.getInt("total_schedules"))
+                        .build()
+        );
+    }
+
 
     private LocalDateTime getLocalDateTime(ResultSet rs, String columnLabel) {
         try {

@@ -1,10 +1,7 @@
 package com.felicita.controller;
 
 import com.felicita.model.dto.*;
-import com.felicita.model.request.DestinationDataRequest;
-import com.felicita.model.request.DestinationInsertRequest;
-import com.felicita.model.request.DestinationTerminateRequest;
-import com.felicita.model.request.DestinationUpdateRequest;
+import com.felicita.model.request.*;
 import com.felicita.model.response.*;
 import com.felicita.service.DestinationService;
 import com.felicita.util.Constant;
@@ -90,6 +87,22 @@ public class DestinationController {
         LOGGER.info("{} Start execute get trending destinations {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<List<TrendingDestinationResponseDto>> response = destinationService.getTrendingDestinations();
         LOGGER.info("{} End execute get trending destinations {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/trending-destinations-add")
+    public ResponseEntity<CommonResponse<InsertResponse>> addTrendingDestinations(@RequestBody TrendingDestinationInsertRequest trendingDestinationInsertRequest) {
+        LOGGER.info("{} Start execute add trending destinations {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = destinationService.addTrendingDestinations(trendingDestinationInsertRequest);
+        LOGGER.info("{} End execute add trending destinations {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/trending-destinations-terminate")
+    public ResponseEntity<CommonResponse<TerminateResponse>> termianteTrendingDestination(@RequestBody TrendingDestinationTerminateRequest trendingDestinationTerminateRequest) {
+        LOGGER.info("{} Start execute terminate trending destinations {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TerminateResponse> response = destinationService.termianteTrendingDestination(trendingDestinationTerminateRequest);
+        LOGGER.info("{} End execute terminate trending destinations {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response,HttpStatus.OK);
     }
 
@@ -210,6 +223,46 @@ public class DestinationController {
         LOGGER.info("{} Start execute get destination statistics {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<DestinationStatisticsResponse> response = destinationService.getDestinationsStatistics();
         LOGGER.info("{} End execute get destination statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/destination-categories-statistics")
+    public ResponseEntity<CommonResponse<DestinationCategoriesStatisticsResponse>> getDestinationCategoriesStatistics() {
+        LOGGER.info("{} Start execute get destination categories statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<DestinationCategoriesStatisticsResponse> response = destinationService.getDestinationCategoriesStatistics();
+        LOGGER.info("{} End execute get destination categories statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/category-details-by-id")
+    public ResponseEntity<CommonResponse<DestinationCategoryDetailsResponseDto>> getDestinationsCategoryDetailsById(@RequestBody DestinationCategoryDetailsRequest destinationCategoryDetailsRequest) {
+        LOGGER.info("{} Start execute get active destinations categories{}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<DestinationCategoryDetailsResponseDto> response = destinationService.getDestinationsCategoryDetailsById(destinationCategoryDetailsRequest);
+        LOGGER.info("{} End execute get active destinations categories{}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/add-destination-category")
+    public ResponseEntity<CommonResponse<InsertResponse>> insertDestinationCategory(@RequestBody DestinationCategoryInsertRequest destinationCategoryInsertRequest) {
+        LOGGER.info("{} Start execute insert destination category {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = destinationService.insertDestinationCategory(destinationCategoryInsertRequest);
+        LOGGER.info("{} End execute insert destination category {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/update-destination-category")
+    public ResponseEntity<CommonResponse<UpdateResponse>> updateDestinationCategory(@RequestBody DestinationCategoryUpdateRequest destinationCategoryUpdateRequest) {
+        LOGGER.info("{} Start execute update destination category {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UpdateResponse> response = destinationService.updateDestinationCategory(destinationCategoryUpdateRequest);
+        LOGGER.info("{} End execute update destination category {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/terminate-destination-category")
+    public ResponseEntity<CommonResponse<TerminateResponse>> terminateDestinationCategory(@RequestBody DestinationCategoryTerminateRequest destinationCategoryTerminateRequest) {
+        LOGGER.info("{} Start execute terminate destination category {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TerminateResponse> response = destinationService.terminateDestinationCategory(destinationCategoryTerminateRequest);
+        LOGGER.info("{} End execute terminate destination category {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

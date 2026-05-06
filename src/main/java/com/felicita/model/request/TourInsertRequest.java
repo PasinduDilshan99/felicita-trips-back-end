@@ -15,9 +15,9 @@ import java.util.List;
 public class TourInsertRequest {
     private String name;
     private String description;
-    private Long tourType;       // FK -> tour_type.id
-    private Long tourCategory;   // FK -> tour_category.id
-    private Integer duration;       // e.g. days / hours (as per your logic)
+    private List<Long> tourTypes;
+    private List<Long> tourCategories;
+    private Integer duration;
     private BigDecimal latitude;
     private BigDecimal longitude;
     private String startLocation;
@@ -26,8 +26,11 @@ public class TourInsertRequest {
     private String status;
     private Long assignTo;
     private String assignMessage;
-    private List<TourDestinationInsertRequest> destinations;
+
     private List<TourImageInsertRequest> images;
+
+    private List<TourItineraryDayRequest> itinerary;
+
     private List<TourInclusionInsertRequest> inclusions;
     private List<TourExclusionInsertRequest> exclusions;
     private List<TourConditionInsertRequest> conditions;

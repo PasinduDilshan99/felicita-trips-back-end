@@ -1,16 +1,20 @@
 package com.felicita.service.impl;
 
+import com.felicita.email.PackageEmailHelperService;
 import com.felicita.exception.*;
 import com.felicita.model.dto.*;
-import com.felicita.model.enums.CommonStatus;
-import com.felicita.model.request.PackageDataRequest;
-import com.felicita.model.request.PackageInsertRequest;
-import com.felicita.model.request.PackageTerminateRequest;
-import com.felicita.model.request.PackageUpdateRequest;
+import com.felicita.model.enums.*;
+import com.felicita.model.other.PackageComparisonResult;
+import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
+import com.felicita.model.response.statistics.PackageStatisticsResponse;
+import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
 import com.felicita.repository.PackageRepository;
 import com.felicita.repository.WishListRepository;
+import com.felicita.security.model.User;
 import com.felicita.service.CommonService;
+import com.felicita.service.EmailService;
 import com.felicita.service.PackageService;
 import com.felicita.util.CommonResponseMessages;
 import com.felicita.validation.PackageValidationService;
@@ -19,10 +23,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static com.felicita.util.Constant.COMPANY_EMAIL;
+import static com.felicita.util.FrontEndUrls.VIEW_PACKAGE_DETAILS;
 
 @Service
 public class PackageServiceImpl implements PackageService {
@@ -33,13 +38,17 @@ public class PackageServiceImpl implements PackageService {
     private final PackageValidationService packageValidationService;
     private final CommonService commonService;
     private final WishListRepository wishListRepository;
+    private final PackageEmailHelperService packageEmailHelperService;
+    private final EmailService emailService;
 
     @Autowired
-    public PackageServiceImpl(PackageRepository packageRepository, PackageValidationService packageValidationService, CommonService commonService, WishListRepository wishListRepository) {
+    public PackageServiceImpl(PackageRepository packageRepository, PackageValidationService packageValidationService, CommonService commonService, WishListRepository wishListRepository, PackageEmailHelperService packageEmailHelperService, EmailService emailService) {
         this.packageRepository = packageRepository;
         this.packageValidationService = packageValidationService;
         this.commonService = commonService;
         this.wishListRepository = wishListRepository;
+        this.packageEmailHelperService = packageEmailHelperService;
+        this.emailService = emailService;
     }
 
     @Override
@@ -671,9 +680,59 @@ public class PackageServiceImpl implements PackageService {
         try {
             packageValidationService.validateTerminatePackageRequest(packageTerminateRequest);
             Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+            PackageResponseDto packageResponseDto = getPackageDetailsById(packageTerminateRequest.getPackageId()).getData();
             packageRepository.terminatePackage(packageTerminateRequest, userId);
-            return
-                    new CommonResponse<>(
+            packageRepository.removeAllPackageImages(packageTerminateRequest.getPackageId(), userId);
+            packageRepository.removeAllPackageFeatures(packageTerminateRequest.getPackageId(), userId);
+            packageRepository.removeAllDayByDayAccommodations(packageTerminateRequest.getPackageId(), userId);
+            packageRepository.removeAllPcakageInclusions(packageTerminateRequest.getPackageId(),  userId);
+            packageRepository.removeAllPackageExclusions(packageTerminateRequest.getPackageId(), userId);
+            packageRepository.removeAllPcakageConditions(packageTerminateRequest.getPackageId(), userId);
+            packageRepository.removeAllPcakageTravelTips(packageTerminateRequest.getPackageId(), userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.PACKAGE_TERMINATED.name())
+                    .priority(Priority.HIGH.name())
+                    .title("Package Terminated")
+                    .message("The package '" + packageResponseDto.getPackageName() + "' has been terminated.")
+                    .actionUrl(VIEW_PACKAGE_DETAILS + "/" + packageResponseDto.getPackageId())
+                    .actionText("View Package")
+                    .icon("PackageX")
+                    .color("#EF4444")
+                    .metadata(Map.of(
+                            "packageId", packageResponseDto.getPackageId(),
+                            "packageName", packageResponseDto.getPackageName(),
+                            "status", packageResponseDto.getPackageStatus(),
+                            "terminatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.PACKAGE_TERMINATE.name())
+                    .sourceModule(SourceModule.PACKAGE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.PACKAGE_TERMINATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+
+            String subject = packageEmailHelperService.buildPackageTerminateSuccessfullSubject(loggedUser, packageResponseDto);
+            String body = packageEmailHelperService.buildPackageTerminateSuccessfullBody(loggedUser, packageResponseDto);
+
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+            return new CommonResponse<>(
                             CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
                             CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
                             CommonResponseMessages.SUCCESSFULLY_TERMINATE_MESSAGE,
@@ -697,13 +756,56 @@ public class PackageServiceImpl implements PackageService {
         try {
             packageValidationService.validatePackageInsertRequest(packageInsertRequest);
             Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
             Long packageId = packageRepository.insertPackageDeails(packageInsertRequest, userId);
+
             packageRepository.insertPackageImages(packageId, packageInsertRequest.getImages(), userId);
+            packageRepository.insertPackageFeatures(packageId, packageInsertRequest.getAddFeatures(), userId);
             packageRepository.insertPackageInclusions(packageId, packageInsertRequest.getInclusions(), userId);
             packageRepository.insertPackageExclusions(packageId, packageInsertRequest.getExclusions(), userId);
             packageRepository.insertPackageConditions(packageId, packageInsertRequest.getConditions(), userId);
             packageRepository.insertPackageTravelTips(packageId, packageInsertRequest.getTravelTips(), userId);
             packageRepository.insertDayByDayAccommodations(packageId, packageInsertRequest.getDayAccommodations(), userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.PACKAGE_CREATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("New Package Created")
+                    .message("A new package '" + packageInsertRequest.getName() + "' has been created.")
+                    .actionUrl(VIEW_PACKAGE_DETAILS + "/" + packageId)
+                    .actionText("View Package")
+                    .icon("Package")
+                    .color("#10B981")
+                    .metadata(Map.of(
+                            "packageId", packageId,
+                            "packageName", packageInsertRequest.getName(),
+                            "createdBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.PACKAGE_CREATE.name())
+                    .sourceModule(SourceModule.PACKAGE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            if (packageId != null) {
+                List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.PACKAGE_CREATED.name(), supervisorUserIds);
+                emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+                emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+                String body = packageEmailHelperService.buildPackageCreateSuccessfullBody(packageInsertRequest, packageId, loggedUser);
+                String subject = packageEmailHelperService.buildPackageCreateSuccessfullSubject(packageInsertRequest,packageId, loggedUser);
+//                emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+            }
 
             return new CommonResponse<>(
                     CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
@@ -729,6 +831,10 @@ public class PackageServiceImpl implements PackageService {
         try {
             packageValidationService.validatePackageUpdateRequest(packageUpdateRequest);
             Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            PackageAllDetailsResponse previousPackage = getPackageAllDetailsById(packageUpdateRequest.getPackageId()).getData();
+
             packageRepository.updatePackageBasicDetails(packageUpdateRequest.getPackageId(), packageUpdateRequest.getPackageBasicDetails(), userId);
 
             packageRepository.insertPackageImages(packageUpdateRequest.getPackageId(), packageUpdateRequest.getAddImages(), userId);
@@ -758,6 +864,49 @@ public class PackageServiceImpl implements PackageService {
             packageRepository.insertPackageTravelTips(packageUpdateRequest.getPackageId(), packageUpdateRequest.getAddTravelTips(), userId);
             packageRepository.removePcakageTravelTips(packageUpdateRequest.getPackageId(), packageUpdateRequest.getRemoveTravelTipIds(), userId);
             packageRepository.updatePackageTravelTips(packageUpdateRequest.getPackageId(), packageUpdateRequest.getUpdatedTravelTips(), userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.PACKAGE_UPDATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("Package Updated")
+                    .message("The package '" + packageUpdateRequest.getPackageBasicDetails().getName() + "' has been updated.")
+                    .actionUrl(VIEW_PACKAGE_DETAILS + "/" + packageUpdateRequest.getPackageId())
+                    .actionText("View Package")
+                    .icon("Package")
+                    .color("#3B82F6")
+                    .metadata(Map.of(
+                            "packageId", packageUpdateRequest.getPackageId(),
+                            "packageName", packageUpdateRequest.getPackageBasicDetails().getName(),
+                            "updatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.PACKAGE_UPDATE.name())
+                    .sourceModule(SourceModule.PACKAGE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            PackageComparisonResult comparisonResult = comparePackageUpdates(
+                    packageUpdateRequest,
+                    previousPackage
+            );
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.PACKAGE_UPDATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+            String subject = packageEmailHelperService.buildPackageUpdateSuccessfullSubject(loggedUser,packageUpdateRequest.getPackageBasicDetails().getName());
+            String body = packageEmailHelperService.buildPackageUpdateSuccessfullBody(loggedUser, comparisonResult);
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
 
             return new CommonResponse<>(
                     CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
@@ -859,6 +1008,639 @@ public class PackageServiceImpl implements PackageService {
                 CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
                 packageIdAndPackageNameResponses,
                 Instant.now());
+    }
+
+    @Override
+    public CommonResponse<PackageStatisticsResponse> getPackageStatistics() {
+        LOGGER.info("Start fetching package statistics from repository");
+        try {
+            PackageStatisticsResponse packageStatisticsResponse = new PackageStatisticsResponse();
+
+            PackageStatisticsResponse.Summary summary = packageRepository.getPackageSummaryStatistics();
+            List<PackageStatisticsResponse.PackagePopularity> packagePopularities = packageRepository.getPackagePopularityStatistics();
+            List<PackageStatisticsResponse.PackageRatingOverview> packageRatingOverviews = packageRepository.getPackageRatingOverviewStatistics();
+            List<PackageStatisticsResponse.PackagePriceDistribution> packagePriceDistributions = packageRepository.getPackagePriceDistributionStatistics();
+            List<PackageStatisticsResponse.PackageCapacityUtilization> packageCapacityUtilizations = packageRepository.getPackageCapacityUtilizationStatistics();
+            List<PackageStatisticsResponse.PackageTypeDistribution> packageTypeDistributions = packageRepository.getPackageTypeDistributionStatistics();
+
+            // Set all the data to the response object
+            packageStatisticsResponse.setSummary(summary);
+            packageStatisticsResponse.setPackagePopularities(packagePopularities);
+            packageStatisticsResponse.setPackageRatingOverviews(packageRatingOverviews);
+            packageStatisticsResponse.setPackagePriceDistributions(packagePriceDistributions);
+            packageStatisticsResponse.setPackageCapacityUtilizations(packageCapacityUtilizations);
+            packageStatisticsResponse.setPackageTypeDistributions(packageTypeDistributions);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package statistics from database");
+        } finally {
+            LOGGER.info("End fetching package statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<PackageScheduleStatisticsResponse> getPackageScheduleStatistics() {
+        LOGGER.info("Start fetching package schedule statistics from repository");
+        try {
+            PackageScheduleStatisticsResponse packageScheduleStatisticsResponse = new PackageScheduleStatisticsResponse();
+
+            // Fetch all the required statistics from packageRepository
+            PackageScheduleStatisticsResponse.Summary summary = packageRepository.getPackageScheduleSummaryStatistics();
+            List<PackageScheduleStatisticsResponse.ScheduleTimeline> scheduleTimelines = packageRepository.getPackageScheduleTimelineStatistics();
+            List<PackageScheduleStatisticsResponse.ScheduleStatusDistribution> scheduleStatusDistributions = packageRepository.getPackageScheduleStatusDistributionStatistics();
+            List<PackageScheduleStatisticsResponse.DurationDistribution> durationDistributions = packageRepository.getPackageScheduleDurationDistributionStatistics();
+            List<PackageScheduleStatisticsResponse.ScheduleParticipationPerformance> scheduleParticipationPerformances = packageRepository.getPackageScheduleParticipationPerformanceStatistics();
+            List<PackageScheduleStatisticsResponse.ScheduleRatingOverview> scheduleRatingOverviews = packageRepository.getPackageScheduleRatingOverviewStatistics();
+
+            // Set all the data to the response object
+            packageScheduleStatisticsResponse.setSummary(summary);
+            packageScheduleStatisticsResponse.setScheduleTimelines(scheduleTimelines);
+            packageScheduleStatisticsResponse.setScheduleStatusDistributions(scheduleStatusDistributions);
+            packageScheduleStatisticsResponse.setDurationDistributions(durationDistributions);
+            packageScheduleStatisticsResponse.setScheduleParticipationPerformances(scheduleParticipationPerformances);
+            packageScheduleStatisticsResponse.setScheduleRatingOverviews(scheduleRatingOverviews);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageScheduleStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package schedule statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package schedule statistics from database");
+        } finally {
+            LOGGER.info("End fetching package schedule statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<PackageTypeStatisticsResponse> getPackageTypeStatistics() {
+        LOGGER.info("Start fetching package type statistics from repository");
+        try {
+            PackageTypeStatisticsResponse packageTypeStatisticsResponse = new PackageTypeStatisticsResponse();
+
+            // Fetch all the required statistics from packageRepository
+            PackageTypeStatisticsResponse.Summary summary = packageRepository.getPackageTypeSummaryStatistics();
+            List<PackageTypeStatisticsResponse.TypeDistribution> typeDistributions = packageRepository.getPackageTypesDistributionStatistics();
+            List<PackageTypeStatisticsResponse.TypeRevenuePerformance> typeRevenuePerformances = packageRepository.getPackageTypeRevenuePerformanceStatistics();
+            List<PackageTypeStatisticsResponse.TypeParticipationImpact> typeParticipationImpacts = packageRepository.getPackageTypeParticipationImpactStatistics();
+            List<PackageTypeStatisticsResponse.TypePrimarySecondaryUsage> typePrimarySecondaryUsages = packageRepository.getPackageTypePrimarySecondaryUsageStatistics();
+            List<PackageTypeStatisticsResponse.TypeBookingPerformance> typeBookingPerformances = packageRepository.getPackageTypeBookingPerformanceStatistics();
+            List<PackageTypeStatisticsResponse.TypeRatingOverview> typeRatingOverviews = packageRepository.getPackageTypeRatingOverviewStatistics();
+
+            // Set all the data to the response object
+            packageTypeStatisticsResponse.setSummary(summary);
+            packageTypeStatisticsResponse.setTypeDistributions(typeDistributions);
+            packageTypeStatisticsResponse.setTypeRevenuePerformances(typeRevenuePerformances);
+            packageTypeStatisticsResponse.setTypeParticipationImpacts(typeParticipationImpacts);
+            packageTypeStatisticsResponse.setTypePrimarySecondaryUsages(typePrimarySecondaryUsages);
+            packageTypeStatisticsResponse.setTypeBookingPerformances(typeBookingPerformances);
+            packageTypeStatisticsResponse.setTypeRatingOverviews(typeRatingOverviews);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageTypeStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package type statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package type statistics from database");
+        } finally {
+            LOGGER.info("End fetching package type statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<AddPackageParamResponse> getInsertPackageParams(AddPackageParamRequest addPackageParamRequest) {
+        LOGGER.info("Start fetching get params for insert package from repository");
+        try {
+            AddPackageParamResponse addPackageParamResponse = new AddPackageParamResponse();
+            List<HotelsNamesAndIdsDto> hotelsNamesAndIdsDtos = packageRepository.getHotelNamesAndIds(addPackageParamRequest);
+            List<VehicleNumberIdTypeDto> vehicleNumberIdTypeDtos = packageRepository.getVehicleNumberIdType(addPackageParamRequest);
+            List<String> inclusions = packageRepository.getTourInclusionsNames(addPackageParamRequest);
+            List<String> exclusions = packageRepository.getTourExclusionsNames(addPackageParamRequest);
+            List<String> conditions = packageRepository.getTourConditions(addPackageParamRequest);
+            List<AddPackageParamResponse.TravelTips> travelTips = packageRepository.getTourTravelTips(addPackageParamRequest);
+
+            addPackageParamResponse.setHotelsNamesAndIdsDtos(hotelsNamesAndIdsDtos);
+            addPackageParamResponse.setVehicleNumberIdTypeDtos(vehicleNumberIdTypeDtos);
+            addPackageParamResponse.setInclusions(inclusions);
+            addPackageParamResponse.setExclusions(exclusions);
+            addPackageParamResponse.setConditions(conditions);
+            addPackageParamResponse.setTravelTips(travelTips);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    addPackageParamResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching get params for insert package: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch get params for insert package from database");
+        } finally {
+            LOGGER.info("End fetching get params for insert package from repository");
+        }
+    }
+
+    private PackageComparisonResult comparePackageUpdates(
+            PackageUpdateRequest packageUpdateRequest,
+            PackageAllDetailsResponse previousPackage) {
+
+        PackageComparisonResult.PackageComparisonResultBuilder resultBuilder =
+                PackageComparisonResult.builder();
+
+        List<PackageComparisonResult.FieldChange> fieldChanges = new ArrayList<>();
+
+        // Compare basic details if present
+        if (packageUpdateRequest.getPackageBasicDetails() != null) {
+            PackageUpdateRequest.PackageBasicDetails basicDetails = packageUpdateRequest.getPackageBasicDetails();
+
+            if (basicDetails.getPackageType() != null &&
+                    !basicDetails.getPackageType().equals(previousPackage.getPackageTypeName())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "packageType", previousPackage.getPackageTypeName(), basicDetails.getPackageType()));
+            }
+
+            if (basicDetails.getTourId() != null &&
+                    !basicDetails.getTourId().equals(previousPackage.getTourId())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "tourId", previousPackage.getTourId(), basicDetails.getTourId()));
+            }
+
+            if (basicDetails.getName() != null &&
+                    !basicDetails.getName().equals(previousPackage.getPackageName())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "packageName", previousPackage.getPackageName(), basicDetails.getName()));
+            }
+
+            if (basicDetails.getDescription() != null &&
+                    !basicDetails.getDescription().equals(previousPackage.getPackageDescription())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "packageDescription", previousPackage.getPackageDescription(), basicDetails.getDescription()));
+            }
+
+            if (basicDetails.getTotalPrice() != null &&
+                    !basicDetails.getTotalPrice().equals(previousPackage.getTotalPrice())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "totalPrice", previousPackage.getTotalPrice(), basicDetails.getTotalPrice()));
+            }
+
+            if (basicDetails.getDiscountPercentage() != null &&
+                    !basicDetails.getDiscountPercentage().equals(previousPackage.getDiscountPercentage())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "discountPercentage", previousPackage.getDiscountPercentage(), basicDetails.getDiscountPercentage()));
+            }
+
+            if (basicDetails.getStartDate() != null &&
+                    !basicDetails.getStartDate().equals(previousPackage.getStartDate())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "startDate", previousPackage.getStartDate(), basicDetails.getStartDate()));
+            }
+
+            if (basicDetails.getEndDate() != null &&
+                    !basicDetails.getEndDate().equals(previousPackage.getEndDate())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "endDate", previousPackage.getEndDate(), basicDetails.getEndDate()));
+            }
+
+            if (basicDetails.getColor() != null &&
+                    !basicDetails.getColor().equals(previousPackage.getColor())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "color", previousPackage.getColor(), basicDetails.getColor()));
+            }
+
+            if (basicDetails.getStatus() != null &&
+                    !basicDetails.getStatus().equals(previousPackage.getPackageStatus())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "packageStatus", previousPackage.getPackageStatus(), basicDetails.getStatus()));
+            }
+
+            if (basicDetails.getHoverColor() != null &&
+                    !basicDetails.getHoverColor().equals(previousPackage.getHoverColor())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "hoverColor", previousPackage.getHoverColor(), basicDetails.getHoverColor()));
+            }
+
+            if (basicDetails.getMinPersonCount() != null &&
+                    !basicDetails.getMinPersonCount().equals(previousPackage.getMinPersonCount())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "minPersonCount", previousPackage.getMinPersonCount(), basicDetails.getMinPersonCount()));
+            }
+
+            if (basicDetails.getMaxPersonCount() != null &&
+                    !basicDetails.getMaxPersonCount().equals(previousPackage.getMaxPersonCount())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "maxPersonCount", previousPackage.getMaxPersonCount(), basicDetails.getMaxPersonCount()));
+            }
+
+            if (basicDetails.getPricePerPerson() != null &&
+                    !basicDetails.getPricePerPerson().equals(previousPackage.getPricePerPerson())) {
+                fieldChanges.add(new PackageComparisonResult.FieldChange(
+                        "pricePerPerson", previousPackage.getPricePerPerson(), basicDetails.getPricePerPerson()));
+            }
+        }
+
+        resultBuilder.basicDetailsChanges(fieldChanges);
+
+        // Images changes
+        resultBuilder.imageIdsToRemove(packageUpdateRequest.getRemovedImageIds() != null ?
+                packageUpdateRequest.getRemovedImageIds() : Collections.emptyList());
+
+        if (packageUpdateRequest.getAddImages() != null) {
+            List<PackageComparisonResult.PackageImageChange> imagesToAdd =
+                    packageUpdateRequest.getAddImages().stream()
+                            .map(img -> PackageComparisonResult.PackageImageChange.builder()
+                                    .name(img.getName())
+                                    .description(img.getDescription())
+                                    .status(img.getStatus())
+                                    .imageUrl(img.getImageUrl())
+                                    .color(img.getColor())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.imagesToAdd(imagesToAdd);
+        }
+
+        if (packageUpdateRequest.getUpdatedImages() != null) {
+            List<PackageComparisonResult.PackageImageChange> imagesToUpdate =
+                    packageUpdateRequest.getUpdatedImages().stream()
+                            .map(img -> PackageComparisonResult.PackageImageChange.builder()
+                                    .imageId(img.getImageId())
+                                    .name(img.getImageName())
+                                    .description(img.getImageDescription())
+                                    .status(img.getStatus())
+                                    .imageUrl(img.getImageUrl())
+                                    .color(img.getColor())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.imagesToUpdate(imagesToUpdate);
+        }
+
+        // Features changes
+        if (packageUpdateRequest.getAddFeatures() != null) {
+            List<PackageComparisonResult.PackageFeatureChange> featuresToAdd =
+                    packageUpdateRequest.getAddFeatures().stream()
+                            .map(feature -> PackageComparisonResult.PackageFeatureChange.builder()
+                                    .featureName(feature.getFeatureName())
+                                    .featureValue(feature.getFeatureValue())
+                                    .featureDescription(feature.getFeatureDescription())
+                                    .status(feature.getStatus())
+                                    .color(feature.getColor())
+                                    .hoverColor(feature.getHoverColor())
+                                    .specialNote(feature.getSpecialNote())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.featuresToAdd(featuresToAdd);
+        }
+
+        resultBuilder.featureIdsToRemove(packageUpdateRequest.getRemoveFeatureIds() != null ?
+                packageUpdateRequest.getRemoveFeatureIds() : Collections.emptyList());
+
+        if (packageUpdateRequest.getUpdatedFeatures() != null) {
+            List<PackageComparisonResult.PackageFeatureChange> featuresToUpdate =
+                    packageUpdateRequest.getUpdatedFeatures().stream()
+                            .map(feature -> PackageComparisonResult.PackageFeatureChange.builder()
+                                    .featureId(feature.getFeatureId())
+                                    .featureName(feature.getFeatureName())
+                                    .featureValue(feature.getFeatureValue())
+                                    .featureDescription(feature.getFeatureDescription())
+                                    .status(feature.getStatus())
+                                    .color(feature.getColor())
+                                    .hoverColor(feature.getHoverColor())
+                                    .specialNote(feature.getSpecialNote())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.featuresToUpdate(featuresToUpdate);
+        }
+
+        // Day Accommodations changes
+        if (packageUpdateRequest.getAddDayAccommodations() != null) {
+            List<PackageComparisonResult.PackageDayAccommodationChange> dayAccommodationsToAdd =
+                    packageUpdateRequest.getAddDayAccommodations().stream()
+                            .map(accomm -> PackageComparisonResult.PackageDayAccommodationChange.builder()
+                                    .dayNumber(accomm.getDayNumber())
+                                    .breakfast(accomm.getBreakfast())
+                                    .breakfastDescription(accomm.getBreakfastDescription())
+                                    .lunch(accomm.getLunch())
+                                    .lunchDescription(accomm.getLunchDescription())
+                                    .dinner(accomm.getDinner())
+                                    .dinnerDescription(accomm.getDinnerDescription())
+                                    .morningTea(accomm.getMorningTea())
+                                    .morningTeaDescription(accomm.getMorningTeaDescription())
+                                    .eveningTea(accomm.getEveningTea())
+                                    .eveningTeaDescription(accomm.getEveningTeaDescription())
+                                    .snacks(accomm.getSnacks())
+                                    .snackNote(accomm.getSnackNote())
+                                    .hotelId(accomm.getHotelId())
+                                    .transportId(accomm.getTransportId())
+                                    .otherNotes(accomm.getOtherNotes())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.dayAccommodationsToAdd(dayAccommodationsToAdd);
+        }
+
+        resultBuilder.dayAccommodationIdsToRemove(packageUpdateRequest.getRemoveDayAccommodationIds() != null ?
+                packageUpdateRequest.getRemoveDayAccommodationIds() : Collections.emptyList());
+
+        if (packageUpdateRequest.getUpdatedDayAccommodations() != null) {
+            List<PackageComparisonResult.PackageDayAccommodationChange> dayAccommodationsToUpdate =
+                    packageUpdateRequest.getUpdatedDayAccommodations().stream()
+                            .map(accomm -> PackageComparisonResult.PackageDayAccommodationChange.builder()
+                                    .packageDayAccommodationId(accomm.getPackageDayAccommodationId())
+                                    .dayNumber(accomm.getDayNumber())
+                                    .breakfast(accomm.getBreakfast())
+                                    .breakfastDescription(accomm.getBreakfastDescription())
+                                    .lunch(accomm.getLunch())
+                                    .lunchDescription(accomm.getLunchDescription())
+                                    .dinner(accomm.getDinner())
+                                    .dinnerDescription(accomm.getDinnerDescription())
+                                    .morningTea(accomm.getMorningTea())
+                                    .morningTeaDescription(accomm.getMorningTeaDescription())
+                                    .eveningTea(accomm.getEveningTea())
+                                    .eveningTeaDescription(accomm.getEveningTeaDescription())
+                                    .snacks(accomm.getSnacks())
+                                    .snackNote(accomm.getSnackNote())
+                                    .hotelId(accomm.getHotelId())
+                                    .transportId(accomm.getTransportId())
+                                    .otherNotes(accomm.getOtherNotes())
+                                    .status(accomm.getStatus())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.dayAccommodationsToUpdate(dayAccommodationsToUpdate);
+        }
+
+        // Inclusions changes
+        if (packageUpdateRequest.getAddInclusions() != null) {
+            List<PackageComparisonResult.PackageInclusionChange> inclusionsToAdd =
+                    packageUpdateRequest.getAddInclusions().stream()
+                            .map(inc -> PackageComparisonResult.PackageInclusionChange.builder()
+                                    .inclusionText(inc.getInclusionText())
+                                    .displayOrder(inc.getDisplayOrder())
+                                    .status(inc.getStatus())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.inclusionsToAdd(inclusionsToAdd);
+        }
+
+        resultBuilder.inclusionIdsToRemove(packageUpdateRequest.getRemoveInclusionIds() != null ?
+                packageUpdateRequest.getRemoveInclusionIds() : Collections.emptyList());
+
+        if (packageUpdateRequest.getUpdatedInclusions() != null) {
+            List<PackageComparisonResult.PackageInclusionChange> inclusionsToUpdate =
+                    packageUpdateRequest.getUpdatedInclusions().stream()
+                            .map(inc -> PackageComparisonResult.PackageInclusionChange.builder()
+                                    .inclusionId(inc.getPackageInclusionId())
+                                    .inclusionText(inc.getInclusionText())
+                                    .displayOrder(inc.getDisplayOrder())
+                                    .status(inc.getStatus())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.inclusionsToUpdate(inclusionsToUpdate);
+        }
+
+        // Exclusions changes
+        if (packageUpdateRequest.getAddExclusions() != null) {
+            List<PackageComparisonResult.PackageExclusionChange> exclusionsToAdd =
+                    packageUpdateRequest.getAddExclusions().stream()
+                            .map(exc -> PackageComparisonResult.PackageExclusionChange.builder()
+                                    .exclusionText(exc.getExclusionText())
+                                    .displayOrder(exc.getDisplayOrder())
+                                    .status(exc.getStatus())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.exclusionsToAdd(exclusionsToAdd);
+        }
+
+        resultBuilder.exclusionIdsToRemove(packageUpdateRequest.getRemoveExclusionIds() != null ?
+                packageUpdateRequest.getRemoveExclusionIds() : Collections.emptyList());
+
+        if (packageUpdateRequest.getUpdatedExclusions() != null) {
+            List<PackageComparisonResult.PackageExclusionChange> exclusionsToUpdate =
+                    packageUpdateRequest.getUpdatedExclusions().stream()
+                            .map(exc -> PackageComparisonResult.PackageExclusionChange.builder()
+                                    .exclusionId(exc.getPackageExclusionId())
+                                    .exclusionText(exc.getExclusionText())
+                                    .displayOrder(exc.getDisplayOrder())
+                                    .status(exc.getStatus())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.exclusionsToUpdate(exclusionsToUpdate);
+        }
+
+        // Conditions changes
+        if (packageUpdateRequest.getAddConditions() != null) {
+            List<PackageComparisonResult.PackageConditionChange> conditionsToAdd =
+                    packageUpdateRequest.getAddConditions().stream()
+                            .map(cond -> PackageComparisonResult.PackageConditionChange.builder()
+                                    .conditionText(cond.getConditionText())
+                                    .displayOrder(cond.getDisplayOrder())
+                                    .status(cond.getStatus())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.conditionsToAdd(conditionsToAdd);
+        }
+
+        resultBuilder.conditionIdsToRemove(packageUpdateRequest.getRemoveConditionIds() != null ?
+                packageUpdateRequest.getRemoveConditionIds() : Collections.emptyList());
+
+        if (packageUpdateRequest.getUpdatedConditions() != null) {
+            List<PackageComparisonResult.PackageConditionChange> conditionsToUpdate =
+                    packageUpdateRequest.getUpdatedConditions().stream()
+                            .map(cond -> PackageComparisonResult.PackageConditionChange.builder()
+                                    .conditionId(cond.getPackageConditionId())
+                                    .conditionText(cond.getConditionText())
+                                    .displayOrder(cond.getDisplayOrder())
+                                    .status(cond.getStatus())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.conditionsToUpdate(conditionsToUpdate);
+        }
+
+        // Travel Tips changes
+        if (packageUpdateRequest.getAddTravelTips() != null) {
+            List<PackageComparisonResult.PackageTravelTipChange> travelTipsToAdd =
+                    packageUpdateRequest.getAddTravelTips().stream()
+                            .map(tip -> PackageComparisonResult.PackageTravelTipChange.builder()
+                                    .tipTitle(tip.getTipTitle())
+                                    .tipDescription(tip.getTipDescription())
+                                    .displayOrder(tip.getDisplayOrder())
+                                    .status(tip.getStatus())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.travelTipsToAdd(travelTipsToAdd);
+        }
+
+        resultBuilder.travelTipIdsToRemove(packageUpdateRequest.getRemoveTravelTipIds() != null ?
+                packageUpdateRequest.getRemoveTravelTipIds() : Collections.emptyList());
+
+        if (packageUpdateRequest.getUpdatedTravelTips() != null) {
+            List<PackageComparisonResult.PackageTravelTipChange> travelTipsToUpdate =
+                    packageUpdateRequest.getUpdatedTravelTips().stream()
+                            .map(tip -> PackageComparisonResult.PackageTravelTipChange.builder()
+                                    .travelTipId(tip.getPackageTipId())
+                                    .tipTitle(tip.getTipTitle())
+                                    .tipDescription(tip.getTipDescription())
+                                    .displayOrder(tip.getDisplayOrder())
+                                    .status(tip.getStatus())
+                                    .build())
+                            .collect(Collectors.toList());
+            resultBuilder.travelTipsToUpdate(travelTipsToUpdate);
+        }
+
+        // Determine if there are any changes
+        boolean hasChanges = !fieldChanges.isEmpty() ||
+                (packageUpdateRequest.getRemovedImageIds() != null && !packageUpdateRequest.getRemovedImageIds().isEmpty()) ||
+                (packageUpdateRequest.getAddImages() != null && !packageUpdateRequest.getAddImages().isEmpty()) ||
+                (packageUpdateRequest.getUpdatedImages() != null && !packageUpdateRequest.getUpdatedImages().isEmpty()) ||
+                (packageUpdateRequest.getAddFeatures() != null && !packageUpdateRequest.getAddFeatures().isEmpty()) ||
+                (packageUpdateRequest.getRemoveFeatureIds() != null && !packageUpdateRequest.getRemoveFeatureIds().isEmpty()) ||
+                (packageUpdateRequest.getUpdatedFeatures() != null && !packageUpdateRequest.getUpdatedFeatures().isEmpty()) ||
+                (packageUpdateRequest.getAddDayAccommodations() != null && !packageUpdateRequest.getAddDayAccommodations().isEmpty()) ||
+                (packageUpdateRequest.getRemoveDayAccommodationIds() != null && !packageUpdateRequest.getRemoveDayAccommodationIds().isEmpty()) ||
+                (packageUpdateRequest.getUpdatedDayAccommodations() != null && !packageUpdateRequest.getUpdatedDayAccommodations().isEmpty()) ||
+                (packageUpdateRequest.getAddInclusions() != null && !packageUpdateRequest.getAddInclusions().isEmpty()) ||
+                (packageUpdateRequest.getRemoveInclusionIds() != null && !packageUpdateRequest.getRemoveInclusionIds().isEmpty()) ||
+                (packageUpdateRequest.getUpdatedInclusions() != null && !packageUpdateRequest.getUpdatedInclusions().isEmpty()) ||
+                (packageUpdateRequest.getAddExclusions() != null && !packageUpdateRequest.getAddExclusions().isEmpty()) ||
+                (packageUpdateRequest.getRemoveExclusionIds() != null && !packageUpdateRequest.getRemoveExclusionIds().isEmpty()) ||
+                (packageUpdateRequest.getUpdatedExclusions() != null && !packageUpdateRequest.getUpdatedExclusions().isEmpty()) ||
+                (packageUpdateRequest.getAddConditions() != null && !packageUpdateRequest.getAddConditions().isEmpty()) ||
+                (packageUpdateRequest.getRemoveConditionIds() != null && !packageUpdateRequest.getRemoveConditionIds().isEmpty()) ||
+                (packageUpdateRequest.getUpdatedConditions() != null && !packageUpdateRequest.getUpdatedConditions().isEmpty()) ||
+                (packageUpdateRequest.getAddTravelTips() != null && !packageUpdateRequest.getAddTravelTips().isEmpty()) ||
+                (packageUpdateRequest.getRemoveTravelTipIds() != null && !packageUpdateRequest.getRemoveTravelTipIds().isEmpty()) ||
+                (packageUpdateRequest.getUpdatedTravelTips() != null && !packageUpdateRequest.getUpdatedTravelTips().isEmpty());
+
+        resultBuilder.hasChanges(hasChanges);
+
+        // Create summary
+        String summary = createPackageSummary(resultBuilder.build());
+        resultBuilder.summary(summary);
+
+        return resultBuilder.build();
+    }
+
+    private String createPackageSummary(PackageComparisonResult result) {
+        StringBuilder summary = new StringBuilder();
+
+        if (!result.isHasChanges()) {
+            return "No changes detected";
+        }
+
+        if (!result.getBasicDetailsChanges().isEmpty()) {
+            summary.append("Basic details updated: ")
+                    .append(result.getBasicDetailsChanges().stream()
+                            .map(PackageComparisonResult.FieldChange::getFieldName)
+                            .collect(Collectors.joining(", ")))
+                    .append(". ");
+        }
+
+        if (!result.getImageIdsToRemove().isEmpty()) {
+            summary.append("Remove ").append(result.getImageIdsToRemove().size()).append(" images. ");
+        }
+
+        if (!result.getImagesToAdd().isEmpty()) {
+            summary.append("Add ").append(result.getImagesToAdd().size()).append(" images. ");
+        }
+
+        if (!result.getImagesToUpdate().isEmpty()) {
+            summary.append("Update ").append(result.getImagesToUpdate().size()).append(" images. ");
+        }
+
+        if (!result.getFeaturesToAdd().isEmpty()) {
+            summary.append("Add ").append(result.getFeaturesToAdd().size()).append(" features. ");
+        }
+
+        if (!result.getFeatureIdsToRemove().isEmpty()) {
+            summary.append("Remove ").append(result.getFeatureIdsToRemove().size()).append(" features. ");
+        }
+
+        if (!result.getFeaturesToUpdate().isEmpty()) {
+            summary.append("Update ").append(result.getFeaturesToUpdate().size()).append(" features. ");
+        }
+
+        if (!result.getDayAccommodationsToAdd().isEmpty()) {
+            summary.append("Add ").append(result.getDayAccommodationsToAdd().size()).append(" day accommodations. ");
+        }
+
+        if (!result.getDayAccommodationIdsToRemove().isEmpty()) {
+            summary.append("Remove ").append(result.getDayAccommodationIdsToRemove().size()).append(" day accommodations. ");
+        }
+
+        if (!result.getDayAccommodationsToUpdate().isEmpty()) {
+            summary.append("Update ").append(result.getDayAccommodationsToUpdate().size()).append(" day accommodations. ");
+        }
+
+        if (!result.getInclusionsToAdd().isEmpty()) {
+            summary.append("Add ").append(result.getInclusionsToAdd().size()).append(" inclusions. ");
+        }
+
+        if (!result.getInclusionIdsToRemove().isEmpty()) {
+            summary.append("Remove ").append(result.getInclusionIdsToRemove().size()).append(" inclusions. ");
+        }
+
+        if (!result.getInclusionsToUpdate().isEmpty()) {
+            summary.append("Update ").append(result.getInclusionsToUpdate().size()).append(" inclusions. ");
+        }
+
+        if (!result.getExclusionsToAdd().isEmpty()) {
+            summary.append("Add ").append(result.getExclusionsToAdd().size()).append(" exclusions. ");
+        }
+
+        if (!result.getExclusionIdsToRemove().isEmpty()) {
+            summary.append("Remove ").append(result.getExclusionIdsToRemove().size()).append(" exclusions. ");
+        }
+
+        if (!result.getExclusionsToUpdate().isEmpty()) {
+            summary.append("Update ").append(result.getExclusionsToUpdate().size()).append(" exclusions. ");
+        }
+
+        if (!result.getConditionsToAdd().isEmpty()) {
+            summary.append("Add ").append(result.getConditionsToAdd().size()).append(" conditions. ");
+        }
+
+        if (!result.getConditionIdsToRemove().isEmpty()) {
+            summary.append("Remove ").append(result.getConditionIdsToRemove().size()).append(" conditions. ");
+        }
+
+        if (!result.getConditionsToUpdate().isEmpty()) {
+            summary.append("Update ").append(result.getConditionsToUpdate().size()).append(" conditions. ");
+        }
+
+        if (!result.getTravelTipsToAdd().isEmpty()) {
+            summary.append("Add ").append(result.getTravelTipsToAdd().size()).append(" travel tips. ");
+        }
+
+        if (!result.getTravelTipIdsToRemove().isEmpty()) {
+            summary.append("Remove ").append(result.getTravelTipIdsToRemove().size()).append(" travel tips. ");
+        }
+
+        if (!result.getTravelTipsToUpdate().isEmpty()) {
+            summary.append("Update ").append(result.getTravelTipsToUpdate().size()).append(" travel tips.");
+        }
+
+        return summary.toString().trim();
     }
 
 }

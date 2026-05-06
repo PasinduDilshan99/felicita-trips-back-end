@@ -1,4 +1,3 @@
-// EmailServiceimpl.java - Updated to support HTML emails
 package com.felicita.service.impl;
 
 import com.felicita.service.EmailService;
@@ -11,6 +10,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 
 @Service
 public class EmailServiceimpl implements EmailService {
@@ -25,9 +25,23 @@ public class EmailServiceimpl implements EmailService {
     @Qualifier("mainMailSender")
     private JavaMailSender mainMailSender;
 
+    @Autowired
+    @Qualifier("adminMailSender")
+    private JavaMailSender adminMailSender;
+
     @Override
     public void sendFromDev(String to, String subject, String body) {
         sendHtmlEmail(devMailSender, to, subject, body);
+    }
+
+    @Override
+    public void sendFromDev(String to, List<String> cc, String subject, String body) {
+        sendHtmlEmail(devMailSender, to, cc, subject, body);
+    }
+
+    @Override
+    public void sendFromAdmin(String to, String subject, String body) {
+        sendHtmlEmail(adminMailSender, to, subject, body);
     }
 
     @Override
@@ -58,6 +72,34 @@ public class EmailServiceimpl implements EmailService {
             helper.setText(htmlBody, true); // true indicates HTML content
 
             sender.send(message);
+            LOGGER.info("HTML email sent successfully to: {}", to);
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to send HTML email to {}: {}", to, e.getMessage(), e);
+            throw new RuntimeException("Failed to send HTML email", e);
+        }
+    }
+
+    private void sendHtmlEmail(JavaMailSender sender,
+                               String to,
+                               List<String> cc,
+                               String subject,
+                               String htmlBody) {
+        try {
+            MimeMessage message = sender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+
+            if (cc != null && !cc.isEmpty()) {
+                helper.setCc(cc.toArray(new String[0]));
+            }
+
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
+
+            sender.send(message);
+
             LOGGER.info("HTML email sent successfully to: {}", to);
 
         } catch (Exception e) {

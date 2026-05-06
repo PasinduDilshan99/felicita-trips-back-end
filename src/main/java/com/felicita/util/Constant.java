@@ -1,6 +1,10 @@
 package com.felicita.util;
 
 public class Constant {
+
+//    COMPANY DETAILS
+    public static final String COMPANY_EMAIL = "felicitatrips@gmail.com";
+
     public static final String DOTS = "*************************************";
     public static final String VALIDATION_DOTS_START = "***************     ";
     public static final String VALIDATION_DOTS_END = "     ***************";

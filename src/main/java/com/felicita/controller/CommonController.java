@@ -1,8 +1,8 @@
 package com.felicita.controller;
 
 import com.felicita.model.dto.ActivityResponseDto;
-import com.felicita.model.response.AllCategoriesResponse;
-import com.felicita.model.response.CommonResponse;
+import com.felicita.model.request.ReadNotificationInsertRequest;
+import com.felicita.model.response.*;
 import com.felicita.service.CommonService;
 import com.felicita.util.Constant;
 import org.slf4j.Logger;
@@ -10,10 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -44,6 +41,39 @@ public class CommonController {
         LOGGER.info("{} End execute get all categories {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    @GetMapping(path = "/notifications")
+    public ResponseEntity<CommonResponse<List<NotificationResponse>>> getNotificationForLoggedUser() {
+        LOGGER.info("{} Start execute get notifications {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<NotificationResponse>> response = commonService.getNotificationForLoggedUser();
+        LOGGER.info("{} End execute get notifications {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/notifications-read")
+    public ResponseEntity<CommonResponse<UpdateResponse>> readNotification(@RequestBody ReadNotificationInsertRequest notificationInsertRequest) {
+        LOGGER.info("{} Start execute update read notifications {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UpdateResponse> response = commonService.readNotification(notificationInsertRequest);
+        LOGGER.info("{} End execute update read notifications {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/unread-notification-count")
+    public ResponseEntity<CommonResponse<UnReadNotificationCountResponse>> getAllUnReadNotifications() {
+        LOGGER.info("{} Start execute get all unread notifications {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UnReadNotificationCountResponse> response = commonService.getAllUnReadNotifications();
+        LOGGER.info("{} End execute get all unread notifications {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/read-all-unread-notifications")
+    public ResponseEntity<CommonResponse<UpdateResponse>> readAllUnreadNotifications() {
+        LOGGER.info("{} Start execute read all unread notifications {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UpdateResponse> response = commonService.readAllUnreadNotifications();
+        LOGGER.info("{} End execute read all unread notifications {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
 
     @GetMapping(path = "/weather")
     public ResponseEntity<CommonResponse<Map<String, Object>>> getWeather(

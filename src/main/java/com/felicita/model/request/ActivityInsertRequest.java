@@ -17,7 +17,7 @@ public class ActivityInsertRequest {
     private Long destinationId;
     private String name;
     private String description;
-    private String activitiesCategory;
+    private List<Category> categories;
     private BigDecimal durationHours;
     private LocalTime availableFrom;
     private LocalTime availableTo;
@@ -25,12 +25,21 @@ public class ActivityInsertRequest {
     private BigDecimal priceForeigners;
     private Integer minParticipate;
     private Integer maxParticipate;
-    private String season;
+    private Long seasonId;
     private String status;
 
     private List<ActivityImageInsertRequest> images;
 
     private List<ActivityRequirementInsertRequest> requirements;
 
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class Category{
+        private Long categoryId;
+        private Boolean isPrimary;
+        private String status;
+    }
 
 }

@@ -4,6 +4,8 @@ import com.felicita.model.dto.ActivityCategoryResponseDto;
 import com.felicita.model.dto.ActivityResponseDto;
 import com.felicita.model.request.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
+import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
 import com.felicita.service.ActivitiesService;
 import com.felicita.util.Constant;
 import org.slf4j.Logger;
@@ -163,5 +165,35 @@ public class ActivitiesController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @GetMapping(path = "/activities-statistics")
+    public ResponseEntity<CommonResponse<ActivityStatisticsResponse>> getActivitiesStatistics() {
+        LOGGER.info("{} Start execute get activities statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<ActivityStatisticsResponse> response = activitiesService.getActivitiesStatistics();
+        LOGGER.info("{} End execute get activities statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 
+    @GetMapping(path = "/activities-categories-statistics")
+    public ResponseEntity<CommonResponse<ActivityCategoriesStatisticsResponse>> getActivityCategoriesStatistics() {
+        LOGGER.info("{} Start execute get activities categories statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<ActivityCategoriesStatisticsResponse> response = activitiesService.getActivityCategoriesStatistics();
+        LOGGER.info("{} End execute get activities categories statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/activities-schedule-statistics")
+    public ResponseEntity<CommonResponse<ActivityScheduleStatisticsResponse>> getActivitiesScheduleStatistics() {
+        LOGGER.info("{} Start execute get activities schedule statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<ActivityScheduleStatisticsResponse> response = activitiesService.getActivitiesScheduleStatistics();
+        LOGGER.info("{} End execute get activities schedule statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/activities-by-destinationId")
+    public ResponseEntity<CommonResponse<List<ActivityBasicDetailsResponse>>> getActivityByDestinationId(@RequestBody ActivitiesByDestinationId activitiesByDestinationId) {
+        LOGGER.info("{} Start execute get activities by destination id {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<ActivityBasicDetailsResponse>> response = activitiesService.getActivityByDestinationId(activitiesByDestinationId);
+        LOGGER.info("{} End execute get activities by destination id {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }
