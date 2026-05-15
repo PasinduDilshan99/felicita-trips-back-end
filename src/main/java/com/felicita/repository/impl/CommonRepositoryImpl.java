@@ -2,6 +2,7 @@ package com.felicita.repository.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.felicita.exception.DataAccessErrorExceptionHandler;
 import com.felicita.exception.InternalServerErrorExceptionHandler;
 import com.felicita.model.dto.NotificationInsertRequestDto;
 import com.felicita.model.dto.SupervisorBasicDetailsDto;
@@ -11,6 +12,7 @@ import com.felicita.model.response.AllCategoriesResponse;
 import com.felicita.model.response.NotificationResponse;
 import com.felicita.model.response.TourForTerminateResponse;
 import com.felicita.model.response.UnReadNotificationCountResponse;
+import com.felicita.model.response.common.*;
 import com.felicita.queries.CommonQueries;
 import com.felicita.queries.TourQueries;
 import com.felicita.repository.CommonRepository;
@@ -622,5 +624,201 @@ public class CommonRepositoryImpl implements CommonRepository {
             );
         }
     }
+
+    @Override
+    public List<ActivityIdAndNameResponse> getActivityIdAndNameResponses() {
+
+        try {
+
+            return jdbcTemplate.query(
+                    CommonQueries.GET_ACTIVITY_ID_AND_NAME,
+                    (rs, rowNum) -> ActivityIdAndNameResponse.builder()
+                            .activityId(rs.getLong("activity_id"))
+                            .activityName(rs.getString("activity_name"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching activity id and names: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch activity id and names from database"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching activity id and names: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching activity id and names"
+            );
+        }
+    }
+
+    @Override
+    public List<DestinationIdAndNameResponse> getDestinationIdAndNameResponses() {
+
+        try {
+
+            return jdbcTemplate.query(
+                    CommonQueries.GET_DESTINATION_ID_AND_NAME,
+                    (rs, rowNum) -> DestinationIdAndNameResponse.builder()
+                            .destinationId(rs.getLong("destination_id"))
+                            .destinationName(rs.getString("destination_name"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching destination id and names: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch destination id and names from database"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching destination id and names: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching destination id and names"
+            );
+        }
+    }
+
+    @Override
+    public List<TourScheduleIdAndNameResponse> getTourScheduleIdAndNameResponses() {
+
+        try {
+
+            return jdbcTemplate.query(
+                    CommonQueries.GET_TOUR_SCHEDULE_ID_AND_NAME,
+                    (rs, rowNum) -> TourScheduleIdAndNameResponse.builder()
+                            .tourScheduleId(rs.getLong("tour_schedule_id"))
+                            .tourScheduleName(rs.getString("tour_schedule_name"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching tour schedule id and names: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch tour schedule id and names from database"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching tour schedule id and names: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching tour schedule id and names"
+            );
+        }
+    }
+
+    @Override
+    public List<PackageScheduleIdAndNameResponse> getPackageScheduleIdAndNameResponses() {
+
+        try {
+
+            return jdbcTemplate.query(
+                    CommonQueries.GET_PACKAGE_SCHEDULE_ID_AND_NAME,
+                    (rs, rowNum) -> PackageScheduleIdAndNameResponse.builder()
+                            .packageScheduleId(rs.getLong("package_schedule_id"))
+                            .packageScheduleName(rs.getString("package_schedule_name"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching package schedule id and names: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch package schedule id and names from database"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching package schedule id and names: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching package schedule id and names"
+            );
+        }
+    }
+
+    @Override
+    public List<SeasonIdAndNameResponse> getSeasonIdAndNameResponses() {
+
+        try {
+
+            return jdbcTemplate.query(
+                    CommonQueries.GET_SEASON_ID_AND_NAME,
+                    (rs, rowNum) -> SeasonIdAndNameResponse.builder()
+                            .seasonId(rs.getLong("season_id"))
+                            .seasonName(rs.getString("season"))
+                            .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching season id and names: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch season id and names from database"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching season id and names: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching season id and names"
+            );
+        }
+    }
+
 
 }

@@ -5,11 +5,17 @@ import com.felicita.model.dto.TourAssignUserDto;
 import com.felicita.model.dto.TourDayDestinationActivityIdsDto;
 import com.felicita.model.dto.TourResponseDto;
 import com.felicita.model.request.*;
+import com.felicita.model.request.tour.category.TourCategoryImageInsertRequest;
+import com.felicita.model.request.tour.category.TourCategoryImageUpdateRequest;
+import com.felicita.model.request.tour.category.TourCategoryInsertRequest;
+import com.felicita.model.request.tour.category.TourCategoryUpdateRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
 import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.TourStatisticsResponse;
 import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
+import com.felicita.model.response.tour.category.TourCategoryAllDetailsResponse;
+import com.felicita.model.response.tour.category.TourCategoryBasicDetailsResponse;
 
 import java.util.List;
 
@@ -181,4 +187,26 @@ public interface TourRepository {
     void terminateTourCategoriesAssignToTour(Long tourId, Long userId);
 
     void insertTourDestinations(Long tourId, List<TourItineraryDayRequest> itinerary, Long userId);
+
+    List<TourCategoryBasicDetailsResponse> getTourCategories();
+
+    TourCategoryAllDetailsResponse getTourCategoryDetailsById(CommonIdRequest commonIdRequest);
+
+    TourCategoryBasicDetailsResponse getTourCategoryBasicDetailsById(CommonIdRequest commonIdRequest);
+
+    void terminateTourCategory(CommonIdRequest commonIdRequest,Long userId);
+
+    Long insertTourCategoryBasicDetails(TourCategoryInsertRequest tourCategoryInsertRequest, Long userId);
+
+    void insertTourCatgeoryImages(Long tourCategoryId, List<TourCategoryImageInsertRequest> images, Long userId);
+
+    void insertToursForTourCategory(Long tourCategoryId, List<Long> tourIds, Long userId);
+
+    void updateTourCategoryBasicDetails(TourCategoryUpdateRequest tourCategoryUpdateRequest,Long userId);
+
+    void removeToursForTourCategory(Long categoryId, List<Long> removeTourIds, Long userId);
+
+    void removeTourCatgeoryImages(Long categoryId, List<Long> removeImageIds, Long userId);
+
+    void updateTourCatgeoryImages(Long categoryId, List<TourCategoryImageUpdateRequest> updateImages, Long userId);
 }

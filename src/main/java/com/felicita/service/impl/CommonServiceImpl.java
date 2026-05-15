@@ -9,6 +9,8 @@ import com.felicita.model.dto.NotificationInsertRequestDto;
 import com.felicita.model.dto.SupervisorBasicDetailsDto;
 import com.felicita.model.request.ReadNotificationInsertRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.*;
+import com.felicita.model.response.common.ActivityIdAndNameResponse;
 import com.felicita.repository.CommonRepository;
 import com.felicita.security.model.CustomUserDetails;
 import com.felicita.security.model.User;
@@ -109,6 +111,121 @@ public class CommonServiceImpl implements CommonService {
         } while (exists);
 
         return employeeCode;
+    }
+
+    @Override
+    public List<ActivityIdAndNameResponse> getActivityIdAndNameResponses() {
+        LOGGER.info("Start fetching activity id and name responses");
+        try {
+            List<ActivityIdAndNameResponse> responses = commonRepository.getActivityIdAndNameResponses();
+
+            if (responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching activity id and name responses");
+        }
+    }
+
+    @Override
+    public List<DestinationIdAndNameResponse> getDestinationIdAndNameResponses() {
+        LOGGER.info("Start fetching destination id and name responses");
+        try {
+            List<DestinationIdAndNameResponse> responses = commonRepository.getDestinationIdAndNameResponses();
+
+            if (responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching destination id and name responses");
+        }
+    }
+
+    @Override
+    public List<TourScheduleIdAndNameResponse> getTourScheduleIdAndNameResponses() {
+        LOGGER.info("Start fetching tour schedule id and name responses");
+        try {
+            List<TourScheduleIdAndNameResponse> responses = commonRepository.getTourScheduleIdAndNameResponses();
+
+            if (responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching tour schedule id and name responses");
+        }
+    }
+
+    @Override
+    public List<PackageScheduleIdAndNameResponse> getPackageScheduleIdAndNameResponses() {
+        LOGGER.info("Start fetching package schedule id and name responses");
+        try {
+            List<PackageScheduleIdAndNameResponse> responses = commonRepository.getPackageScheduleIdAndNameResponses();
+
+            if (responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching package schedule id and name responses");
+        }
+    }
+
+    @Override
+    public List<SeasonIdAndNameResponse> getSeasonIdAndNameResponses() {
+        LOGGER.info("Start fetching season id and name responses");
+        try {
+            List<SeasonIdAndNameResponse> responses = commonRepository.getSeasonIdAndNameResponses();
+
+            if (responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching season id and name responses");
+        }
     }
 
     @Override

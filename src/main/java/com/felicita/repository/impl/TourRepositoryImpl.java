@@ -7,11 +7,18 @@ import com.felicita.exception.*;
 import com.felicita.model.dto.*;
 import com.felicita.model.enums.CommonStatus;
 import com.felicita.model.request.*;
+import com.felicita.model.request.tour.category.TourCategoryImageInsertRequest;
+import com.felicita.model.request.tour.category.TourCategoryImageUpdateRequest;
+import com.felicita.model.request.tour.category.TourCategoryInsertRequest;
+import com.felicita.model.request.tour.category.TourCategoryUpdateRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
 import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.TourStatisticsResponse;
 import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
+import com.felicita.model.response.tour.category.TourCategoryAllDetailsResponse;
+import com.felicita.model.response.tour.category.TourCategoryBasicDetailsResponse;
+import com.felicita.model.response.tour.category.TourCategoryImageResponse;
 import com.felicita.queries.TourQueries;
 import com.felicita.repository.StatusRepository;
 import com.felicita.repository.TourRepository;
@@ -75,6 +82,7 @@ public class TourRepositoryImpl implements TourRepository {
                             .images(parseImages(rs.getString("images")))
                             .build();
                 } catch (JsonProcessingException e) {
+                    LOGGER.error(e.toString());
                     throw new RuntimeException(e);
                 }
 
@@ -82,8 +90,10 @@ public class TourRepositoryImpl implements TourRepository {
             });
 
         } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching tours: {}", ex.getMessage(), ex);
             throw new DataAccessErrorExceptionHandler("Database error while fetching tours");
         } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching tours: {}", ex.getMessage(), ex);
             throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching tours");
         }
     }
@@ -3266,6 +3276,398 @@ public class TourRepositoryImpl implements TourRepository {
         } catch (DataAccessException dae) {
             LOGGER.error("DB error while inserting tour destinations", dae);
             throw new InsertFailedErrorExceptionHandler(dae.getMessage());
+        }
+    }
+
+    @Override
+    public TourCategoryBasicDetailsResponse getTourCategoryBasicDetailsById(
+            CommonIdRequest request) {
+
+        try {
+
+            Long categoryId = request.getId();
+
+            TourCategoryBasicDetailsResponse response =
+                    jdbcTemplate.queryForObject(
+                            TourQueries.GET_TOUR_CATEGORY_BASIC_BY_ID,
+                            new Object[]{categoryId},
+                            (rs, rowNum) -> TourCategoryBasicDetailsResponse.builder()
+                                    .categoryId(rs.getLong("id"))
+                                    .categoryName(rs.getString("name"))
+                                    .description(rs.getString("description"))
+                                    .color(rs.getString("color"))
+                                    .hoverColor(rs.getString("hover_color"))
+                                    .status(rs.getString("status"))
+                                    .build()
+                    );
+
+            // images
+            List<TourCategoryImageResponse> images =
+                    jdbcTemplate.query(
+                            TourQueries.GET_TOUR_CATEGORY_IMAGES,
+                            new Object[]{categoryId},
+                            (rs, rowNum) -> TourCategoryImageResponse.builder()
+                                    .imageId(rs.getLong("id"))
+                                    .name(rs.getString("name"))
+                                    .description(rs.getString("description"))
+                                    .imageUrl(rs.getString("image_url"))
+                                    .status(rs.getString("status"))
+                                    .build()
+                    );
+
+            response.setImages(images);
+
+            return response;
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Error fetching basic tour category", ex);
+        }
+    }
+
+    @Override
+    public void terminateTourCategory(CommonIdRequest commonIdRequest, Long userId) {
+
+        try {
+
+            Long categoryId = commonIdRequest.getId();
+
+            Long terminatedStatusId = statusRepository.getStatusIdByName("TERMINATED");
+
+            int updated = jdbcTemplate.update(
+                    TourQueries.TERMINATE_TOUR_CATEGORY,
+                    terminatedStatusId,
+                    userId,
+                    categoryId
+            );
+
+            if (updated == 0) {
+                throw new RuntimeException("Tour category not found or already terminated");
+            }
+
+        } catch (DataAccessException ex) {
+            throw new RuntimeException("Database error while terminating tour category", ex);
+        } catch (Exception ex) {
+            throw new RuntimeException("Unexpected error while terminating tour category", ex);
+        }
+    }
+
+    @Override
+    public Long insertTourCategoryBasicDetails(TourCategoryInsertRequest request, Long userId) {
+
+        try {
+            Long statusId = statusRepository.getStatusIdByName(request.getStatus());
+
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(
+                        TourQueries.INSERT_TOUR_CATEGORY,
+                        Statement.RETURN_GENERATED_KEYS
+                );
+
+                ps.setString(1, request.getCategoryName());
+                ps.setString(2, request.getDescription());
+                ps.setString(3, request.getColor());
+                ps.setString(4, request.getHoverColor());
+                ps.setLong(5, statusId);
+                ps.setLong(6, userId);
+
+                return ps;
+            }, keyHolder);
+
+            Long categoryId = keyHolder.getKey().longValue();
+
+            return categoryId;
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Error inserting tour category", ex);
+        }
+    }
+
+    @Override
+    public void insertTourCatgeoryImages(Long tourCategoryId,
+                                         List<TourCategoryImageInsertRequest> images, Long userId) {
+
+        try {
+
+            for (TourCategoryImageInsertRequest img : images) {
+
+                Long statusId = statusRepository.getStatusIdByName(img.getStatus());
+
+                jdbcTemplate.update(
+                        TourQueries.INSERT_TOUR_CATEGORY_IMAGE,
+                        tourCategoryId,
+                        img.getName(),
+                        img.getDescription(),
+                        img.getImageUrl(),
+                        statusId,
+                        userId
+                );
+            }
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Error inserting tour category images", ex);
+        }
+    }
+
+    @Override
+    public void insertToursForTourCategory(Long tourCategoryId, List<Long> tourIds, Long userId) {
+
+        try {
+
+            Long statusId = statusRepository.getStatusIdByName("ACTIVE");
+
+            for (Long tourId : tourIds) {
+
+                jdbcTemplate.update(
+                        INSERT_TOUR_CATEGORY_MAP_FOR_CATEGORY,
+                        tourId,
+                        tourCategoryId,
+                        statusId,
+                        userId
+                );
+            }
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Error inserting tour mappings", ex);
+        }
+    }
+
+    @Override
+    public void updateTourCategoryBasicDetails(TourCategoryUpdateRequest request, Long userId) {
+
+        try {
+
+            Long statusId = statusRepository.getStatusIdByName(request.getStatus());
+
+            jdbcTemplate.update(
+                    TourQueries.UPDATE_TOUR_CATEGORY,
+                    request.getCategoryName(),
+                    request.getDescription(),
+                    request.getColor(),
+                    request.getHoverColor(),
+                    statusId,
+                    userId,
+                    request.getCategoryId()
+            );
+
+            // REMOVE tours
+            if (request.getRemoveTourIds() != null) {
+                removeToursForTourCategory(
+                        request.getCategoryId(),
+                        request.getRemoveTourIds(),
+                        userId
+                );
+            }
+
+
+            // UPDATE images
+            if (request.getUpdateImages() != null) {
+                updateTourCatgeoryImages(
+                        request.getCategoryId(),
+                        request.getUpdateImages(),
+                        userId
+                );
+            }
+
+            // REMOVE images
+            if (request.getRemoveImageIds() != null) {
+                removeTourCatgeoryImages(
+                        request.getCategoryId(),
+                        request.getRemoveImageIds(),
+                        userId
+                );
+            }
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Error updating tour category", ex);
+        }
+    }
+
+    @Override
+    public void removeToursForTourCategory(Long categoryId,
+                                           List<Long> removeTourIds,
+                                           Long userId) {
+
+        try {
+
+            Long terminatedStatus = statusRepository.getStatusIdByName("TERMINATED");
+
+            for (Long tourId : removeTourIds) {
+
+                jdbcTemplate.update(
+                        TourQueries.REMOVE_TOUR_CATEGORY_MAP,
+                        terminatedStatus,
+                        userId,
+                        categoryId,
+                        tourId
+                );
+            }
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Error removing tour mappings", ex);
+        }
+    }
+
+    @Override
+    public void removeTourCatgeoryImages(Long categoryId,
+                                         List<Long> removeImageIds,
+                                         Long userId) {
+
+        try {
+
+            Long terminatedStatus = statusRepository.getStatusIdByName("TERMINATED");
+
+            for (Long imageId : removeImageIds) {
+
+                jdbcTemplate.update(
+                        TourQueries.REMOVE_TOUR_CATEGORY_IMAGE,
+                        terminatedStatus,
+                        userId,
+                        imageId,
+                        categoryId
+                );
+            }
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Error removing images", ex);
+        }
+    }
+
+    @Override
+    public void updateTourCatgeoryImages(Long categoryId,
+                                         List<TourCategoryImageUpdateRequest> updateImages,
+                                         Long userId) {
+
+        try {
+
+            Long statusId;
+
+            for (TourCategoryImageUpdateRequest img : updateImages) {
+
+                statusId = statusRepository.getStatusIdByName(img.getStatus());
+
+                jdbcTemplate.update(
+                        TourQueries.UPDATE_TOUR_CATEGORY_IMAGE,
+                        img.getName(),
+                        img.getDescription(),
+                        img.getImageUrl(),
+                        statusId,
+                        userId,
+                        img.getImageId(),
+                        categoryId
+                );
+            }
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Error updating images", ex);
+        }
+    }
+
+    @Override
+    public TourCategoryAllDetailsResponse getTourCategoryDetailsById(
+            CommonIdRequest request) {
+
+        try {
+
+            Long categoryId = request.getId();
+
+            // =====================================================
+            // CATEGORY
+            // =====================================================
+
+            TourCategoryAllDetailsResponse response =
+                    jdbcTemplate.queryForObject(
+                            TourQueries.GET_TOUR_CATEGORY_BY_ID,
+                            new Object[]{categoryId},
+                            (rs, rowNum) -> TourCategoryAllDetailsResponse.builder()
+                                    .categoryId(rs.getLong("id"))
+                                    .categoryName(rs.getString("name"))
+                                    .description(rs.getString("description"))
+                                    .color(rs.getString("color"))
+                                    .hoverColor(rs.getString("hover_color"))
+                                    .status(rs.getString("status"))
+                                    .createdAt(rs.getTimestamp("created_at"))
+                                    .createdBy(rs.getObject("created_by", Long.class))
+                                    .createdByName(rs.getString("created_by_name"))
+                                    .updatedAt(rs.getTimestamp("updated_at"))
+                                    .updatedBy(rs.getObject("updated_by", Long.class))
+                                    .updatedByName(rs.getString("updated_by_name"))
+                                    .terminatedAt(rs.getTimestamp("terminated_at"))
+                                    .terminatedBy(rs.getObject("terminated_by", Long.class))
+                                    .build()
+                    );
+
+            // =====================================================
+            // IMAGES
+            // =====================================================
+
+            List<TourCategoryImageResponse> images =
+                    jdbcTemplate.query(
+                            TourQueries.GET_TOUR_CATEGORY_IMAGES,
+                            new Object[]{categoryId},
+                            (rs, rowNum) -> TourCategoryImageResponse.builder()
+                                    .imageId(rs.getLong("id"))
+                                    .name(rs.getString("name"))
+                                    .description(rs.getString("description"))
+                                    .imageUrl(rs.getString("image_url"))
+                                    .status(rs.getString("status"))
+                                    .build()
+                    );
+
+            // =====================================================
+            // TOURS
+            // =====================================================
+
+            List<TourCategoryAllDetailsResponse.TourBasicDetails> tours =
+                    jdbcTemplate.query(
+                            TourQueries.GET_TOURS_BY_CATEGORY_ID,
+                            new Object[]{categoryId},
+                            (rs, rowNum) -> TourCategoryAllDetailsResponse.TourBasicDetails.builder()
+                                    .tourId(rs.getLong("tour_id"))
+                                    .tourName(rs.getString("name"))
+                                    .description(rs.getString("description"))
+                                    .duration(rs.getObject("duration", Integer.class))
+                                    .latitude(rs.getObject("latitude", Double.class))
+                                    .longitude(rs.getObject("longitude", Double.class))
+                                    .startLocation(rs.getString("start_location"))
+                                    .endLocation(rs.getString("end_location"))
+                                    .season(rs.getString("season"))
+                                    .status(rs.getString("status"))
+                                    .primaryCategory(rs.getBoolean("is_primary"))
+                                    .build()
+                    );
+
+            response.setImages(images);
+            response.setTours(tours);
+            response.setTotalTours(tours.size());
+
+            return response;
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Error fetching tour category details", ex);
+        }
+    }
+
+    @Override
+    public List<TourCategoryBasicDetailsResponse> getTourCategories() {
+
+        try {
+
+            return jdbcTemplate.query(
+                    TourQueries.GET_ALL_TOUR_CATEGORIES,
+                    (rs, rowNum) -> TourCategoryBasicDetailsResponse.builder()
+                            .categoryId(rs.getLong("id"))
+                            .categoryName(rs.getString("name"))
+                            .description(rs.getString("description"))
+                            .color(rs.getString("color"))
+                            .hoverColor(rs.getString("hover_color"))
+                            .status(rs.getString("status"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Error fetching tour categories", ex);
         }
     }
 

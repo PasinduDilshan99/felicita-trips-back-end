@@ -3,11 +3,18 @@ package com.felicita.controller;
 import com.felicita.model.dto.PopularTourResponseDto;
 import com.felicita.model.dto.TourResponseDto;
 import com.felicita.model.request.*;
+import com.felicita.model.request.activity.category.ActivityCategoryInsertRequest;
+import com.felicita.model.request.activity.category.ActivityCategoryUpdateRequest;
+import com.felicita.model.request.tour.category.TourCategoryInsertRequest;
+import com.felicita.model.request.tour.category.TourCategoryUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.activity.category.ActivityCategoryDetailsResponse;
 import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
 import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.TourStatisticsResponse;
 import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
+import com.felicita.model.response.tour.category.TourCategoryAllDetailsResponse;
+import com.felicita.model.response.tour.category.TourCategoryBasicDetailsResponse;
 import com.felicita.service.TourService;
 import com.felicita.util.Constant;
 import org.slf4j.Logger;
@@ -247,4 +254,51 @@ public class TourController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @GetMapping(path = "/tour-categories")
+    public ResponseEntity<CommonResponse<List<TourCategoryBasicDetailsResponse>>> getTourCategories() {
+        LOGGER.info("{} Start execute get tour type statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<TourCategoryBasicDetailsResponse>> response = tourService.getTourCategories();
+        LOGGER.info("{} End execute get tour type statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/tour-category-details")
+    public ResponseEntity<CommonResponse<TourCategoryAllDetailsResponse>> getTourCategoryDetailsById(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TourCategoryAllDetailsResponse> response = tourService.getTourCategoryDetailsById(commonIdRequest);
+        LOGGER.info("{} End execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/tour-category-basic-details")
+    public ResponseEntity<CommonResponse<TourCategoryBasicDetailsResponse>> getTourCategoryBasicDetailsById(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TourCategoryBasicDetailsResponse> response = tourService.getTourCategoryBasicDetailsById(commonIdRequest);
+        LOGGER.info("{} End execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/terminate-tour-category")
+    public ResponseEntity<CommonResponse<TerminateResponse>> terminateTourCategory(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TerminateResponse> response = tourService.terminateTourCategory(commonIdRequest);
+        LOGGER.info("{} End execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/add-tour-category")
+    public ResponseEntity<CommonResponse<InsertResponse>> insertTourCategory(@RequestBody TourCategoryInsertRequest tourCategoryInsertRequest) {
+        LOGGER.info("{} Start execute insert activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = tourService.insertTourCategory(tourCategoryInsertRequest);
+        LOGGER.info("{} End execute insert activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/update-tour-category")
+    public ResponseEntity<CommonResponse<UpdateResponse>> updateTourCategory(@RequestBody TourCategoryUpdateRequest tourCategoryUpdateRequest) {
+        LOGGER.info("{} Start execute update activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UpdateResponse> response = tourService.updateTourCategory(tourCategoryUpdateRequest);
+        LOGGER.info("{} End execute update activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

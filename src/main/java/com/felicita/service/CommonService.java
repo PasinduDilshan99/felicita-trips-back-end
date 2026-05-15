@@ -5,6 +5,8 @@ import com.felicita.model.dto.NotificationInsertRequestDto;
 import com.felicita.model.dto.SupervisorBasicDetailsDto;
 import com.felicita.model.request.ReadNotificationInsertRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.*;
+import com.felicita.model.response.common.ActivityIdAndNameResponse;
 import com.felicita.security.model.User;
 
 import java.util.List;
@@ -42,4 +44,14 @@ public interface CommonService {
     List<Long> extractSupervisorUserIds(List<SupervisorBasicDetailsDto> supervisorDetails);
 
     String createEmployeeUniqueEmployeeCode();
+
+    List<ActivityIdAndNameResponse> getActivityIdAndNameResponses();
+
+    List<DestinationIdAndNameResponse> getDestinationIdAndNameResponses();
+
+    List<TourScheduleIdAndNameResponse> getTourScheduleIdAndNameResponses();
+
+    List<PackageScheduleIdAndNameResponse> getPackageScheduleIdAndNameResponses();
+
+    List<SeasonIdAndNameResponse> getSeasonIdAndNameResponses();
 }

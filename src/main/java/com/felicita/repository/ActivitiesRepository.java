@@ -2,8 +2,15 @@ package com.felicita.repository;
 
 import com.felicita.model.dto.ActivityCategoryResponseDto;
 import com.felicita.model.dto.ActivityResponseDto;
+import com.felicita.model.dto.activity.schedule.ActivityScheduleBasicDetailsDTO;
 import com.felicita.model.request.*;
+import com.felicita.model.request.activity.category.ActivityCategoryImageRequest;
+import com.felicita.model.request.activity.category.ActivityCategoryImageUpdateRequest;
+import com.felicita.model.request.activity.category.ActivityCategoryInsertRequest;
+import com.felicita.model.request.activity.category.ActivityCategoryUpdateRequest;
+import com.felicita.model.request.activity.schedule.ActivityScheduleUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.activity.category.ActivityCategoryDetailsResponse;
 import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
 import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
 
@@ -46,8 +53,7 @@ public interface ActivitiesRepository {
     void removeActivityImages(List<Long> removeImagesIds, Long userId);
 
     void removeRequirements(List<Long> removeRequirementsIds, Long userId);
-
-
+    
     void updateActivityImages(Long activityId, List<ActivityImageUpdateRequest> updatedImages, Long userId);
 
     void updateActivityRequirements(Long activityId, List<ActivityRequirementsUpdateRequest> updatedRequirements, Long userId);
@@ -91,4 +97,36 @@ public interface ActivitiesRepository {
     void termianteActivityCategories(Long activityId, Long userId);
 
     List<ActivityBasicDetailsResponse> getActivityByDestinationId(ActivitiesByDestinationId activitiesByDestinationId);
+
+    ActivityScheduleWithParamsResponse getActivitiesScheduleWithParams(ActivityScheduleDataRequest activityScheduleDataRequest);
+
+    List<String> getDistinctActivityDurations();
+
+    ActivityScheduleDetailsResponse getActivityScheduleDetailsById(CommonIdRequest activityScheduleId);
+
+    Long createActivitySchedule(ActivityScheduleInsertRequest activityScheduleInsertRequest, Long userId);
+
+    ActivityScheduleBasicDetailsDTO getActivityScheduleBasicDetails(Long packageScheduleId);
+
+    void updateActivitySchedule(ActivityScheduleUpdateRequest activityScheduleUpdateRequest);
+
+    void terminateActivityScheduleById(CommonIdRequest commonIdRequest);
+
+    ActivityCategoryDetailsResponse getActivityCategoryDetailsById(CommonIdRequest commonIdRequest);
+
+    void terminateActivityCategory(CommonIdRequest commonIdRequest);
+
+    Long insertActivityCategoryBasicDetails(ActivityCategoryInsertRequest activityCategoryInsertRequest);
+
+    void insertActivityCategoryImages(Long activityCategoryId, List<ActivityCategoryImageRequest> images);
+
+    void addActivityCategoryForActivities(Long activityCategoryId, List<Long> activityIds);
+
+    void updateActivityCategorybasicDetails(ActivityCategoryUpdateRequest activityCategoryUpdateRequest);
+
+    void removeActivityCategoryForActivities(Long categoryId, List<Long> removeActivityIds);
+
+    void removeActivityCategoryImages(Long categoryId, List<Long> removeImageIds);
+
+    void updateActivityCategoryImages(Long categoryId, List<ActivityCategoryImageUpdateRequest> updateImages);
 }

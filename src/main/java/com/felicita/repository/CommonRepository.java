@@ -6,6 +6,7 @@ import com.felicita.model.request.ReadNotificationInsertRequest;
 import com.felicita.model.response.AllCategoriesResponse;
 import com.felicita.model.response.NotificationResponse;
 import com.felicita.model.response.UnReadNotificationCountResponse;
+import com.felicita.model.response.common.*;
 
 import java.util.List;
 
@@ -39,4 +40,14 @@ public interface CommonRepository {
     List<String> getSupervisorEmailsWhichEnableNotificationForGiven(String name, List<Long> supervisorUserIds);
 
     boolean existsByEmployeeCode(String employeeCode);
+
+    List<SeasonIdAndNameResponse> getSeasonIdAndNameResponses();
+
+    List<PackageScheduleIdAndNameResponse> getPackageScheduleIdAndNameResponses();
+
+    List<TourScheduleIdAndNameResponse> getTourScheduleIdAndNameResponses();
+
+    List<DestinationIdAndNameResponse> getDestinationIdAndNameResponses();
+
+    List<ActivityIdAndNameResponse> getActivityIdAndNameResponses();
 }

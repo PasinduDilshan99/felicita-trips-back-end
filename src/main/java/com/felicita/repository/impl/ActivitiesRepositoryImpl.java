@@ -5,25 +5,34 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.felicita.exception.*;
 import com.felicita.model.dto.*;
+import com.felicita.model.dto.activity.schedule.ActivityScheduleBasicDetailsDTO;
 import com.felicita.model.enums.CommonStatus;
 import com.felicita.model.request.*;
+import com.felicita.model.request.activity.category.ActivityCategoryImageRequest;
+import com.felicita.model.request.activity.category.ActivityCategoryImageUpdateRequest;
+import com.felicita.model.request.activity.category.ActivityCategoryInsertRequest;
+import com.felicita.model.request.activity.category.ActivityCategoryUpdateRequest;
+import com.felicita.model.request.activity.schedule.ActivityScheduleUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.activity.category.ActivityCategoryDetailsResponse;
 import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
 import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
 import com.felicita.queries.ActivitiesQueries;
-import com.felicita.queries.DestinationQueries;
 import com.felicita.repository.ActivitiesRepository;
 import com.felicita.repository.StatusRepository;
+import com.felicita.util.Sortings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -1965,6 +1974,1916 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
             );
         }
     }
+
+    @Override
+    public ActivityScheduleWithParamsResponse getActivitiesScheduleWithParams(
+            ActivityScheduleDataRequest request) {
+
+        try {
+
+            StringBuilder query = new StringBuilder(
+                    ActivitiesQueries.BASE_ACTIVITY_SCHEDULE_QUERY);
+
+            StringBuilder countQuery = new StringBuilder(
+                    ActivitiesQueries.COUNT_ACTIVITY_SCHEDULE_QUERY);
+
+            List<Object> params = new ArrayList<>();
+            List<Object> countParams = new ArrayList<>();
+
+            // =========================================
+            // FILTERS
+            // =========================================
+
+            if (request.getName() != null && !request.getName().isBlank()) {
+
+                String search = "%" + request.getName().trim() + "%";
+
+                query.append("""
+                        AND (
+                            a.name LIKE ?
+                            OR s.name LIKE ?
+                        )
+                        """);
+
+                countQuery.append("""
+                        AND (
+                            a.name LIKE ?
+                            OR s.name LIKE ?
+                        )
+                        """);
+
+                params.add(search);
+                params.add(search);
+
+                countParams.add(search);
+                countParams.add(search);
+            }
+
+            if (request.getActivityId() != null) {
+
+                query.append(" AND a.id = ? ");
+                countQuery.append(" AND a.id = ? ");
+
+                params.add(request.getActivityId());
+                countParams.add(request.getActivityId());
+            }
+
+            if (request.getDestinationId() != null) {
+
+                query.append(" AND a.destination_id = ? ");
+                countQuery.append(" AND a.destination_id = ? ");
+
+                params.add(request.getDestinationId());
+                countParams.add(request.getDestinationId());
+            }
+
+            if (request.getPackageScheduleId() != null) {
+
+                query.append(" AND s.package_schedule_id = ? ");
+                countQuery.append(" AND s.package_schedule_id = ? ");
+
+                params.add(request.getPackageScheduleId());
+                countParams.add(request.getPackageScheduleId());
+            }
+
+            if (request.getTourScheduleId() != null) {
+
+                query.append(" AND s.tour_schedule_id = ? ");
+                countQuery.append(" AND s.tour_schedule_id = ? ");
+
+                params.add(request.getTourScheduleId());
+                countParams.add(request.getTourScheduleId());
+            }
+
+            if (request.getSeasonId() != null) {
+
+                query.append(" AND a.season_id LIKE ? ");
+                countQuery.append(" AND a.season_id LIKE ? ");
+
+                params.add(request.getSeasonId());
+                countParams.add(request.getSeasonId());
+            }
+
+            if (request.getStatus() != null && !request.getStatus().isBlank()) {
+
+                Long statusId = statusRepository.getStatusIdByName(request.getStatus());
+
+                if (statusId != null) {
+
+                    query.append(" AND a.status = ? ");
+                    countQuery.append(" AND a.status = ? ");
+
+                    params.add(statusId);
+                    countParams.add(statusId);
+                }
+            }
+
+            if (request.getFromDate() != null) {
+
+                query.append(" AND s.assume_start_date >= ? ");
+                countQuery.append(" AND s.assume_start_date >= ? ");
+
+                params.add(request.getFromDate());
+                countParams.add(request.getFromDate());
+            }
+
+            if (request.getToDate() != null) {
+
+                query.append(" AND s.assume_end_date <= ? ");
+                countQuery.append(" AND s.assume_end_date <= ? ");
+
+                params.add(request.getToDate());
+                countParams.add(request.getToDate());
+            }
+
+            if (request.getActivityCategoryId() != null) {
+
+                query.append("""
+                        AND EXISTS (
+                            SELECT 1
+                            FROM activity_category_map acm
+                            WHERE acm.activity_id = a.id
+                            AND acm.category_id = ?
+                        )
+                        """);
+
+                countQuery.append("""
+                        AND EXISTS (
+                            SELECT 1
+                            FROM activity_category_map acm
+                            WHERE acm.activity_id = a.id
+                            AND acm.category_id = ?
+                        )
+                        """);
+
+                params.add(request.getActivityCategoryId());
+                countParams.add(request.getActivityCategoryId());
+            }
+
+            // =========================================
+            // SORTING
+            // =========================================
+
+            String sortColumn = mapSortColumn(request.getSortBy());
+
+            String sortDirection = "DESC";
+
+            if ("ASC".equalsIgnoreCase(request.getSortDirection())) {
+                sortDirection = "ASC";
+            }
+
+            query.append(" ORDER BY ")
+                    .append(sortColumn)
+                    .append(" ")
+                    .append(sortDirection);
+
+            // =========================================
+            // PAGINATION
+            // =========================================
+
+            int pageSize = request.getPageSize() > 0
+                    ? request.getPageSize()
+                    : 10;
+
+            int pageNumber = request.getPageNumber() > 0
+                    ? request.getPageNumber()
+                    : 0;
+
+            int offset = pageNumber * pageSize;
+
+            query.append(" LIMIT ? OFFSET ? ");
+
+            params.add(pageSize);
+            params.add(offset);
+
+            // =========================================
+            // COUNT
+            // =========================================
+
+            Integer totalCount = jdbcTemplate.queryForObject(
+                    countQuery.toString(),
+                    countParams.toArray(),
+                    Integer.class
+            );
+
+            // =========================================
+            // MAIN DATA
+            // =========================================
+
+            List<ActivityScheduleResponseDto> result =
+                    jdbcTemplate.query(
+                            query.toString(),
+                            params.toArray(),
+                            (rs, rowNum) -> {
+
+                                Long activityId = rs.getLong("activity_id");
+
+                                return ActivityScheduleResponseDto.builder()
+                                        .activityId(activityId)
+                                        .scheduleId(rs.getLong("schedule_id"))
+                                        .destinationId(rs.getLong("destination_id"))
+                                        .destinationName(rs.getString("destination_name"))
+                                        .activityName(rs.getString("activity_name"))
+                                        .activityScheduleName(rs.getString("activity_schedule_name"))
+                                        .description(rs.getString("description"))
+                                        .durationHours(rs.getBigDecimal("duration_hours"))
+                                        .availableFrom(rs.getTime("available_from"))
+                                        .availableTo(rs.getTime("available_to"))
+                                        .priceLocal(rs.getBigDecimal("price_local"))
+                                        .priceForeigners(rs.getBigDecimal("price_foreigners"))
+                                        .minParticipate(rs.getInt("min_participate"))
+                                        .maxParticipate(rs.getInt("max_participate"))
+                                        .seasonId(rs.getLong("season_id"))
+                                        .season(rs.getString("season"))
+                                        .status(rs.getString("status"))
+                                        .createdAt(rs.getTimestamp("created_at"))
+                                        .updatedAt(rs.getTimestamp("updated_at"))
+
+                                        .scheduleAssumeStartDate(
+                                                rs.getString("assume_start_date"))
+
+                                        .scheduleAssumeEndDate(
+                                                rs.getString("assume_end_date"))
+
+                                        .scheduleDurationHoursStart(
+                                                rs.getBigDecimal("duration_hours_start"))
+
+                                        .scheduleDurationHoursEnd(
+                                                rs.getBigDecimal("duration_hours_end"))
+
+                                        .scheduleSpecialNote(
+                                                rs.getString("special_note"))
+
+                                        .scheduleDescription(
+                                                rs.getString("schedule_description"))
+
+                                        .scheduleStatus(
+                                                rs.getString("schedule_status"))
+
+                                        .activityCategoryDtos(
+                                                getCategoriesByActivityId(activityId))
+
+                                        .images(
+                                                getImagesByActivityId(activityId))
+
+                                        .build();
+                            });
+
+            return new ActivityScheduleWithParamsResponse(
+                    totalCount != null ? totalCount : 0,
+                    result
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching activity schedules: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch activity schedules from database"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching activity schedules: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching activity schedules"
+            );
+        }
+    }
+
+    @Override
+    public List<String> getDistinctActivityDurations() {
+
+        try {
+
+            return jdbcTemplate.query(
+                    ActivitiesQueries.GET_DISTINCT_ACTIVITY_DURATIONS,
+                    (rs, rowNum) -> rs.getBigDecimal("duration_hours")
+                            .stripTrailingZeros()
+                            .toPlainString()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching distinct activity durations: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch distinct activity durations from database"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching distinct activity durations: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching distinct activity durations"
+            );
+        }
+    }
+
+    @Override
+    public ActivityScheduleDetailsResponse getActivityScheduleDetailsById(
+            CommonIdRequest activityScheduleId) {
+
+        try {
+
+            ActivityScheduleDetailsResponse response = jdbcTemplate.queryForObject(
+                    ActivitiesQueries.GET_ACTIVITY_SCHEDULE_DETAILS_BY_ID,
+                    new Object[]{activityScheduleId.getId()},
+                    (rs, rowNum) -> ActivityScheduleDetailsResponse.builder()
+
+                            // =====================================================
+                            // ACTIVITY SCHEDULE
+                            // =====================================================
+
+                            .activityScheduleId(
+                                    rs.getLong("activity_schedule_id"))
+
+                            .activityScheduleName(
+                                    rs.getString("activity_schedule_name"))
+
+                            .scheduleAssumeStartDate(
+                                    rs.getString("assume_start_date"))
+
+                            .scheduleAssumeEndDate(
+                                    rs.getString("assume_end_date"))
+
+                            .scheduleDurationHoursStart(
+                                    rs.getBigDecimal("duration_hours_start"))
+
+                            .scheduleDurationHoursEnd(
+                                    rs.getBigDecimal("duration_hours_end"))
+
+                            .scheduleSpecialNote(
+                                    rs.getString("special_note"))
+
+                            .scheduleDescription(
+                                    rs.getString("schedule_description"))
+
+                            .scheduleStatus(
+                                    rs.getString("schedule_status"))
+
+                            .scheduleCreatedAt(
+                                    rs.getTimestamp("schedule_created_at"))
+
+                            .scheduleUpdatedAt(
+                                    rs.getTimestamp("schedule_updated_at"))
+
+                            // =====================================================
+                            // ACTIVITY
+                            // =====================================================
+
+                            .activityId(
+                                    rs.getLong("activity_id"))
+
+                            .activityName(
+                                    rs.getString("activity_name"))
+
+                            .activityDescription(
+                                    rs.getString("activity_description"))
+
+                            .durationHours(
+                                    rs.getBigDecimal("duration_hours"))
+
+                            .availableFrom(
+                                    rs.getTime("available_from"))
+
+                            .availableTo(
+                                    rs.getTime("available_to"))
+
+                            .priceLocal(
+                                    rs.getBigDecimal("price_local"))
+
+                            .priceForeigners(
+                                    rs.getBigDecimal("price_foreigners"))
+
+                            .minParticipate(
+                                    rs.getInt("min_participate"))
+
+                            .maxParticipate(
+                                    rs.getInt("max_participate"))
+
+                            .seasonId(
+                                    rs.getLong("season_id"))
+
+                            .season(
+                                    rs.getString("season"))
+
+                            .activityStatus(
+                                    rs.getString("activity_status"))
+
+                            .activityCreatedAt(
+                                    rs.getTimestamp("activity_created_at"))
+
+                            .activityUpdatedAt(
+                                    rs.getTimestamp("activity_updated_at"))
+
+                            // =====================================================
+                            // DESTINATION
+                            // =====================================================
+
+                            .destinationId(
+                                    rs.getLong("destination_id"))
+
+                            .destinationName(
+                                    rs.getString("destination_name"))
+
+                            // =====================================================
+                            // TOUR
+                            // =====================================================
+
+                            .tourId(
+                                    rs.getLong("tour_id"))
+
+                            .tourName(
+                                    rs.getString("tour_name"))
+
+                            .tourDescription(
+                                    rs.getString("tour_description"))
+
+                            .tourDuration(
+                                    rs.getInt("tour_duration"))
+
+                            .startLocation(
+                                    rs.getString("start_location"))
+
+                            .endLocation(
+                                    rs.getString("end_location"))
+
+                            .tourStatus(
+                                    rs.getString("tour_status"))
+
+                            // =====================================================
+                            // TOUR SCHEDULE
+                            // =====================================================
+
+                            .tourScheduleId(
+                                    rs.getLong("tour_schedule_id"))
+
+                            .tourScheduleName(
+                                    rs.getString("tour_schedule_name"))
+
+                            .tourScheduleStartDate(
+                                    rs.getString("tour_schedule_start_date"))
+
+                            .tourScheduleEndDate(
+                                    rs.getString("tour_schedule_end_date"))
+
+                            .tourScheduleDurationStart(
+                                    rs.getInt("tour_schedule_duration_start"))
+
+                            .tourScheduleDurationEnd(
+                                    rs.getInt("tour_schedule_duration_end"))
+
+                            .tourScheduleStatus(
+                                    rs.getString("tour_schedule_status"))
+
+                            // =====================================================
+                            // PACKAGE
+                            // =====================================================
+
+                            .packageId(
+                                    rs.getLong("package_id"))
+
+                            .packageName(
+                                    rs.getString("package_name"))
+
+                            .packageDescription(
+                                    rs.getString("package_description"))
+
+                            .totalPrice(
+                                    rs.getBigDecimal("total_price"))
+
+                            .discountPercentage(
+                                    rs.getBigDecimal("discount_percentage"))
+
+                            .pricePerPerson(
+                                    rs.getBigDecimal("price_per_person"))
+
+                            .minPersonCount(
+                                    rs.getInt("min_person_count"))
+
+                            .maxPersonCount(
+                                    rs.getInt("max_person_count"))
+
+                            .packageStatus(
+                                    rs.getString("package_status"))
+
+                            // =====================================================
+                            // PACKAGE SCHEDULE
+                            // =====================================================
+
+                            .packageScheduleId(
+                                    rs.getLong("package_schedule_id"))
+
+                            .packageScheduleName(
+                                    rs.getString("package_schedule_name"))
+
+                            .packageScheduleStartDate(
+                                    rs.getString("package_schedule_start_date"))
+
+                            .packageScheduleEndDate(
+                                    rs.getString("package_schedule_end_date"))
+
+                            .packageScheduleDurationStart(
+                                    rs.getInt("package_schedule_duration_start"))
+
+                            .packageScheduleDurationEnd(
+                                    rs.getInt("package_schedule_duration_end"))
+
+                            .packageScheduleStatus(
+                                    rs.getString("package_schedule_status"))
+
+                            // =====================================================
+                            // EXTRA DETAILS
+                            // =====================================================
+
+                            .activityCategoryDtos(
+                                    getCategoriesByActivityId(
+                                            rs.getLong("activity_id")
+                                    ))
+
+                            .images(
+                                    getImagesByActivityId(
+                                            rs.getLong("activity_id")
+                                    ))
+
+                            .build()
+            );
+
+            return response;
+
+        } catch (EmptyResultDataAccessException ex) {
+
+            LOGGER.error(
+                    "No activity schedule found for id: {}",
+                    activityScheduleId.getId(),
+                    ex
+            );
+
+            throw new DataNotFoundErrorExceptionHandler(
+                    "Activity schedule not found"
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching activity schedule details: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch activity schedule details from database"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching activity schedule details: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching activity schedule details"
+            );
+        }
+    }
+
+    @Override
+    public Long createActivitySchedule(
+            ActivityScheduleInsertRequest request,
+            Long userId) {
+
+        try {
+
+            // =====================================================
+            // STATUS
+            // =====================================================
+
+            Long statusId = statusRepository.getStatusIdByName(
+                    request.getStatus()
+            );
+
+            if (statusId == null) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Invalid status : " + request.getStatus()
+                );
+            }
+
+            // =====================================================
+            // INSERT
+            // =====================================================
+
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+
+            jdbcTemplate.update(connection -> {
+
+                PreparedStatement ps = connection.prepareStatement(
+                        ActivitiesQueries.INSERT_ACTIVITY_SCHEDULE,
+                        Statement.RETURN_GENERATED_KEYS
+                );
+
+                // =====================================================
+                // BASIC DETAILS
+                // =====================================================
+
+                ps.setString(
+                        1,
+                        request.getActivityScheduleName()
+                );
+
+                ps.setLong(
+                        2,
+                        request.getActivityId()
+                );
+
+                // =====================================================
+                // ASSUME START DATE
+                // =====================================================
+
+                if (request.getAssumeStartDate() != null) {
+
+                    ps.setDate(
+                            3,
+                            new java.sql.Date(
+                                    request.getAssumeStartDate().getTime()
+                            )
+                    );
+
+                } else {
+
+                    ps.setNull(3, Types.DATE);
+                }
+
+                // =====================================================
+                // ASSUME END DATE
+                // =====================================================
+
+                if (request.getAssumeEndDate() != null) {
+
+                    ps.setDate(
+                            4,
+                            new java.sql.Date(
+                                    request.getAssumeEndDate().getTime()
+                            )
+                    );
+
+                } else {
+
+                    ps.setNull(4, Types.DATE);
+                }
+
+                // =====================================================
+                // DURATION START
+                // =====================================================
+
+                if (request.getDurationHoursStart() != null) {
+
+                    ps.setBigDecimal(
+                            5,
+                            BigDecimal.valueOf(
+                                    request.getDurationHoursStart()
+                            )
+                    );
+
+                } else {
+
+                    ps.setNull(5, Types.DECIMAL);
+                }
+
+                // =====================================================
+                // DURATION END
+                // =====================================================
+
+                if (request.getDurationHoursEnd() != null) {
+
+                    ps.setBigDecimal(
+                            6,
+                            BigDecimal.valueOf(
+                                    request.getDurationHoursEnd()
+                            )
+                    );
+
+                } else {
+
+                    ps.setNull(6, Types.DECIMAL);
+                }
+
+                // =====================================================
+                // SPECIAL NOTE
+                // =====================================================
+
+                if (request.getSpecialNotes() != null) {
+
+                    ps.setString(
+                            7,
+                            request.getSpecialNotes()
+                    );
+
+                } else {
+
+                    ps.setNull(7, Types.VARCHAR);
+                }
+
+                // =====================================================
+                // DESCRIPTION
+                // =====================================================
+
+                if (request.getDescription() != null) {
+
+                    ps.setString(
+                            8,
+                            request.getDescription()
+                    );
+
+                } else {
+
+                    ps.setNull(8, Types.VARCHAR);
+                }
+
+                // =====================================================
+                // PACKAGE SCHEDULE ID
+                // =====================================================
+
+                if (request.getPackageScheduleId() != null) {
+
+                    ps.setLong(
+                            9,
+                            request.getPackageScheduleId()
+                    );
+
+                } else {
+
+                    ps.setNull(9, Types.BIGINT);
+                }
+
+                // =====================================================
+                // TOUR SCHEDULE ID
+                // =====================================================
+
+                if (request.getTourScheduleId() != null) {
+
+                    ps.setLong(
+                            10,
+                            request.getTourScheduleId()
+                    );
+
+                } else {
+
+                    ps.setNull(10, Types.BIGINT);
+                }
+
+                // =====================================================
+                // STATUS
+                // =====================================================
+
+                ps.setLong(
+                        11,
+                        statusId
+                );
+
+                // =====================================================
+                // CREATED BY
+                // =====================================================
+
+                if (userId != null) {
+
+                    ps.setLong(
+                            12,
+                            userId
+                    );
+
+                } else {
+
+                    ps.setNull(12, Types.BIGINT);
+                }
+
+                // =====================================================
+                // UPDATED BY
+                // =====================================================
+
+                if (userId != null) {
+
+                    ps.setLong(
+                            13,
+                            userId
+                    );
+
+                } else {
+
+                    ps.setNull(13, Types.BIGINT);
+                }
+
+                return ps;
+
+            }, keyHolder);
+
+            // =====================================================
+            // GENERATED ID
+            // =====================================================
+
+            Number generatedId = keyHolder.getKey();
+
+            if (generatedId == null) {
+
+                throw new InternalServerErrorExceptionHandler(
+                        "Failed to generate activity schedule id"
+                );
+            }
+
+            return generatedId.longValue();
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while creating activity schedule: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to create activity schedule"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while creating activity schedule: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while creating activity schedule"
+            );
+        }
+    }
+
+    @Override
+    public ActivityScheduleBasicDetailsDTO getActivityScheduleBasicDetails(
+            Long activityScheduleId) {
+
+        try {
+
+            return jdbcTemplate.queryForObject(
+                    ActivitiesQueries.GET_ACTIVITY_SCHEDULE_BASIC_DETAILS,
+                    new Object[]{activityScheduleId},
+                    (rs, rowNum) -> ActivityScheduleBasicDetailsDTO.builder()
+
+                            .activityScheduleId(
+                                    rs.getLong("activity_schedule_id"))
+
+                            .activityScheduleName(
+                                    rs.getString("activity_schedule_name"))
+
+                            .activityId(
+                                    rs.getLong("activity_id"))
+
+                            .assumeStartDate(
+                                    rs.getDate("assume_start_date"))
+
+                            .assumeEndDate(
+                                    rs.getDate("assume_end_date"))
+
+                            .durationHoursStart(
+                                    rs.getObject(
+                                            "duration_hours_start",
+                                            Double.class
+                                    ))
+
+                            .durationHoursEnd(
+                                    rs.getObject(
+                                            "duration_hours_end",
+                                            Double.class
+                                    ))
+
+                            .specialNotes(
+                                    rs.getString("special_note"))
+
+                            .description(
+                                    rs.getString("description"))
+
+                            .packageScheduleId(
+                                    rs.getObject(
+                                            "package_schedule_id",
+                                            Long.class
+                                    ))
+
+                            .tourScheduleId(
+                                    rs.getObject(
+                                            "tour_schedule_id",
+                                            Long.class
+                                    ))
+
+                            .status(
+                                    rs.getString("status"))
+
+                            .createdBy(
+                                    rs.getObject(
+                                            "created_by",
+                                            Long.class
+                                    ))
+
+                            .createdByName(
+                                    rs.getString("created_by_name"))
+
+                            .createdAt(
+                                    rs.getTimestamp("created_at"))
+
+                            .updatedAt(
+                                    rs.getTimestamp("updated_at"))
+
+                            .updatedBy(
+                                    rs.getObject(
+                                            "updated_by",
+                                            Long.class
+                                    ))
+
+                            .updatedByName(
+                                    rs.getString("updated_by_name"))
+
+                            .build()
+            );
+
+        } catch (EmptyResultDataAccessException ex) {
+
+            LOGGER.error(
+                    "No activity schedule found for id: {}",
+                    activityScheduleId,
+                    ex
+            );
+
+            throw new DataNotFoundErrorExceptionHandler(
+                    "Activity schedule not found"
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching activity schedule basic details: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch activity schedule basic details from database"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching activity schedule basic details: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching activity schedule basic details"
+            );
+        }
+    }
+
+    @Override
+    public void updateActivitySchedule(
+            ActivityScheduleUpdateRequest request) {
+
+        try {
+
+            // =====================================================
+            // STATUS
+            // =====================================================
+
+            Long statusId = statusRepository.getStatusIdByName(
+                    request.getStatus()
+            );
+
+            if (statusId == null) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Invalid status : " + request.getStatus()
+                );
+            }
+
+            // =====================================================
+            // UPDATE
+            // =====================================================
+
+            int updatedRows = jdbcTemplate.update(
+                    ActivitiesQueries.UPDATE_ACTIVITY_SCHEDULE,
+
+                    // name
+                    request.getActivityScheduleName(),
+
+                    // activity_id
+                    request.getActivityId(),
+
+                    // assume_start_date
+                    request.getAssumeStartDate() != null
+                            ? new java.sql.Date(
+                            request.getAssumeStartDate().getTime())
+                            : null,
+
+                    // assume_end_date
+                    request.getAssumeEndDate() != null
+                            ? new java.sql.Date(
+                            request.getAssumeEndDate().getTime())
+                            : null,
+
+                    // duration_hours_start
+                    request.getDurationHoursStart() != null
+                            ? BigDecimal.valueOf(
+                            request.getDurationHoursStart())
+                            : null,
+
+                    // duration_hours_end
+                    request.getDurationHoursEnd() != null
+                            ? BigDecimal.valueOf(
+                            request.getDurationHoursEnd())
+                            : null,
+
+                    // special_note
+                    request.getSpecialNotes(),
+
+                    // description
+                    request.getDescription(),
+
+                    // package_schedule_id
+                    request.getPackageScheduleId(),
+
+                    // tour_schedule_id
+                    request.getTourScheduleId(),
+
+                    // status
+                    statusId,
+
+                    // where id
+                    request.getActivityScheduleId()
+            );
+
+            // =====================================================
+            // NOT FOUND
+            // =====================================================
+
+            if (updatedRows == 0) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Activity schedule not found"
+                );
+            }
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while updating activity schedule: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to update activity schedule"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while updating activity schedule: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while updating activity schedule"
+            );
+        }
+    }
+
+    @Override
+    public void terminateActivityScheduleById(CommonIdRequest commonIdRequest) {
+        try {
+            Long terminatedStatusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
+            if (terminatedStatusId == null) {
+                throw new DataNotFoundErrorExceptionHandler(
+                        "TERMINATED status not found"
+                );
+            }
+            int updatedRows = jdbcTemplate.update(
+                    ActivitiesQueries.TERMINATE_ACTIVITY_SCHEDULE_BY_ID,
+                    terminatedStatusId,
+                    commonIdRequest.getId()
+            );
+
+
+            if (updatedRows == 0) {
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Activity schedule not found"
+                );
+            }
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Database error while terminating activity schedule: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new UpdateFailedErrorExceptionHandler(
+                    "Failed to terminate activity schedule"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while terminating activity schedule: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while terminating activity schedule"
+            );
+        }
+    }
+
+    @Override
+    public ActivityCategoryDetailsResponse getActivityCategoryDetailsById(
+            CommonIdRequest commonIdRequest) {
+
+        try {
+            Long categoryId = commonIdRequest.getId();
+            ActivityCategoryDetailsResponse response =
+                    jdbcTemplate.queryForObject(
+                            ActivitiesQueries.GET_ACTIVITY_CATEGORY_DETAILS_BY_ID,
+                            new Object[]{categoryId},
+                            (rs, rowNum) -> ActivityCategoryDetailsResponse.builder()
+
+                                    .categoryId(
+                                            rs.getLong("id"))
+
+                                    .categoryName(
+                                            rs.getString("name"))
+
+                                    .description(
+                                            rs.getString("description"))
+
+                                    .color(
+                                            rs.getString("color"))
+
+                                    .hoverColor(
+                                            rs.getString("hover_color"))
+
+                                    .status(
+                                            rs.getString("status"))
+
+                                    .createdAt(
+                                            rs.getTimestamp("created_at"))
+
+                                    .createdBy(
+                                            rs.getObject(
+                                                    "created_by",
+                                                    Long.class))
+
+                                    .createdByName(
+                                            rs.getString("created_by_name"))
+
+                                    .updatedAt(
+                                            rs.getTimestamp("updated_at"))
+
+                                    .updatedBy(
+                                            rs.getObject(
+                                                    "updated_by",
+                                                    Long.class))
+
+                                    .updatedByName(
+                                            rs.getString("updated_by_name"))
+
+                                    .terminatedAt(
+                                            rs.getTimestamp("terminated_at"))
+
+                                    .terminatedBy(
+                                            rs.getObject(
+                                                    "terminated_by",
+                                                    Long.class))
+
+                                    .build()
+                    );
+
+            // =====================================================
+            // IMAGES
+            // =====================================================
+
+            List<ActivityCategoryDetailsResponse.CategoryImage> images =
+                    jdbcTemplate.query(
+                            ActivitiesQueries.GET_ACTIVITY_CATEGORY_IMAGES_BY_CATEGORY_ID,
+                            new Object[]{categoryId},
+                            (rs, rowNum) ->
+                                    ActivityCategoryDetailsResponse.CategoryImage
+                                            .builder()
+
+                                            .imageId(
+                                                    rs.getLong("id"))
+
+                                            .name(
+                                                    rs.getString("name"))
+
+                                            .description(
+                                                    rs.getString("description"))
+
+                                            .imageUrl(
+                                                    rs.getString("image_url"))
+
+                                            .status(
+                                                    rs.getString("status"))
+
+                                            .createdAt(
+                                                    rs.getTimestamp("created_at"))
+
+                                            .build()
+                    );
+
+            // =====================================================
+            // PRIMARY ACTIVITIES
+            // =====================================================
+
+            List<ActivityCategoryDetailsResponse.Activity> primaryActivities =
+                    jdbcTemplate.query(
+                            ActivitiesQueries.GET_PRIMARY_ACTIVITIES_BY_CATEGORY_ID,
+                            new Object[]{categoryId},
+                            (rs, rowNum) ->
+                                    ActivityCategoryDetailsResponse.Activity
+                                            .builder()
+
+                                            .activityId(
+                                                    rs.getLong("id"))
+
+                                            .activityName(
+                                                    rs.getString("name"))
+
+                                            .build()
+                    );
+
+            // =====================================================
+            // OTHER ACTIVITIES
+            // =====================================================
+
+            List<ActivityCategoryDetailsResponse.Activity> otherActivities =
+                    jdbcTemplate.query(
+                            ActivitiesQueries.GET_OTHER_ACTIVITIES_BY_CATEGORY_ID,
+                            new Object[]{categoryId},
+                            (rs, rowNum) ->
+                                    ActivityCategoryDetailsResponse.Activity
+                                            .builder()
+
+                                            .activityId(
+                                                    rs.getLong("id"))
+
+                                            .activityName(
+                                                    rs.getString("name"))
+
+                                            .build()
+                    );
+
+
+
+            response.setImages(images);
+            response.setPrimaryActivities(primaryActivities);
+            response.setOtherActivities(otherActivities);
+
+            return response;
+
+        } catch (EmptyResultDataAccessException ex) {
+
+            LOGGER.error(
+                    "Activity category not found for id: {}",
+                    commonIdRequest.getId(),
+                    ex
+            );
+
+            throw new DataNotFoundErrorExceptionHandler(
+                    "Activity category not found"
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching activity category details: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch activity category details from database"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching activity category details: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching activity category details"
+            );
+        }
+    }
+
+    @Override
+    public void terminateActivityCategory(
+            CommonIdRequest commonIdRequest) {
+
+        try {
+            Long terminatedStatusId =
+                    statusRepository.getStatusIdByName("TERMINATED");
+
+            if (terminatedStatusId == null) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "TERMINATED status not found"
+                );
+            }
+
+            int updatedRows = jdbcTemplate.update(
+                    ActivitiesQueries.TERMINATE_ACTIVITY_CATEGORY,
+                    terminatedStatusId,
+                    commonIdRequest.getId()
+            );
+
+
+            if (updatedRows == 0) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Activity category not found"
+                );
+            }
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while terminating activity category: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to terminate activity category"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while terminating activity category: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while terminating activity category"
+            );
+        }
+    }
+
+    @Override
+    public Long insertActivityCategoryBasicDetails(
+            ActivityCategoryInsertRequest request) {
+
+        try {
+
+            Long statusId = statusRepository.getStatusIdByName(
+                    request.getStatus()
+            );
+
+            if (statusId == null) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Invalid status : " + request.getStatus()
+                );
+            }
+
+
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+
+            jdbcTemplate.update(connection -> {
+
+                PreparedStatement ps = connection.prepareStatement(
+                        ActivitiesQueries.INSERT_ACTIVITY_CATEGORY,
+                        Statement.RETURN_GENERATED_KEYS
+                );
+
+                ps.setString(1, request.getCategoryName());
+                ps.setString(2, request.getDescription());
+                ps.setString(3, request.getColor());
+                ps.setString(4, request.getHoverColor());
+                ps.setLong(5, statusId);
+
+                return ps;
+
+            }, keyHolder);
+
+            Number key = keyHolder.getKey();
+
+            if (key == null) {
+
+                throw new InternalServerErrorExceptionHandler(
+                        "Failed to generate activity category id"
+                );
+            }
+
+            return key.longValue();
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while inserting activity category: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to insert activity category"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while inserting activity category: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while inserting activity category"
+            );
+        }
+    }
+
+    @Override
+    public void insertActivityCategoryImages(
+            Long activityCategoryId,
+            List<ActivityCategoryImageRequest> images) {
+
+        try {
+
+            if (activityCategoryId == null) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Activity category id is required"
+                );
+            }
+
+            if (images == null || images.isEmpty()) {
+                return;
+            }
+
+            for (ActivityCategoryImageRequest image : images) {
+
+                Long imageStatusId = statusRepository.getStatusIdByName(
+                        image.getStatus()
+                );
+
+                if (imageStatusId == null) {
+
+                    throw new DataNotFoundErrorExceptionHandler(
+                            "Invalid image status : " + image.getStatus()
+                    );
+                }
+
+                jdbcTemplate.update(
+                        ActivitiesQueries.INSERT_ACTIVITY_CATEGORY_IMAGE,
+
+                        activityCategoryId,
+                        image.getName(),
+                        image.getDescription(),
+                        image.getImageUrl(),
+                        imageStatusId
+                );
+            }
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while inserting activity category images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to insert activity category images"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while inserting activity category images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while inserting activity category images"
+            );
+        }
+    }
+
+
+    @Override
+    public void addActivityCategoryForActivities(
+            Long activityCategoryId,
+            List<Long> activityIds) {
+
+        try {
+
+            if (activityCategoryId == null) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Activity category id is required"
+                );
+            }
+
+            if (activityIds == null || activityIds.isEmpty()) {
+                return;
+            }
+
+            Long activeStatusId = statusRepository.getStatusIdByName(
+                    "ACTIVE"
+            );
+
+            if (activeStatusId == null) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "ACTIVE status not found"
+                );
+            }
+
+            for (Long activityId : activityIds) {
+
+                jdbcTemplate.update(
+                        ActivitiesQueries.INSERT_ACTIVITY_CATEGORY_MAP_FOR_CATEGORY,
+
+                        activityId,
+                        activityCategoryId,
+                        false,
+                        activeStatusId
+                );
+            }
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while mapping activity category for activities: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to map activity category for activities"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while mapping activity category for activities: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while mapping activity category for activities"
+            );
+        }
+    }
+
+    @Override
+    public void updateActivityCategorybasicDetails(
+            ActivityCategoryUpdateRequest request) {
+
+        try {
+
+            // =====================================================
+            // STATUS
+            // =====================================================
+
+            Long statusId = statusRepository.getStatusIdByName(
+                    request.getStatus()
+            );
+
+            if (statusId == null) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Invalid status : " + request.getStatus()
+                );
+            }
+
+            // =====================================================
+            // UPDATE
+            // =====================================================
+
+            int updatedRows = jdbcTemplate.update(
+                    ActivitiesQueries.UPDATE_ACTIVITY_CATEGORY_BASIC_DETAILS,
+
+                    request.getCategoryName(),
+                    request.getDescription(),
+                    request.getColor(),
+                    request.getHoverColor(),
+                    statusId,
+                    request.getCategoryId()
+            );
+
+            if (updatedRows == 0) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Activity category not found"
+                );
+            }
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while updating activity category: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to update activity category"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while updating activity category: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while updating activity category"
+            );
+        }
+    }
+
+    @Override
+    public void removeActivityCategoryForActivities(
+            Long categoryId,
+            List<Long> removeActivityIds) {
+
+        try {
+
+            if (categoryId == null) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Category id is required"
+                );
+            }
+
+            if (removeActivityIds == null ||
+                    removeActivityIds.isEmpty()) {
+
+                return;
+            }
+
+            for (Long activityId : removeActivityIds) {
+
+                jdbcTemplate.update(
+                        ActivitiesQueries.REMOVE_ACTIVITY_CATEGORY_FOR_ACTIVITY,
+                        categoryId,
+                        activityId
+                );
+            }
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while removing activity mappings: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to remove activity mappings"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while removing activity mappings: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while removing activity mappings"
+            );
+        }
+    }
+
+    @Override
+    public void removeActivityCategoryImages(
+            Long categoryId,
+            List<Long> removeImageIds) {
+
+        try {
+
+            if (categoryId == null) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Category id is required"
+                );
+            }
+
+            if (removeImageIds == null ||
+                    removeImageIds.isEmpty()) {
+
+                return;
+            }
+
+            for (Long imageId : removeImageIds) {
+
+                jdbcTemplate.update(
+                        ActivitiesQueries.REMOVE_ACTIVITY_CATEGORY_IMAGE,
+                        categoryId,
+                        imageId
+                );
+            }
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while removing activity category images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to remove activity category images"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while removing activity category images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while removing activity category images"
+            );
+        }
+    }
+
+    @Override
+    public void updateActivityCategoryImages(
+            Long categoryId,
+            List<ActivityCategoryImageUpdateRequest> updateImages) {
+
+        try {
+
+            if (categoryId == null) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Category id is required"
+                );
+            }
+
+            if (updateImages == null ||
+                    updateImages.isEmpty()) {
+
+                return;
+            }
+
+            for (ActivityCategoryImageUpdateRequest image : updateImages) {
+
+                if (image.getImageId() == null) {
+
+                    throw new DataNotFoundErrorExceptionHandler(
+                            "Image id is required"
+                    );
+                }
+
+                Long statusId = statusRepository.getStatusIdByName(
+                        image.getStatus()
+                );
+
+                if (statusId == null) {
+
+                    throw new DataNotFoundErrorExceptionHandler(
+                            "Invalid image status : " + image.getStatus()
+                    );
+                }
+
+                jdbcTemplate.update(
+                        ActivitiesQueries.UPDATE_ACTIVITY_CATEGORY_IMAGE,
+
+                        image.getName(),
+                        image.getDescription(),
+                        image.getImageUrl(),
+                        statusId,
+                        image.getImageId(),
+                        categoryId
+                );
+            }
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while updating activity category images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to update activity category images"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while updating activity category images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while updating activity category images"
+            );
+        }
+    }
+
+    private List<ActivityCategoryDto> getCategoriesByActivityId(Long activityId) {
+
+        return jdbcTemplate.query(
+                ActivitiesQueries.ACTIVITY_CATEGORIES_QUERY,
+                new Object[]{activityId},
+                (rs, rowNum) -> ActivityCategoryDto.builder()
+                        .id(rs.getLong("id"))
+                        .name(rs.getString("name"))
+                        .description(rs.getString("description"))
+                        .isPrimary(rs.getBoolean("is_primary"))
+                        .build()
+        );
+    }
+
+    private List<ActivityImageDto> getImagesByActivityId(Long activityId) {
+
+        return jdbcTemplate.query(
+                ActivitiesQueries.ACTIVITY_IMAGES_QUERY,
+                new Object[]{activityId},
+                (rs, rowNum) -> new ActivityImageDto(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("description"),
+                        rs.getString("image_url"),
+                        rs.getInt("status")
+                )
+        );
+    }
+
+    private String mapSortColumn(String sortBy) {
+
+        if (sortBy == null ||
+                !Sortings.ALLOWED_ACTIVITY_SCHEDULE_SORT_COLUMNS.contains(sortBy)) {
+
+            return "a.created_at";
+        }
+
+        return switch (sortBy) {
+
+            case "activityName" -> "a.name";
+            case "activityScheduleName" -> "s.name";
+            case "destinationName" -> "d.name";
+            case "durationHours" -> "a.duration_hours";
+            case "season" -> "a.season";
+            case "status" -> "cs.name";
+            case "scheduleAssumeStartDate" -> "s.assume_start_date";
+            case "scheduleAssumeEndDate" -> "s.assume_end_date";
+            case "createdAt" -> "a.created_at";
+            case "updatedAt" -> "a.updated_at";
+
+            default -> "a.created_at";
+        };
+    }
+
 
     private LocalDateTime getLocalDateTime(ResultSet rs, String column) {
         try {

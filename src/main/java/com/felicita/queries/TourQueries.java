@@ -1737,4 +1737,170 @@ public class TourQueries {
                 ORDER BY primary_usage DESC
             """;
 
+    public static final String GET_ALL_TOUR_CATEGORIES = """
+        SELECT
+            tc.id,
+            tc.name,
+            tc.description,
+            tc.color,
+            tc.hover_color,
+            cs.name AS status
+        FROM tour_category tc
+        LEFT JOIN common_status cs ON tc.status = cs.id
+        WHERE tc.terminated_at IS NULL
+        ORDER BY tc.id DESC
+        """;
+
+    public static final String GET_TOUR_CATEGORY_BY_ID = """
+        SELECT
+            tc.id,
+            tc.name,
+            tc.description,
+            tc.color,
+            tc.hover_color,
+            cs.name AS status,
+            tc.created_at,
+            tc.created_by,
+            tc.updated_at,
+            tc.updated_by,
+            tc.terminated_at,
+            tc.terminated_by,
+            CONCAT(cu.first_name,' ',cu.last_name) AS created_by_name,
+            CONCAT(uu.first_name,' ',uu.last_name) AS updated_by_name
+        FROM tour_category tc
+        LEFT JOIN common_status cs ON tc.status = cs.id
+        LEFT JOIN user cu ON tc.created_by = cu.user_id
+        LEFT JOIN user uu ON tc.updated_by = uu.user_id
+        WHERE tc.id = ?
+        """;
+
+    public static final String GET_TOUR_CATEGORY_IMAGES = """
+        SELECT
+            id,
+            name,
+            description,
+            image_url,
+            status
+        FROM tour_category_images
+        WHERE tour_category_id = ?
+        ORDER BY id ASC
+        """;
+
+    public static final String GET_TOURS_BY_CATEGORY_ID = """
+        SELECT
+            t.tour_id,
+            t.name,
+            t.description,
+            t.duration,
+            t.latitude,
+            t.longitude,
+            t.start_location,
+            t.end_location,
+            s.name AS season,
+            cs.name AS status,
+            tcm.is_primary
+        FROM tour_category_map tcm
+        INNER JOIN tour t ON tcm.tour_id = t.tour_id
+        LEFT JOIN seasons s ON t.season = s.id
+        LEFT JOIN common_status cs ON t.status = cs.id
+        WHERE tcm.category_id = ?
+        """;
+
+    public static final String GET_TOUR_CATEGORY_BASIC_BY_ID = """
+        SELECT
+            tc.id,
+            tc.name,
+            tc.description,
+            tc.color,
+            tc.hover_color,
+            cs.name AS status
+        FROM tour_category tc
+        LEFT JOIN common_status cs ON tc.status = cs.id
+        WHERE tc.id = ?
+        """;
+
+    public static final String TERMINATE_TOUR_CATEGORY = """
+    UPDATE tour_category
+    SET
+        status = ?,
+        terminated_at = NOW(),
+        terminated_by = ?
+    WHERE id = ?
+    AND terminated_at IS NULL
+    """;
+
+    public static final String INSERT_TOUR_CATEGORY = """
+        INSERT INTO tour_category
+        (name, description, color, hover_color, status, created_at, created_by)
+        VALUES (?, ?, ?, ?, ?, NOW(), ?)
+        """;
+
+    public static final String INSERT_TOUR_CATEGORY_IMAGE = """
+        INSERT INTO tour_category_images
+        (tour_category_id, name, description, image_url, status, created_at, created_by)
+        VALUES (?, ?, ?, ?, ?, NOW(), ?)
+        """;
+
+    public static final String INSERT_TOUR_CATEGORY_MAP_FOR_CATEGORY = """
+        INSERT INTO tour_category_map
+        (tour_id, category_id, is_primary, status, created_at, created_by)
+        VALUES (?, ?, 0, ?, NOW(), ?)
+        """;
+
+    // =========================
+    // BASIC UPDATE
+    // =========================
+    public static final String UPDATE_TOUR_CATEGORY = """
+        UPDATE tour_category
+        SET name = ?,
+            description = ?,
+            color = ?,
+            hover_color = ?,
+            status = ?,
+            updated_at = NOW(),
+            updated_by = ?
+        WHERE id = ? AND terminated_at IS NULL
+        """;
+
+    // =========================
+    // REMOVE TOUR MAPPING (soft delete)
+    // =========================
+    public static final String REMOVE_TOUR_CATEGORY_MAP = """
+        UPDATE tour_category_map
+        SET status = ?,
+            terminated_at = NOW(),
+            terminated_by = ?
+        WHERE category_id = ?
+          AND tour_id = ?
+          AND terminated_at IS NULL
+        """;
+
+    // =========================
+    // REMOVE IMAGE
+    // =========================
+    public static final String REMOVE_TOUR_CATEGORY_IMAGE = """
+        UPDATE tour_category_images
+        SET status = ?,
+            terminated_at = NOW(),
+            terminated_by = ?
+        WHERE id = ?
+          AND tour_category_id = ?
+          AND terminated_at IS NULL
+        """;
+
+    // =========================
+    // UPDATE IMAGE
+    // =========================
+    public static final String UPDATE_TOUR_CATEGORY_IMAGE = """
+        UPDATE tour_category_images
+        SET name = ?,
+            description = ?,
+            image_url = ?,
+            status = ?,
+            updated_at = NOW(),
+            updated_by = ?
+        WHERE id = ?
+          AND tour_category_id = ?
+        """;
+
 }
