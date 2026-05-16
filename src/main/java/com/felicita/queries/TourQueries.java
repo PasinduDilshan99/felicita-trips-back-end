@@ -1903,4 +1903,274 @@ public class TourQueries {
           AND tour_category_id = ?
         """;
 
+    // =====================================================
+    // GET ALL TOUR TYPES
+    // =====================================================
+
+    public static final String GET_ALL_TOUR_TYPES = """
+        SELECT
+            tt.id,
+            tt.name,
+            tt.description,
+            tt.color,
+            tt.hover_color,
+            cs.name AS status
+        FROM tour_type tt
+        LEFT JOIN common_status cs ON tt.status = cs.id
+        WHERE tt.terminated_at IS NULL
+        ORDER BY tt.id DESC
+        """;
+
+    // =====================================================
+    // GET TOUR TYPE BY ID
+    // =====================================================
+
+    public static final String GET_TOUR_TYPE_BY_ID = """
+        SELECT
+            tt.id,
+            tt.name,
+            tt.description,
+            tt.color,
+            tt.hover_color,
+            cs.name AS status,
+            tt.created_at,
+            tt.created_by,
+            tt.updated_at,
+            tt.updated_by,
+            tt.terminated_at,
+            tt.terminated_by,
+            CONCAT(cu.first_name, ' ', cu.last_name) AS created_by_name,
+            CONCAT(uu.first_name, ' ', uu.last_name) AS updated_by_name
+        FROM tour_type tt
+        LEFT JOIN common_status cs ON tt.status = cs.id
+        LEFT JOIN user cu ON tt.created_by = cu.user_id
+        LEFT JOIN user uu ON tt.updated_by = uu.user_id
+        WHERE tt.id = ?
+        """;
+
+    // =====================================================
+    // GET TOUR TYPE BASIC DETAILS BY ID
+    // =====================================================
+
+    public static final String GET_TOUR_TYPE_BASIC_BY_ID = """
+        SELECT
+            tt.id,
+            tt.name,
+            tt.description,
+            tt.color,
+            tt.hover_color,
+            cs.name AS status
+        FROM tour_type tt
+        LEFT JOIN common_status cs ON tt.status = cs.id
+        WHERE tt.id = ?
+        """;
+
+    // =====================================================
+    // GET TOUR TYPE IMAGES
+    // =====================================================
+
+    public static final String GET_TOUR_TYPE_IMAGES = """
+        SELECT
+            id,
+            name,
+            description,
+            image_url,
+            status
+        FROM tour_type_images
+        WHERE tour_type_id = ?
+          AND terminated_at IS NULL
+        ORDER BY id ASC
+        """;
+
+    // =====================================================
+    // GET TOURS FOR TYPE
+    // =====================================================
+
+    public static final String GET_TOURS_BY_TYPE_ID = """
+        SELECT
+            t.tour_id,
+            t.name,
+            t.description,
+            t.duration,
+            t.latitude,
+            t.longitude,
+            t.start_location,
+            t.end_location,
+            s.name AS season,
+            cs.name AS status,
+            ttm.is_primary
+        FROM tour_type_map ttm
+        INNER JOIN tour t
+            ON ttm.tour_id = t.tour_id
+        LEFT JOIN seasons s
+            ON t.season = s.id
+        LEFT JOIN common_status cs
+            ON t.status = cs.id
+        WHERE ttm.type_id = ?
+          AND ttm.terminated_at IS NULL
+        """;
+
+    public static final String TERMINATE_TOUR_TYPE = """
+    UPDATE tour_type
+    SET
+        status = ?,
+        terminated_at = NOW(),
+        terminated_by = ?
+    WHERE id = ?
+      AND terminated_at IS NULL
+    """;
+
+    // =====================================================
+    // INSERT TOUR TYPE
+    // =====================================================
+
+    public static final String INSERT_TOUR_TYPE = """
+        INSERT INTO tour_type
+        (
+            name,
+            description,
+            color,
+            hover_color,
+            status,
+            created_at,
+            created_by
+        )
+        VALUES (?, ?, ?, ?, ?, NOW(), ?)
+        """;
+
+    // =====================================================
+    // INSERT TOUR TYPE IMAGE
+    // =====================================================
+
+    public static final String INSERT_TOUR_TYPE_IMAGE = """
+        INSERT INTO tour_type_images
+        (
+            tour_type_id,
+            name,
+            description,
+            image_url,
+            status,
+            created_at,
+            created_by
+        )
+        VALUES (?, ?, ?, ?, ?, NOW(), ?)
+        """;
+
+    // =====================================================
+    // INSERT TOUR TYPE MAP
+    // =====================================================
+
+    public static final String INSERT_TOUR_TYPE_MAP_TOUR_TYPES = """
+        INSERT INTO tour_type_map
+        (
+            tour_id,
+            type_id,
+            is_primary,
+            status,
+            created_at,
+            created_by
+        )
+        VALUES (?, ?, 0, ?, NOW(), ?)
+        """;
+
+
+    // =====================================================
+    // UPDATE TOUR TYPE
+    // =====================================================
+
+    public static final String UPDATE_TOUR_TYPE = """
+        UPDATE tour_type
+        SET
+            name = ?,
+            description = ?,
+            color = ?,
+            hover_color = ?,
+            status = ?,
+            updated_at = NOW(),
+            updated_by = ?
+        WHERE id = ?
+        """;
+
+    // =====================================================
+    // TERMINATE TOUR TYPE MAP
+    // =====================================================
+
+    public static final String REMOVE_TOURS_FOR_TYPE = """
+        UPDATE tour_type_map
+        SET
+            terminated_at = NOW(),
+            terminated_by = ?,
+            status = ?
+        WHERE type_id = ?
+          AND tour_id = ?
+          AND terminated_at IS NULL
+        """;
+
+    // =====================================================
+    // TERMINATE TOUR TYPE IMAGE
+    // =====================================================
+
+    public static final String REMOVE_TOUR_TYPE_IMAGE = """
+        UPDATE tour_type_images
+        SET
+            terminated_at = NOW(),
+            terminated_by = ?,
+            status = ?
+        WHERE id = ?
+          AND tour_type_id = ?
+          AND terminated_at IS NULL
+        """;
+
+    // =====================================================
+    // UPDATE TOUR TYPE IMAGE
+    // =====================================================
+
+    public static final String UPDATE_TOUR_TYPE_IMAGE = """
+        UPDATE tour_type_images
+        SET
+            name = ?,
+            description = ?,
+            image_url = ?,
+            status = ?,
+            updated_at = NOW(),
+            updated_by = ?
+        WHERE id = ?
+          AND tour_type_id = ?
+        """;
+
+    public static final String BASE_TOUR_SCHEDULE_QUERY = """
+    SELECT
+        ts.id AS tour_schedule_id,
+        ts.name AS tour_schedule_name,
+        ts.assume_start_date,
+        ts.assume_end_date,
+        ts.duration_start,
+        ts.duration_end,
+        ts.special_note,
+        ts.description,
+        ts.status AS schedule_status,
+        ts.created_at,
+        ts.updated_at,
+
+        t.tour_id,
+        t.name AS tour_name,
+        t.description AS tour_description,
+        t.duration,
+        t.start_location,
+        t.end_location,
+        t.season,
+        t.status AS tour_status
+
+    FROM tour_schedule ts
+    JOIN tour t ON t.tour_id = ts.tour_id
+
+    WHERE 1=1
+""";
+
+    public static final String COUNT_TOUR_SCHEDULE_QUERY = """
+    SELECT COUNT(*)
+    FROM tour_schedule ts
+    JOIN tour t ON t.tour_id = ts.tour_id
+    WHERE 1=1
+""";
 }

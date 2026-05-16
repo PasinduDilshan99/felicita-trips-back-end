@@ -665,6 +665,23 @@ public class CommonRepositoryImpl implements CommonRepository {
     }
 
     @Override
+    public List<TourIdAndNameResponse> getTourIdAndNameResponses() {
+
+        String sql = """
+        SELECT tour_id, name
+        FROM tour
+        WHERE status = 1
+        ORDER BY name ASC
+    """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+                TourIdAndNameResponse.builder()
+                        .tourId(rs.getLong("tour_id"))
+                        .tourName(rs.getString("name"))
+                        .build()
+        );
+    }
+    @Override
     public List<DestinationIdAndNameResponse> getDestinationIdAndNameResponses() {
 
         try {

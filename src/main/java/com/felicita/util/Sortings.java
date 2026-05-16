@@ -16,4 +16,17 @@ public class Sortings {
             "createdAt",
             "updatedAt"
     );
+    public static final List<String> ALLOWED_TOUR_SCHEDULE_SORT_COLUMNS = List.of(
+            "name",
+            "tourName",
+            "duration",
+            "startLocation",
+            "endLocation",
+            "season",
+            "status",
+            "assumeStartDate",
+            "assumeEndDate",
+            "createdAt",
+            "updatedAt"
+    );
 }

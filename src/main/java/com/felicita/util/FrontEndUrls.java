@@ -8,9 +8,11 @@ public class FrontEndUrls {
     public static final String VIEW_PACKAGE_DETAILS = "/web-management/packages/view";
 
     public static final String VIEW_ACTIVITY_SCHEDULE_DETAILS = "/web-management/activities-schedules/view";
+    public static final String VIEW_TOUR_SCHEDULE_DETAILS = "/web-management/tours-schedules/view";
 
     public static final String VIEW_ACTIVITY_CATEGORY_DETAILS = "/web-management/activities/category/view";
     public static final String VIEW_TOUR_CATEGORY_DETAILS = "/web-management/tours/category/view";
+    public static final String VIEW_TOUR_TYPE_DETAILS = "/web-management/tours/type/view";
 
     public static final String VIEW_DESTINATION_CATEGORIES_DETAILS = "/web-management/destinations/categories/view";
     public static final String VIEW_PRIVILEGE_DETAILS = "/employee-management/privileges/view";

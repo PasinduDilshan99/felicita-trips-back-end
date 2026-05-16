@@ -5,8 +5,14 @@ import com.felicita.model.dto.TourResponseDto;
 import com.felicita.model.request.*;
 import com.felicita.model.request.activity.category.ActivityCategoryInsertRequest;
 import com.felicita.model.request.activity.category.ActivityCategoryUpdateRequest;
+import com.felicita.model.request.activity.schedule.ActivityScheduleUpdateRequest;
 import com.felicita.model.request.tour.category.TourCategoryInsertRequest;
 import com.felicita.model.request.tour.category.TourCategoryUpdateRequest;
+import com.felicita.model.request.tour.schedule.TourScheduleDataRequest;
+import com.felicita.model.request.tour.schedule.TourScheduleInsertRequest;
+import com.felicita.model.request.tour.schedule.TourScheduleUpdateRequest;
+import com.felicita.model.request.tour.type.TourTypeInsertRequest;
+import com.felicita.model.request.tour.type.TourTypeUpdateRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.activity.category.ActivityCategoryDetailsResponse;
 import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
@@ -15,6 +21,11 @@ import com.felicita.model.response.statistics.TourStatisticsResponse;
 import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
 import com.felicita.model.response.tour.category.TourCategoryAllDetailsResponse;
 import com.felicita.model.response.tour.category.TourCategoryBasicDetailsResponse;
+import com.felicita.model.response.tour.schedule.TourScheduleDetailsResponse;
+import com.felicita.model.response.tour.schedule.TourScheduleParamsResponse;
+import com.felicita.model.response.tour.schedule.TourScheduleWithParamsResponse;
+import com.felicita.model.response.tour.type.TourTypeAllDetailsResponse;
+import com.felicita.model.response.tour.type.TourTypeBasicDetailsResponse;
 import com.felicita.service.TourService;
 import com.felicita.util.Constant;
 import org.slf4j.Logger;
@@ -299,6 +310,102 @@ public class TourController {
         LOGGER.info("{} Start execute update activity {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<UpdateResponse> response = tourService.updateTourCategory(tourCategoryUpdateRequest);
         LOGGER.info("{} End execute update activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/tour-types")
+    public ResponseEntity<CommonResponse<List<TourTypeBasicDetailsResponse>>> getTourTypes() {
+        LOGGER.info("{} Start execute get tour type statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<TourTypeBasicDetailsResponse>> response = tourService.getTourTypes();
+        LOGGER.info("{} End execute get tour type statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/tour-type-details")
+    public ResponseEntity<CommonResponse<TourTypeAllDetailsResponse>> getTourTypeDetailsById(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TourTypeAllDetailsResponse> response = tourService.getTourTypeDetailsById(commonIdRequest);
+        LOGGER.info("{} End execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/tour-type-basic-details")
+    public ResponseEntity<CommonResponse<TourTypeBasicDetailsResponse>> getTourTypeBasicDetailsById(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TourTypeBasicDetailsResponse> response = tourService.getTourTypeBasicDetailsById(commonIdRequest);
+        LOGGER.info("{} End execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/terminate-tour-type")
+    public ResponseEntity<CommonResponse<TerminateResponse>> terminateTourType(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TerminateResponse> response = tourService.terminateTourType(commonIdRequest);
+        LOGGER.info("{} End execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/add-tour-type")
+    public ResponseEntity<CommonResponse<InsertResponse>> insertTourType(@RequestBody TourTypeInsertRequest tourTypeInsertRequest) {
+        LOGGER.info("{} Start execute insert activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = tourService.insertTourType(tourTypeInsertRequest);
+        LOGGER.info("{} End execute insert activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/update-tour-type")
+    public ResponseEntity<CommonResponse<UpdateResponse>> updateTourType(@RequestBody TourTypeUpdateRequest tourTypeUpdateRequest) {
+        LOGGER.info("{} Start execute update activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UpdateResponse> response = tourService.updateTourType(tourTypeUpdateRequest);
+        LOGGER.info("{} End execute update activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/tour-schedule")
+    public ResponseEntity<CommonResponse<TourScheduleWithParamsResponse>> getTourScheduleWithParams(@RequestBody TourScheduleDataRequest tourScheduleDataRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TourScheduleWithParamsResponse> response = tourService.getTourScheduleWithParams(tourScheduleDataRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/tour-schedule-params")
+    public ResponseEntity<CommonResponse<TourScheduleParamsResponse>> getToursScheduleParams() {
+        LOGGER.info("{} Start execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TourScheduleParamsResponse> response = tourService.getToursScheduleParams();
+        LOGGER.info("{} End execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/tour-schedule-details-by-id")
+    public ResponseEntity<CommonResponse<TourScheduleDetailsResponse>> getTourScheduleDetailsById(@RequestBody CommonIdRequest tourScheduleId) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TourScheduleDetailsResponse> response = tourService.getTourScheduleDetailsById(tourScheduleId);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/create-tour-schedule")
+    public ResponseEntity<CommonResponse<InsertResponse>> createTourSchedule(@RequestBody TourScheduleInsertRequest tourScheduleInsertRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = tourService.createTourSchedule(tourScheduleInsertRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/update-tour-schedule")
+    public ResponseEntity<CommonResponse<UpdateResponse>> updateTourSchedule(@RequestBody TourScheduleUpdateRequest tourScheduleUpdateRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UpdateResponse> response = tourService.updateTourSchedule(tourScheduleUpdateRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/terminate-activities-schedule")
+    public ResponseEntity<CommonResponse<TerminateResponse>> termianteTourScheduleById(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TerminateResponse> response = tourService.termianteTourScheduleById(commonIdRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

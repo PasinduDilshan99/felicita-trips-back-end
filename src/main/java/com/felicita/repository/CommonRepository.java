@@ -50,4 +50,6 @@ public interface CommonRepository {
     List<DestinationIdAndNameResponse> getDestinationIdAndNameResponses();
 
     List<ActivityIdAndNameResponse> getActivityIdAndNameResponses();
+
+    List<TourIdAndNameResponse> getTourIdAndNameResponses();
 }

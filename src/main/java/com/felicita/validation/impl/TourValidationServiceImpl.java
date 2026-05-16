@@ -5,6 +5,11 @@ import com.felicita.model.request.TourInsertRequest;
 import com.felicita.model.request.TourUpdateRequest;
 import com.felicita.model.request.tour.category.TourCategoryInsertRequest;
 import com.felicita.model.request.tour.category.TourCategoryUpdateRequest;
+import com.felicita.model.request.tour.schedule.TourScheduleDataRequest;
+import com.felicita.model.request.tour.schedule.TourScheduleInsertRequest;
+import com.felicita.model.request.tour.schedule.TourScheduleUpdateRequest;
+import com.felicita.model.request.tour.type.TourTypeInsertRequest;
+import com.felicita.model.request.tour.type.TourTypeUpdateRequest;
 import com.felicita.model.response.TourTerminateRequest;
 import com.felicita.validation.CommonValidationService;
 import com.felicita.validation.TourValidationService;
@@ -52,6 +57,31 @@ public class TourValidationServiceImpl implements TourValidationService {
 
     @Override
     public void validateTourCategoryInsertRequest(TourCategoryInsertRequest tourCategoryInsertRequest) {
+
+    }
+
+    @Override
+    public void validateTourTypeInsertRequest(TourTypeInsertRequest tourTypeInsertRequest) {
+
+    }
+
+    @Override
+    public void vaidateTourTypeUpdateRequest(TourTypeUpdateRequest tourTypeUpdateRequest) {
+
+    }
+
+    @Override
+    public void validateTourScheduleDataRequest(TourScheduleDataRequest tourScheduleDataRequest) {
+
+    }
+
+    @Override
+    public void validateTourScheduleInsertRequest(TourScheduleInsertRequest tourScheduleInsertRequest) {
+
+    }
+
+    @Override
+    public void validateTourScheduleUpdateRequest(TourScheduleUpdateRequest tourScheduleUpdateRequest) {
 
     }
 }

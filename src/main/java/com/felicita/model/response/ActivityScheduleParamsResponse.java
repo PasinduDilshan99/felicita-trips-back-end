@@ -20,5 +20,4 @@ public class ActivityScheduleParamsResponse {
     private List<PackageScheduleIdAndNameResponse> packageScheduleIdAndNameResponses;
     private List<SeasonIdAndNameResponse> seasonIdAndNameResponses;
     private List<SortByResponse> sortByResponses;
-
 }

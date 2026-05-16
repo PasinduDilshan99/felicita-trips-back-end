@@ -1202,6 +1202,7 @@ public class ActivitiesServiceImpl implements ActivitiesService {
             String body = activityEmailHelperService.buildActivityScheduleTerminateSuccessfullBody(loggedUser, activityScheduleResponse);
 
 //            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
             return new CommonResponse<>(
                     CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
                     CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
