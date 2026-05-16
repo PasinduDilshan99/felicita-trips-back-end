@@ -252,6 +252,29 @@ public class CommonServiceImpl implements CommonService {
     }
 
     @Override
+    public List<PackageIdAndNamesResponse> getPacakgeIdAndNameResponses() {
+        LOGGER.info("Start fetching package id and name responses");
+        try {
+            List<PackageIdAndNamesResponse> responses = commonRepository.getPackageIdAndNameResponses();
+
+            if (responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching package id and name responses");
+        }
+    }
+
+    @Override
     public String generateRandomOtp() {
         SecureRandom secureRandom = new SecureRandom();
         StringBuilder otp = new StringBuilder();

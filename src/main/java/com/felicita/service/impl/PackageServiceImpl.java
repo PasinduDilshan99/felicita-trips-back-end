@@ -4,9 +4,24 @@ import com.felicita.email.PackageEmailHelperService;
 import com.felicita.exception.*;
 import com.felicita.model.dto.*;
 import com.felicita.model.enums.*;
-import com.felicita.model.other.PackageComparisonResult;
+import com.felicita.model.other.*;
 import com.felicita.model.request.*;
+import com.felicita.model.request.packages.schedule.PackageScheduleDataRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleInsertRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleUpdateRequest;
+import com.felicita.model.request.packages.type.PackageTypeImageInsertRequest;
+import com.felicita.model.request.packages.type.PackageTypeImageUpdateRequest;
+import com.felicita.model.request.packages.type.PackageTypeInsertRequest;
+import com.felicita.model.request.packages.type.PackageTypeUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.SortByResponse;
+import com.felicita.model.response.packages.schedule.PacakgeScheduleBasicDetailsResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleAllDetailsResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleParamsResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleWithParamsResponse;
+import com.felicita.model.response.packages.type.PackageTypeAllDetailsResponse;
+import com.felicita.model.response.packages.type.PackageTypeBasicDetailsResponse;
+import com.felicita.model.response.packages.type.PackageTypeImageResponse;
 import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.PackageStatisticsResponse;
 import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
@@ -27,7 +42,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.felicita.util.Constant.COMPANY_EMAIL;
-import static com.felicita.util.FrontEndUrls.VIEW_PACKAGE_DETAILS;
+import static com.felicita.util.FrontEndUrls.*;
 
 @Service
 public class PackageServiceImpl implements PackageService {
@@ -1164,6 +1179,630 @@ public class PackageServiceImpl implements PackageService {
         }
     }
 
+    @Override
+    public CommonResponse<List<PackageTypeBasicDetailsResponse>> getPackageTypes() {
+        LOGGER.info("Start fetching package types from repository");
+        try {
+            List<PackageTypeBasicDetailsResponse> packageTypes = packageRepository.getPackageTypes();
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageTypes,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package types: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package types from database");
+        } finally {
+            LOGGER.info("End fetching package types from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<PackageTypeAllDetailsResponse> getPackageTypeDetailsById(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start fetching package type details by id from repository");
+        try {
+            PackageTypeAllDetailsResponse packageTypeDetails = packageRepository.getPackageTypeDetailsById(commonIdRequest);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageTypeDetails,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package type details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package type details from database");
+        } finally {
+            LOGGER.info("End fetching package type details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<PackageTypeBasicDetailsResponse> getPackageTypeBasicDetailsById(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start fetching package type basic details by id from repository");
+        try {
+            PackageTypeBasicDetailsResponse packageTypeBasicDetails = packageRepository.getPackageTypeBasicDetailsById(commonIdRequest);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageTypeBasicDetails,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package type basic details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package type basic details from database");
+        } finally {
+            LOGGER.info("End fetching package type basic details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TerminateResponse> terminatePackageType(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start terminating package type by id from repository");
+        try {
+            packageValidationService.validateCommonIdRequest(commonIdRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            PackageTypeBasicDetailsResponse packageTypeResponse = getPackageTypeBasicDetailsById(commonIdRequest).getData();
+
+            packageRepository.terminatePackageType(commonIdRequest, userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.PACKAGE_TYPE_TERMINATED.name())
+                    .priority(Priority.HIGH.name())
+                    .title("Package Type Terminated")
+                    .message("The package type '" + packageTypeResponse.getTypeName() + "' has been terminated.")
+                    .actionUrl(VIEW_PACKAGE_TYPE_DETAILS + "/" + packageTypeResponse.getTypeId())
+                    .actionText("View Package Type")
+                    .icon("PackageX")
+                    .color("#EF4444")
+                    .metadata(Map.of(
+                            "packageTypeId", packageTypeResponse.getTypeId(),
+                            "packageTypeName", packageTypeResponse.getTypeName(),
+                            "status", packageTypeResponse.getStatus(),
+                            "terminatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.PACKAGE_TYPE_TERMINATE.name())
+                    .sourceModule(SourceModule.PACKAGE_TYPE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.PACKAGE_TYPE_TERMINATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+
+            String subject = packageEmailHelperService.buildPackageTypeTerminateSuccessfullSubject(loggedUser, packageTypeResponse);
+            String body = packageEmailHelperService.buildPackageTypeTerminateSuccessfullBody(loggedUser, packageTypeResponse);
+
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_MESSAGE,
+                    new TerminateResponse(""),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while terminating package type: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to terminate package type in database");
+        } finally {
+            LOGGER.info("End terminating package type from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<InsertResponse> insertPackageType(PackageTypeInsertRequest packageTypeInsertRequest) {
+        LOGGER.info("Start inserting package type from repository");
+        try {
+            packageValidationService.validatePackageTypeInsertRequest(packageTypeInsertRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            Long packageTypeId = packageRepository.insertPackageTypeBasicDetails(packageTypeInsertRequest, userId);
+            packageRepository.insertPackageTypeImages(packageTypeId, packageTypeInsertRequest.getImages(), userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.PACKAGE_TYPE_CREATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("New Package Type Created")
+                    .message("A new package type '" + packageTypeInsertRequest.getTypeName() + "' has been created.")
+                    .actionUrl(VIEW_PACKAGE_TYPE_DETAILS + "/" + packageTypeId)
+                    .actionText("View Package Type")
+                    .icon("PackagePlus")
+                    .color("#10B981")
+                    .metadata(Map.of(
+                            "packageTypeId", packageTypeId,
+                            "packageTypeName", packageTypeInsertRequest.getTypeName(),
+                            "createdBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.PACKAGE_TYPE_CREATE.name())
+                    .sourceModule(SourceModule.PACKAGE_TYPE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            if (packageTypeId != null) {
+                List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.PACKAGE_TYPE_CREATED.name(), supervisorUserIds);
+                emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+                emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+                String body = packageEmailHelperService.buildPackageTypeCreateSuccessfullBody(packageTypeId, packageTypeInsertRequest, loggedUser);
+                String subject = packageEmailHelperService.buildPackageTypeCreateSuccessfullSubject(packageTypeId, packageTypeInsertRequest, loggedUser);
+//                emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_MESSAGE,
+                    new InsertResponse(""),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while inserting package type: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to insert package type in database");
+        } finally {
+            LOGGER.info("End inserting package type from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<UpdateResponse> updatePackageType(PackageTypeUpdateRequest packageTypeUpdateRequest) {
+        LOGGER.info("Start updating package type from repository");
+        try {
+            packageValidationService.validatePackageTypeUpdateRequest(packageTypeUpdateRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            PackageTypeBasicDetailsResponse previousPackageTypeDetails = getPackageTypeBasicDetailsById(new CommonIdRequest(packageTypeUpdateRequest.getTypeId())).getData();
+
+            packageRepository.updatePackageTypeBasicDetails(packageTypeUpdateRequest, userId);
+
+            packageRepository.insertPackageTypeImages(packageTypeUpdateRequest.getTypeId(), packageTypeUpdateRequest.getAddImages(), userId);
+            packageRepository.removePackageTypeImages(packageTypeUpdateRequest.getTypeId(), packageTypeUpdateRequest.getRemoveImageIds(), userId);
+            packageRepository.updatePackageTypeImages(packageTypeUpdateRequest.getTypeId(), packageTypeUpdateRequest.getUpdateImages(), userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.PACKAGE_TYPE_UPDATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("Package Type Updated")
+                    .message("The package type '" + packageTypeUpdateRequest.getTypeName() + "' has been updated.")
+                    .actionUrl(VIEW_PACKAGE_TYPE_DETAILS + "/" + packageTypeUpdateRequest.getTypeId())
+                    .actionText("View Package Type")
+                    .icon("PackageEdit")
+                    .color("#3B82F6")
+                    .metadata(Map.of(
+                            "packageTypeId", packageTypeUpdateRequest.getTypeId(),
+                            "packageTypeName", packageTypeUpdateRequest.getTypeName(),
+                            "status", packageTypeUpdateRequest.getStatus(),
+                            "updatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.PACKAGE_TYPE_UPDATE.name())
+                    .sourceModule(SourceModule.PACKAGE_TYPE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            PackageTypeComparisonResult comparisonResult = comparePackageTypeUpdates(
+                    previousPackageTypeDetails,
+                    packageTypeUpdateRequest,
+                    loggedUser
+            );
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.PACKAGE_TYPE_UPDATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+            String subject = packageEmailHelperService.buildPackageTypeUpdateSuccessfullSubject(loggedUser, packageTypeUpdateRequest);
+            String body = packageEmailHelperService.buildPackageTypeUpdateSuccessfullBody(loggedUser, packageTypeUpdateRequest, comparisonResult);
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
+                    new UpdateResponse(),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while updating package type: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to update package type in database");
+        } finally {
+            LOGGER.info("End updating package type from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<PackageScheduleWithParamsResponse> getPackageScheduleWithParams(PackageScheduleDataRequest packageScheduleDataRequest) {
+        LOGGER.info("Start fetching package schedule with params from repository");
+        try {
+            packageValidationService.validatePackageScheduleDataRequest(packageValidationService);
+            PackageScheduleWithParamsResponse packageScheduleWithParams = packageRepository.getPackageScheduleWithParams(packageScheduleDataRequest);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageScheduleWithParams,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package schedule with params: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package schedule with params from database");
+        } finally {
+            LOGGER.info("End fetching package schedule with params from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<PackageScheduleParamsResponse> getPackageScheduleParams() {
+        LOGGER.info("Start fetching package schedule params from repository");
+        try {
+            PackageScheduleParamsResponse packageScheduleParams = new PackageScheduleParamsResponse();
+
+            packageScheduleParams.setTourIdAndNameResponses(commonService.getTourIdAndNameResponses());
+            packageScheduleParams.setPackageIdAndNamesResponses(commonService.getPacakgeIdAndNameResponses());
+            packageScheduleParams.setTourScheduleIdAndNameResponses(commonService.getTourScheduleIdAndNameResponses());
+
+            List<SortByResponse> sortByResponses = List.of(
+                    SortByResponse.builder()
+                            .sortByDisplayName("Name")
+                            .sortBy("name")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Package Name")
+                            .sortBy("packageName")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Start Date")
+                            .sortBy("startDate")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("End Date")
+                            .sortBy("endDate")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Duration Start")
+                            .sortBy("durationStart")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Duration End")
+                            .sortBy("durationEnd")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Status")
+                            .sortBy("status")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Tour Schedule Name")
+                            .sortBy("tourScheduleName")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Created At")
+                            .sortBy("createdAt")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Updated At")
+                            .sortBy("updatedAt")
+                            .build()
+            );
+
+            packageScheduleParams.setSortByResponses(sortByResponses);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageScheduleParams,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package schedule params: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package schedule params from database");
+        } finally {
+            LOGGER.info("End fetching package schedule params from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<PackageScheduleAllDetailsResponse> getPackageScheduleDetailsById(CommonIdRequest packageScheduleId) {
+        LOGGER.info("Start fetching package schedule details by id from repository");
+        try {
+            PackageScheduleAllDetailsResponse packageScheduleDetails = packageRepository.getPackageScheduleDetailsById(packageScheduleId);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageScheduleDetails,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching package schedule details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch package schedule details from database");
+        } finally {
+            LOGGER.info("End fetching package schedule details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<InsertResponse> createPackageSchedule(PackageScheduleInsertRequest packageScheduleInsertRequest) {
+        LOGGER.info("Start creating package schedule from repository");
+        try {
+            packageValidationService.validatePackageScheduleInsertRequest(packageScheduleInsertRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            Long packageScheduleId = packageRepository.createPackageSchedule(packageScheduleInsertRequest);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.PACKAGE_SCHEDULE_CREATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("New Package Schedule Created")
+                    .message("A new package schedule '" + packageScheduleInsertRequest.getPackageScheduleName() + "' has been created.")
+                    .actionUrl(VIEW_PACKAGE_SCHEDULE_DETAILS + "/" + packageScheduleId)
+                    .actionText("View Package Schedule")
+                    .icon("CalendarPlus")
+                    .color("#10B981")
+                    .metadata(Map.of(
+                            "packageScheduleId", packageScheduleId,
+                            "packageScheduleName", packageScheduleInsertRequest.getPackageScheduleName(),
+                            "packageId", packageScheduleInsertRequest.getPackageId(),
+                            "createdBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.PACKAGE_SCHEDULE_CREATE.name())
+                    .sourceModule(SourceModule.PACKAGE_SCHEDULE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            if (packageScheduleId != null) {
+                List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.PACKAGE_SCHEDULE_CREATED.name(), supervisorUserIds);
+                emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+                emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+                String body = packageEmailHelperService.buildPackageScheduleCreateSuccessfullBody(packageScheduleId, packageScheduleInsertRequest, loggedUser);
+                String subject = packageEmailHelperService.buildPackageScheduleCreateSuccessfullSubject(packageScheduleId, packageScheduleInsertRequest, loggedUser);
+//                emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_MESSAGE,
+                    new InsertResponse(),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while creating package schedule: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to create package schedule in database");
+        } finally {
+            LOGGER.info("End creating package schedule from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<UpdateResponse> updatePackageSchedule(PackageScheduleUpdateRequest packageScheduleUpdateRequest) {
+        LOGGER.info("Start updating package schedule from repository");
+        try {
+            packageValidationService.validatePackageScheduleUpdateRequest(packageScheduleUpdateRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            PacakgeScheduleBasicDetailsResponse previousPackageScheduleResponse = packageRepository.getPackageScheduleBasicDetails(packageScheduleUpdateRequest.getPackageScheduleId());
+
+            packageRepository.updatePackageSchedule(packageScheduleUpdateRequest, userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.PACKAGE_SCHEDULE_UPDATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("Package Schedule Updated")
+                    .message("The package schedule '" + packageScheduleUpdateRequest.getPackageScheduleName() + "' has been updated.")
+                    .actionUrl(VIEW_PACKAGE_SCHEDULE_DETAILS + "/" + packageScheduleUpdateRequest.getPackageScheduleId())
+                    .actionText("View Package Schedule")
+                    .icon("CalendarClock")
+                    .color("#3B82F6")
+                    .metadata(Map.of(
+                            "packageScheduleId", packageScheduleUpdateRequest.getPackageScheduleId(),
+                            "packageScheduleName", packageScheduleUpdateRequest.getPackageScheduleName(),
+                            "packageId", packageScheduleUpdateRequest.getPackageId(),
+                            "status", packageScheduleUpdateRequest.getStatus(),
+                            "updatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.PACKAGE_SCHEDULE_UPDATE.name())
+                    .sourceModule(SourceModule.PACKAGE_SCHEDULE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            PcakageScheduleComparisonResult comparisonResult = comparePcakageScheduleUpdates(
+                    packageScheduleUpdateRequest,
+                    previousPackageScheduleResponse,
+                    loggedUser
+            );
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.PACKAGE_SCHEDULE_UPDATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+            String subject = packageEmailHelperService.buildPackageScheduleUpdateSuccessfullSubject(loggedUser, packageScheduleUpdateRequest);
+            String body = packageEmailHelperService.buildPackageScheduleUpdateSuccessfullBody(loggedUser, packageScheduleUpdateRequest, comparisonResult);
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
+                    new UpdateResponse(),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while updating package schedule: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to update package schedule in database");
+        } finally {
+            LOGGER.info("End updating package schedule from repository");
+        }
+    }
+
+
+    @Override
+    public CommonResponse<TerminateResponse> termiantePackageScheduleById(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start terminating package schedule by id from repository");
+        try {
+            packageValidationService.validateCommonIdRequest(commonIdRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            PacakgeScheduleBasicDetailsResponse packageScheduleResponse = packageRepository.getPackageScheduleBasicDetails(commonIdRequest.getId());
+
+            packageRepository.terminatePackageScheduleById(commonIdRequest, userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.PACKAGE_SCHEDULE_TERMINATED.name())
+                    .priority(Priority.HIGH.name())
+                    .title("Package Schedule Terminated")
+                    .message("The package schedule '" + packageScheduleResponse.getPackageScheduleName() + "' has been terminated.")
+                    .actionUrl(VIEW_PACKAGE_SCHEDULE_DETAILS + "/" + packageScheduleResponse.getPackageScheduleId())
+                    .actionText("View Package Schedule")
+                    .icon("CalendarX")
+                    .color("#EF4444")
+                    .metadata(Map.of(
+                            "packageScheduleId", packageScheduleResponse.getPackageScheduleId(),
+                            "packageScheduleName", packageScheduleResponse.getPackageScheduleName(),
+                            "packageId", packageScheduleResponse.getPackageId(),
+                            "status", packageScheduleResponse.getStatus(),
+                            "terminatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.PACKAGE_SCHEDULE_TERMINATE.name())
+                    .sourceModule(SourceModule.PACKAGE_SCHEDULE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.PACKAGE_SCHEDULE_TERMINATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+
+            String subject = packageEmailHelperService.buildPackageScheduleTerminateSuccessfullSubject(loggedUser, packageScheduleResponse);
+            String body = packageEmailHelperService.buildPackageScheduleTerminateSuccessfullBody(loggedUser, packageScheduleResponse);
+
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_MESSAGE,
+                    new TerminateResponse(""),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while terminating package schedule: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to terminate package schedule in database");
+        } finally {
+            LOGGER.info("End terminating package schedule from repository");
+        }
+    }
+
     private PackageComparisonResult comparePackageUpdates(
             PackageUpdateRequest packageUpdateRequest,
             PackageAllDetailsResponse previousPackage) {
@@ -1641,6 +2280,651 @@ public class PackageServiceImpl implements PackageService {
         }
 
         return summary.toString().trim();
+    }
+
+    private PackageTypeComparisonResult comparePackageTypeUpdates(
+            PackageTypeBasicDetailsResponse previousPackageTypeDetails,
+            PackageTypeUpdateRequest packageTypeUpdateRequest,
+            User loggedUser) {
+
+        PackageTypeComparisonResult.PackageTypeComparisonResultBuilder resultBuilder =
+                PackageTypeComparisonResult.builder();
+
+        List<PackageTypeComparisonResult.FieldChange> fieldChanges = new ArrayList<>();
+        List<String> changes = new ArrayList<>();
+        boolean hasChanges = false;
+        List<String> warnings = new ArrayList<>();
+
+        // Compare typeName
+        if (packageTypeUpdateRequest.getTypeName() != null &&
+                previousPackageTypeDetails.getTypeName() != null &&
+                !packageTypeUpdateRequest.getTypeName().equals(previousPackageTypeDetails.getTypeName())) {
+            changes.add(String.format("Type Name changed from '%s' to '%s'",
+                    previousPackageTypeDetails.getTypeName(),
+                    packageTypeUpdateRequest.getTypeName()));
+            fieldChanges.add(new PackageTypeComparisonResult.FieldChange(
+                    "typeName",
+                    previousPackageTypeDetails.getTypeName(),
+                    packageTypeUpdateRequest.getTypeName(),
+                    "Type Name"));
+            hasChanges = true;
+        }
+
+        // Compare description
+        if (!Objects.equals(packageTypeUpdateRequest.getDescription(), previousPackageTypeDetails.getDescription())) {
+            String oldDesc = previousPackageTypeDetails.getDescription() != null ?
+                    previousPackageTypeDetails.getDescription() : "null";
+            String newDesc = packageTypeUpdateRequest.getDescription() != null ?
+                    packageTypeUpdateRequest.getDescription() : "null";
+            changes.add(String.format("Description changed from '%s' to '%s'", oldDesc, newDesc));
+            fieldChanges.add(new PackageTypeComparisonResult.FieldChange(
+                    "description",
+                    previousPackageTypeDetails.getDescription(),
+                    packageTypeUpdateRequest.getDescription(),
+                    "Description"));
+            hasChanges = true;
+        }
+
+        // Validate description length
+        if (packageTypeUpdateRequest.getDescription() != null &&
+                packageTypeUpdateRequest.getDescription().length() > 500) {
+            warnings.add("Warning: Description is very long (>500 characters), consider shortening for better display");
+        }
+
+        // Compare color
+        if (packageTypeUpdateRequest.getColor() != null &&
+                previousPackageTypeDetails.getColor() != null &&
+                !packageTypeUpdateRequest.getColor().equals(previousPackageTypeDetails.getColor())) {
+            changes.add(String.format("Color changed from '%s' to '%s'",
+                    previousPackageTypeDetails.getColor(),
+                    packageTypeUpdateRequest.getColor()));
+            fieldChanges.add(new PackageTypeComparisonResult.FieldChange(
+                    "color",
+                    previousPackageTypeDetails.getColor(),
+                    packageTypeUpdateRequest.getColor(),
+                    "Color"));
+            hasChanges = true;
+        }
+
+        // Validate color format (basic hex validation)
+        if (packageTypeUpdateRequest.getColor() != null &&
+                !packageTypeUpdateRequest.getColor().matches("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$")) {
+            warnings.add(String.format("Warning: Color '%s' may not be a valid hex color code",
+                    packageTypeUpdateRequest.getColor()));
+        }
+
+        // Compare hoverColor
+        if (packageTypeUpdateRequest.getHoverColor() != null &&
+                previousPackageTypeDetails.getHoverColor() != null &&
+                !packageTypeUpdateRequest.getHoverColor().equals(previousPackageTypeDetails.getHoverColor())) {
+            changes.add(String.format("Hover Color changed from '%s' to '%s'",
+                    previousPackageTypeDetails.getHoverColor(),
+                    packageTypeUpdateRequest.getHoverColor()));
+            fieldChanges.add(new PackageTypeComparisonResult.FieldChange(
+                    "hoverColor",
+                    previousPackageTypeDetails.getHoverColor(),
+                    packageTypeUpdateRequest.getHoverColor(),
+                    "Hover Color"));
+            hasChanges = true;
+        }
+
+        // Validate hover color format
+        if (packageTypeUpdateRequest.getHoverColor() != null &&
+                !packageTypeUpdateRequest.getHoverColor().matches("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$")) {
+            warnings.add(String.format("Warning: Hover Color '%s' may not be a valid hex color code",
+                    packageTypeUpdateRequest.getHoverColor()));
+        }
+
+        // Compare status
+        String oldStatus = previousPackageTypeDetails.getStatus();
+        String newStatus = packageTypeUpdateRequest.getStatus();
+        if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
+            changes.add(String.format("Status changed from '%s' to '%s'", oldStatus, newStatus));
+            fieldChanges.add(new PackageTypeComparisonResult.FieldChange(
+                    "status",
+                    oldStatus,
+                    newStatus,
+                    "Status"));
+            hasChanges = true;
+
+            // Status change warnings
+            if ("INACTIVE".equals(newStatus)) {
+                warnings.add("Warning: Changing status to INACTIVE will hide this package type from users");
+            } else if ("ACTIVE".equals(newStatus) && "INACTIVE".equals(oldStatus)) {
+                warnings.add("Info: Reactivating this package type will make it visible to users again");
+            } else if ("DRAFT".equals(newStatus)) {
+                warnings.add("Note: Package type is in DRAFT mode and not publicly visible");
+            }
+        }
+
+        // Handle images to add
+        List<PackageTypeComparisonResult.ImageChange> imagesToAdd = new ArrayList<>();
+        if (packageTypeUpdateRequest.getAddImages() != null &&
+                !packageTypeUpdateRequest.getAddImages().isEmpty()) {
+
+            int imageCount = 0;
+            for (PackageTypeImageInsertRequest imageRequest : packageTypeUpdateRequest.getAddImages()) {
+                // Validate required fields
+                if (imageRequest.getName() == null || imageRequest.getName().trim().isEmpty()) {
+                    warnings.add(String.format("Warning: Image %d has no name, skipping", imageCount + 1));
+                    continue;
+                }
+
+                if (imageRequest.getImageUrl() == null || imageRequest.getImageUrl().trim().isEmpty()) {
+                    warnings.add(String.format("Warning: Image '%s' has no URL", imageRequest.getName()));
+                }
+
+                PackageTypeComparisonResult.ImageChange imageChange =
+                        PackageTypeComparisonResult.ImageChange.builder()
+                                .name(imageRequest.getName())
+                                .description(imageRequest.getDescription())
+                                .imageUrl(imageRequest.getImageUrl())
+                                .status(imageRequest.getStatus() != null ? imageRequest.getStatus() : "ACTIVE")
+                                .build();
+                imagesToAdd.add(imageChange);
+                changes.add(String.format("Image to add: %s", imageRequest.getName()));
+                imageCount++;
+            }
+
+            if (!imagesToAdd.isEmpty()) {
+                hasChanges = true;
+            }
+        }
+
+        // Handle images to remove
+        List<Long> imagesToRemove = new ArrayList<>();
+        if (packageTypeUpdateRequest.getRemoveImageIds() != null &&
+                !packageTypeUpdateRequest.getRemoveImageIds().isEmpty()) {
+
+            // Check if images exist in the previous response
+            if (previousPackageTypeDetails.getImages() != null) {
+                List<Long> existingImageIds = previousPackageTypeDetails.getImages().stream()
+                        .map(PackageTypeImageResponse::getImageId)
+                        .collect(Collectors.toList());
+
+                List<Long> nonExistentImages = packageTypeUpdateRequest.getRemoveImageIds().stream()
+                        .filter(id -> !existingImageIds.contains(id))
+                        .collect(Collectors.toList());
+
+                if (!nonExistentImages.isEmpty()) {
+                    warnings.add(String.format("Warning: Some images to remove do not exist: %s", nonExistentImages));
+                }
+            }
+
+            imagesToRemove.addAll(packageTypeUpdateRequest.getRemoveImageIds());
+            changes.add(String.format("Images to remove IDs: %s", packageTypeUpdateRequest.getRemoveImageIds()));
+            hasChanges = true;
+        }
+
+        // Handle images to update
+        List<PackageTypeComparisonResult.ImageUpdateChange> imagesToUpdate = new ArrayList<>();
+        if (packageTypeUpdateRequest.getUpdateImages() != null &&
+                !packageTypeUpdateRequest.getUpdateImages().isEmpty()) {
+
+            // Find existing images in previous response for comparison
+            Map<Long, PackageTypeImageResponse> existingImagesMap = new HashMap<>();
+            if (previousPackageTypeDetails.getImages() != null) {
+                existingImagesMap = previousPackageTypeDetails.getImages().stream()
+                        .collect(Collectors.toMap(
+                                PackageTypeImageResponse::getImageId,
+                                image -> image
+                        ));
+            }
+
+            for (PackageTypeImageUpdateRequest updateRequest : packageTypeUpdateRequest.getUpdateImages()) {
+                PackageTypeImageResponse existingImage = existingImagesMap.get(updateRequest.getImageId());
+
+                if (existingImage != null) {
+                    // Check if there are actual changes
+                    boolean hasImageChanges = false;
+                    String oldName = existingImage.getName();
+                    String newName = updateRequest.getName();
+                    String oldDescription = existingImage.getDescription();
+                    String newDescription = updateRequest.getDescription();
+                    String oldImageUrl = existingImage.getImageUrl();
+                    String newImageUrl = updateRequest.getImageUrl();
+                    String oldImgStatus = existingImage.getStatus();
+                    String newImgStatus = updateRequest.getStatus();
+
+                    if (!Objects.equals(oldName, newName) && newName != null && !newName.trim().isEmpty()) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d name changed from '%s' to '%s'",
+                                updateRequest.getImageId(), oldName, newName));
+                    } else if (newName != null && newName.trim().isEmpty()) {
+                        warnings.add(String.format("Warning: Image ID %d has empty name, update skipped",
+                                updateRequest.getImageId()));
+                    }
+
+                    if (!Objects.equals(oldDescription, newDescription) && newDescription != null) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d description changed",
+                                updateRequest.getImageId()));
+                    }
+
+                    if (!Objects.equals(oldImageUrl, newImageUrl) && newImageUrl != null && !newImageUrl.trim().isEmpty()) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d URL changed", updateRequest.getImageId()));
+                    } else if (newImageUrl != null && newImageUrl.trim().isEmpty()) {
+                        warnings.add(String.format("Warning: Image ID %d has empty URL", updateRequest.getImageId()));
+                    }
+
+                    if (!Objects.equals(oldImgStatus, newImgStatus) && newImgStatus != null) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d status changed from '%s' to '%s'",
+                                updateRequest.getImageId(), oldImgStatus, newImgStatus));
+                    }
+
+                    if (hasImageChanges) {
+                        PackageTypeComparisonResult.ImageUpdateChange imageUpdateChange =
+                                PackageTypeComparisonResult.ImageUpdateChange.builder()
+                                        .imageId(updateRequest.getImageId())
+                                        .oldName(oldName)
+                                        .newName(newName)
+                                        .oldDescription(oldDescription)
+                                        .newDescription(newDescription)
+                                        .oldImageUrl(oldImageUrl)
+                                        .newImageUrl(newImageUrl)
+                                        .oldStatus(oldImgStatus)
+                                        .newStatus(newImgStatus)
+                                        .build();
+                        imagesToUpdate.add(imageUpdateChange);
+                        hasChanges = true;
+                    }
+                } else {
+                    warnings.add(String.format("Warning: Image with ID %d not found for update",
+                            updateRequest.getImageId()));
+                }
+            }
+        }
+
+        // Additional warnings for image operations
+        if (!imagesToAdd.isEmpty() && imagesToAdd.size() > 10) {
+            warnings.add("Warning: Adding more than 10 images at once might impact performance");
+        }
+
+        if (!imagesToRemove.isEmpty() && !imagesToAdd.isEmpty()) {
+            warnings.add("Note: Adding and removing images in the same operation");
+        }
+
+        // Check for duplicate image names in add operation
+        if (imagesToAdd.size() > 1) {
+            Set<String> imageNames = new HashSet<>();
+            List<String> duplicateNames = new ArrayList<>();
+            for (PackageTypeComparisonResult.ImageChange image : imagesToAdd) {
+                if (image.getName() != null && !imageNames.add(image.getName())) {
+                    duplicateNames.add(image.getName());
+                }
+            }
+            if (!duplicateNames.isEmpty()) {
+                warnings.add(String.format("Warning: Duplicate image names found: %s", duplicateNames));
+            }
+        }
+
+        // Validate type name length
+        if (packageTypeUpdateRequest.getTypeName() != null) {
+            if (packageTypeUpdateRequest.getTypeName().trim().isEmpty()) {
+                warnings.add("Warning: Type name is empty, this might cause issues");
+            } else if (packageTypeUpdateRequest.getTypeName().length() > 100) {
+                warnings.add("Warning: Type name is very long (>100 characters), consider shortening");
+            }
+        }
+
+        // Check if all updates are empty
+        boolean hasNoUpdates = (packageTypeUpdateRequest.getTypeName() == null ||
+                packageTypeUpdateRequest.getTypeName().equals(previousPackageTypeDetails.getTypeName())) &&
+                (packageTypeUpdateRequest.getDescription() == null ||
+                        Objects.equals(packageTypeUpdateRequest.getDescription(), previousPackageTypeDetails.getDescription())) &&
+                (packageTypeUpdateRequest.getColor() == null ||
+                        Objects.equals(packageTypeUpdateRequest.getColor(), previousPackageTypeDetails.getColor())) &&
+                (packageTypeUpdateRequest.getHoverColor() == null ||
+                        Objects.equals(packageTypeUpdateRequest.getHoverColor(), previousPackageTypeDetails.getHoverColor())) &&
+                (packageTypeUpdateRequest.getStatus() == null ||
+                        Objects.equals(packageTypeUpdateRequest.getStatus(), previousPackageTypeDetails.getStatus())) &&
+                (packageTypeUpdateRequest.getAddImages() == null || packageTypeUpdateRequest.getAddImages().isEmpty()) &&
+                (packageTypeUpdateRequest.getUpdateImages() == null || packageTypeUpdateRequest.getUpdateImages().isEmpty()) &&
+                (packageTypeUpdateRequest.getRemoveImageIds() == null || packageTypeUpdateRequest.getRemoveImageIds().isEmpty());
+
+        if (hasNoUpdates && !hasChanges) {
+            changes.add("No changes detected in package type");
+        }
+
+        // Build the result
+        return resultBuilder
+                .fieldChanges(fieldChanges)
+                .changes(changes)
+                .hasChanges(hasChanges)
+                .warnings(warnings)
+                .imagesToAdd(imagesToAdd)
+                .imagesToRemove(imagesToRemove)
+                .imagesToUpdate(imagesToUpdate)
+                .oldStatus(oldStatus)
+                .newStatus(newStatus)
+                .changedBy(loggedUser != null ?
+                        loggedUser.getFirstName() + " " + loggedUser.getLastName() : "Unknown")
+                .changedByUserId(loggedUser != null ? loggedUser.getId() : null)
+                .changeTimestamp(new Date().toString())
+                .build();
+    }
+
+    private PcakageScheduleComparisonResult comparePcakageScheduleUpdates(
+            PackageScheduleUpdateRequest packageScheduleUpdateRequest,
+            PacakgeScheduleBasicDetailsResponse previousPackageScheduleResponse,
+            User loggedUser) {
+
+        PcakageScheduleComparisonResult.PcakageScheduleComparisonResultBuilder resultBuilder =
+                PcakageScheduleComparisonResult.builder();
+
+        List<PcakageScheduleComparisonResult.FieldChange> fieldChanges = new ArrayList<>();
+        List<String> changes = new ArrayList<>();
+        boolean hasChanges = false;
+        List<String> warnings = new ArrayList<>();
+
+        boolean isDateRangeValid = true;
+        boolean isDurationRangeValid = true;
+        Integer daysBetweenDates = null;
+        Integer durationDifference = null;
+
+        // Compare packageScheduleName
+        if (packageScheduleUpdateRequest.getPackageScheduleName() != null &&
+                previousPackageScheduleResponse.getPackageScheduleName() != null &&
+                !packageScheduleUpdateRequest.getPackageScheduleName().equals(previousPackageScheduleResponse.getPackageScheduleName())) {
+            changes.add(String.format("Package Schedule Name changed from '%s' to '%s'",
+                    previousPackageScheduleResponse.getPackageScheduleName(),
+                    packageScheduleUpdateRequest.getPackageScheduleName()));
+            fieldChanges.add(new PcakageScheduleComparisonResult.FieldChange(
+                    "packageScheduleName",
+                    previousPackageScheduleResponse.getPackageScheduleName(),
+                    packageScheduleUpdateRequest.getPackageScheduleName(),
+                    "Package Schedule Name"));
+            hasChanges = true;
+        }
+
+        // Compare packageId
+        if (packageScheduleUpdateRequest.getPackageId() != null &&
+                previousPackageScheduleResponse.getPackageId() != null &&
+                !packageScheduleUpdateRequest.getPackageId().equals(previousPackageScheduleResponse.getPackageId())) {
+            changes.add(String.format("Package ID changed from %d to %d",
+                    previousPackageScheduleResponse.getPackageId(),
+                    packageScheduleUpdateRequest.getPackageId()));
+            fieldChanges.add(new PcakageScheduleComparisonResult.FieldChange(
+                    "packageId",
+                    previousPackageScheduleResponse.getPackageId(),
+                    packageScheduleUpdateRequest.getPackageId(),
+                    "Package ID"));
+            hasChanges = true;
+
+            // Warning about package change
+            warnings.add("Note: Changing the package may affect existing bookings and references");
+        }
+
+        // Compare tourScheduleId
+        if (!Objects.equals(packageScheduleUpdateRequest.getTourScheduleId(), previousPackageScheduleResponse.getTourScheduleId())) {
+            Long oldTourScheduleId = previousPackageScheduleResponse.getTourScheduleId();
+            Long newTourScheduleId = packageScheduleUpdateRequest.getTourScheduleId();
+            String oldTourName = previousPackageScheduleResponse.getTourScheduleName() != null ?
+                    previousPackageScheduleResponse.getTourScheduleName() : "None";
+
+            changes.add(String.format("Tour Schedule changed from '%s' (ID: %d) to ID: %d",
+                    oldTourName,
+                    oldTourScheduleId != null ? oldTourScheduleId : 0,
+                    newTourScheduleId != null ? newTourScheduleId : 0));
+            fieldChanges.add(new PcakageScheduleComparisonResult.FieldChange(
+                    "tourScheduleId",
+                    oldTourScheduleId,
+                    newTourScheduleId,
+                    "Tour Schedule"));
+            hasChanges = true;
+
+            if (newTourScheduleId == null) {
+                warnings.add("Warning: Tour schedule is being removed from this package schedule");
+            } else if (oldTourScheduleId == null) {
+                warnings.add("Info: Tour schedule is being added to this package schedule");
+            } else {
+                warnings.add("Note: Tour schedule has been changed, verify dates compatibility");
+            }
+        }
+
+        // Compare assumeStartDate
+        if (packageScheduleUpdateRequest.getAssumeStartDate() != null &&
+                previousPackageScheduleResponse.getAssumeStartDate() != null &&
+                !packageScheduleUpdateRequest.getAssumeStartDate().equals(previousPackageScheduleResponse.getAssumeStartDate())) {
+            changes.add(String.format("Assume Start Date changed from %s to %s",
+                    previousPackageScheduleResponse.getAssumeStartDate(),
+                    packageScheduleUpdateRequest.getAssumeStartDate()));
+            fieldChanges.add(new PcakageScheduleComparisonResult.FieldChange(
+                    "assumeStartDate",
+                    previousPackageScheduleResponse.getAssumeStartDate(),
+                    packageScheduleUpdateRequest.getAssumeStartDate(),
+                    "Assume Start Date"));
+            hasChanges = true;
+        }
+
+        // Compare assumeEndDate
+        if (packageScheduleUpdateRequest.getAssumeEndDate() != null &&
+                previousPackageScheduleResponse.getAssumeEndDate() != null &&
+                !packageScheduleUpdateRequest.getAssumeEndDate().equals(previousPackageScheduleResponse.getAssumeEndDate())) {
+            changes.add(String.format("Assume End Date changed from %s to %s",
+                    previousPackageScheduleResponse.getAssumeEndDate(),
+                    packageScheduleUpdateRequest.getAssumeEndDate()));
+            fieldChanges.add(new PcakageScheduleComparisonResult.FieldChange(
+                    "assumeEndDate",
+                    previousPackageScheduleResponse.getAssumeEndDate(),
+                    packageScheduleUpdateRequest.getAssumeEndDate(),
+                    "Assume End Date"));
+            hasChanges = true;
+        }
+
+        // Validate date range
+        if (packageScheduleUpdateRequest.getAssumeStartDate() != null &&
+                packageScheduleUpdateRequest.getAssumeEndDate() != null) {
+
+            Date startDate = packageScheduleUpdateRequest.getAssumeStartDate();
+            Date endDate = packageScheduleUpdateRequest.getAssumeEndDate();
+
+            if (endDate.before(startDate)) {
+                isDateRangeValid = false;
+                warnings.add("Error: End date is before start date!");
+            } else if (endDate.equals(startDate)) {
+                warnings.add("Note: Start date and end date are the same day");
+                daysBetweenDates = 0;
+            } else {
+                // Calculate days between dates
+                long diffInMillies = Math.abs(endDate.getTime() - startDate.getTime());
+                daysBetweenDates = (int) (diffInMillies / (24 * 60 * 60 * 1000));
+                if (daysBetweenDates > 365) {
+                    warnings.add(String.format("Warning: Package schedule spans more than a year (%d days)", daysBetweenDates));
+                } else if (daysBetweenDates > 180) {
+                    warnings.add(String.format("Note: Package schedule spans %d days (more than 6 months)", daysBetweenDates));
+                }
+            }
+
+            // Check if start date is in the past
+            Date today = new Date();
+            if (startDate.before(today)) {
+                warnings.add("Warning: Start date is in the past");
+            }
+        }
+
+        // Compare durationStart
+        if (packageScheduleUpdateRequest.getDurationStart() != null &&
+                previousPackageScheduleResponse.getDurationStart() != null &&
+                !packageScheduleUpdateRequest.getDurationStart().equals(previousPackageScheduleResponse.getDurationStart())) {
+            changes.add(String.format("Duration Start changed from %d to %d days",
+                    previousPackageScheduleResponse.getDurationStart(),
+                    packageScheduleUpdateRequest.getDurationStart()));
+            fieldChanges.add(new PcakageScheduleComparisonResult.FieldChange(
+                    "durationStart",
+                    previousPackageScheduleResponse.getDurationStart(),
+                    packageScheduleUpdateRequest.getDurationStart(),
+                    "Duration Start (days)"));
+            hasChanges = true;
+        }
+
+        // Compare durationEnd
+        if (packageScheduleUpdateRequest.getDurationEnd() != null &&
+                previousPackageScheduleResponse.getDurationEnd() != null &&
+                !packageScheduleUpdateRequest.getDurationEnd().equals(previousPackageScheduleResponse.getDurationEnd())) {
+            changes.add(String.format("Duration End changed from %d to %d days",
+                    previousPackageScheduleResponse.getDurationEnd(),
+                    packageScheduleUpdateRequest.getDurationEnd()));
+            fieldChanges.add(new PcakageScheduleComparisonResult.FieldChange(
+                    "durationEnd",
+                    previousPackageScheduleResponse.getDurationEnd(),
+                    packageScheduleUpdateRequest.getDurationEnd(),
+                    "Duration End (days)"));
+            hasChanges = true;
+        }
+
+        // Validate duration range
+        if (packageScheduleUpdateRequest.getDurationStart() != null &&
+                packageScheduleUpdateRequest.getDurationEnd() != null) {
+
+            Integer durationStart = packageScheduleUpdateRequest.getDurationStart();
+            Integer durationEnd = packageScheduleUpdateRequest.getDurationEnd();
+
+            if (durationEnd < durationStart) {
+                isDurationRangeValid = false;
+                warnings.add("Error: Duration end is less than duration start!");
+            } else {
+                durationDifference = durationEnd - durationStart;
+                if (durationDifference > 30) {
+                    warnings.add(String.format("Warning: Duration range is very wide (%d days difference)", durationDifference));
+                } else if (durationDifference > 14) {
+                    warnings.add(String.format("Note: Duration range spans %d days difference", durationDifference));
+                }
+            }
+
+            // Additional validations
+            if (durationStart < 1) {
+                warnings.add("Warning: Duration start should be at least 1 day");
+            }
+
+            if (durationEnd > 365) {
+                warnings.add("Warning: Duration end exceeds 365 days");
+            }
+
+            if (durationStart > durationEnd) {
+                isDurationRangeValid = false;
+            }
+        }
+
+        // Compare duration with date range
+        if (packageScheduleUpdateRequest.getAssumeStartDate() != null &&
+                packageScheduleUpdateRequest.getAssumeEndDate() != null &&
+                packageScheduleUpdateRequest.getDurationStart() != null &&
+                packageScheduleUpdateRequest.getDurationEnd() != null) {
+
+            Date startDate = packageScheduleUpdateRequest.getAssumeStartDate();
+            Date endDate = packageScheduleUpdateRequest.getAssumeEndDate();
+            long diffInMillies = Math.abs(endDate.getTime() - startDate.getTime());
+            int actualDaysBetween = (int) (diffInMillies / (24 * 60 * 60 * 1000));
+
+            if (actualDaysBetween < packageScheduleUpdateRequest.getDurationStart()) {
+                warnings.add(String.format("Warning: Date range (%d days) is shorter than duration start (%d days)",
+                        actualDaysBetween, packageScheduleUpdateRequest.getDurationStart()));
+            }
+
+            if (actualDaysBetween > packageScheduleUpdateRequest.getDurationEnd()) {
+                warnings.add(String.format("Note: Date range (%d days) exceeds duration end (%d days)",
+                        actualDaysBetween, packageScheduleUpdateRequest.getDurationEnd()));
+            }
+        }
+
+        // Compare specialNote
+        if (!Objects.equals(packageScheduleUpdateRequest.getSpecialNote(), previousPackageScheduleResponse.getSpecialNote())) {
+            String oldNote = previousPackageScheduleResponse.getSpecialNote() != null ?
+                    previousPackageScheduleResponse.getSpecialNote() : "null";
+            String newNote = packageScheduleUpdateRequest.getSpecialNote() != null ?
+                    packageScheduleUpdateRequest.getSpecialNote() : "null";
+            changes.add(String.format("Special Note changed from '%s' to '%s'", oldNote, newNote));
+            fieldChanges.add(new PcakageScheduleComparisonResult.FieldChange(
+                    "specialNote",
+                    previousPackageScheduleResponse.getSpecialNote(),
+                    packageScheduleUpdateRequest.getSpecialNote(),
+                    "Special Note"));
+            hasChanges = true;
+        }
+
+        // Compare description
+        if (!Objects.equals(packageScheduleUpdateRequest.getDescription(), previousPackageScheduleResponse.getDescription())) {
+            String oldDesc = previousPackageScheduleResponse.getDescription() != null ?
+                    previousPackageScheduleResponse.getDescription() : "null";
+            String newDesc = packageScheduleUpdateRequest.getDescription() != null ?
+                    packageScheduleUpdateRequest.getDescription() : "null";
+            changes.add(String.format("Description changed from '%s' to '%s'", oldDesc, newDesc));
+            fieldChanges.add(new PcakageScheduleComparisonResult.FieldChange(
+                    "description",
+                    previousPackageScheduleResponse.getDescription(),
+                    packageScheduleUpdateRequest.getDescription(),
+                    "Description"));
+            hasChanges = true;
+        }
+
+        // Compare status
+        String oldStatus = previousPackageScheduleResponse.getStatus();
+        String newStatus = packageScheduleUpdateRequest.getStatus();
+        if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
+            changes.add(String.format("Status changed from '%s' to '%s'", oldStatus, newStatus));
+            fieldChanges.add(new PcakageScheduleComparisonResult.FieldChange(
+                    "status",
+                    oldStatus,
+                    newStatus,
+                    "Status"));
+            hasChanges = true;
+
+            // Status change warnings
+            if ("CANCELLED".equals(newStatus)) {
+                warnings.add("Warning: Package schedule is being cancelled! This may affect customer bookings.");
+            } else if ("COMPLETED".equals(newStatus)) {
+                warnings.add("Note: Package schedule marked as completed");
+            } else if ("INACTIVE".equals(newStatus)) {
+                warnings.add("Warning: Package schedule is being deactivated");
+            } else if ("ACTIVE".equals(newStatus) && "INACTIVE".equals(oldStatus)) {
+                warnings.add("Info: Reactivating this package schedule will make it available for bookings");
+            } else if ("DRAFT".equals(newStatus)) {
+                warnings.add("Note: Package schedule is in DRAFT mode and not available for booking");
+            }
+        }
+
+        // Validate required fields
+        if (packageScheduleUpdateRequest.getPackageScheduleName() == null ||
+                packageScheduleUpdateRequest.getPackageScheduleName().trim().isEmpty()) {
+            warnings.add("Warning: Package schedule name is empty");
+        }
+
+        if (packageScheduleUpdateRequest.getPackageId() == null) {
+            warnings.add("Warning: Package ID is not specified");
+        }
+
+        // Check date consistency with duration
+        if (packageScheduleUpdateRequest.getDurationStart() != null &&
+                packageScheduleUpdateRequest.getDurationStart() > 0 &&
+                packageScheduleUpdateRequest.getAssumeStartDate() == null) {
+            warnings.add("Warning: Duration start is specified but start date is missing");
+        }
+
+        // Check if any changes were made
+        if (!hasChanges) {
+            changes.add("No changes detected in package schedule");
+        }
+
+        // Build the result
+        return resultBuilder
+                .fieldChanges(fieldChanges)
+                .changes(changes)
+                .hasChanges(hasChanges)
+                .warnings(warnings)
+                .isDateRangeValid(isDateRangeValid)
+                .isDurationRangeValid(isDurationRangeValid)
+                .daysBetweenDates(daysBetweenDates)
+                .durationDifference(durationDifference)
+                .oldStatus(oldStatus)
+                .newStatus(newStatus)
+                .changedBy(loggedUser != null ?
+                        loggedUser.getFirstName() + " " + loggedUser.getLastName() : "Unknown")
+                .changedByUserId(loggedUser != null ? loggedUser.getId() : null)
+                .changeTimestamp(new Date().toString())
+                .build();
     }
 
 }

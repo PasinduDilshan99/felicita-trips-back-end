@@ -52,4 +52,6 @@ public interface CommonRepository {
     List<ActivityIdAndNameResponse> getActivityIdAndNameResponses();
 
     List<TourIdAndNameResponse> getTourIdAndNameResponses();
+
+    List<PackageIdAndNamesResponse> getPackageIdAndNameResponses();
 }

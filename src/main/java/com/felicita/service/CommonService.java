@@ -56,4 +56,6 @@ public interface CommonService {
     List<SeasonIdAndNameResponse> getSeasonIdAndNameResponses();
 
     List<TourIdAndNameResponse> getTourIdAndNameResponses();
+
+    List<PackageIdAndNamesResponse> getPacakgeIdAndNameResponses();
 }

@@ -7,13 +7,27 @@ import com.felicita.exception.*;
 import com.felicita.model.dto.*;
 import com.felicita.model.enums.CommonStatus;
 import com.felicita.model.request.*;
+import com.felicita.model.request.packages.schedule.PackageScheduleDataRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleInsertRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleUpdateRequest;
+import com.felicita.model.request.packages.type.PackageTypeImageInsertRequest;
+import com.felicita.model.request.packages.type.PackageTypeImageUpdateRequest;
+import com.felicita.model.request.packages.type.PackageTypeInsertRequest;
+import com.felicita.model.request.packages.type.PackageTypeUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.packages.schedule.PacakgeScheduleBasicDetailsResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleAllDetailsResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleWithParamsResponse;
+import com.felicita.model.response.packages.type.PackageTypeAllDetailsResponse;
+import com.felicita.model.response.packages.type.PackageTypeBasicDetailsResponse;
+import com.felicita.model.response.packages.type.PackageTypeImageResponse;
 import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.PackageStatisticsResponse;
 import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
 import com.felicita.queries.PackageQueries;
 import com.felicita.repository.PackageRepository;
 import com.felicita.repository.StatusRepository;
+import com.felicita.util.Sortings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -2762,6 +2776,1449 @@ public class PackageRepositoryImpl implements PackageRepository {
     }
 
     @Override
+    public List<PackageTypeBasicDetailsResponse> getPackageTypes() {
+
+        try {
+
+            String query = """
+                SELECT
+                    pt.id,
+                    pt.name,
+                    pt.description,
+                    pt.color,
+                    pt.hover_color,
+                    cs.name AS status
+                FROM package_type pt
+                INNER JOIN common_status cs
+                    ON cs.id = pt.status
+                WHERE pt.terminated_at IS NULL
+                ORDER BY pt.created_at DESC
+                """;
+
+            return jdbcTemplate.query(query, (rs, rowNum) -> {
+
+                Long typeId = rs.getLong("id");
+
+                return PackageTypeBasicDetailsResponse.builder()
+                        .typeId(typeId)
+                        .typeName(rs.getString("name"))
+                        .description(rs.getString("description"))
+                        .color(rs.getString("color"))
+                        .hoverColor(rs.getString("hover_color"))
+                        .status(rs.getString("status"))
+                        .images(getPackageTypeImages(typeId))
+                        .build();
+            });
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error("Database error while fetching package types", ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch package types"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Unexpected error while fetching package types", ex);
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching package types"
+            );
+        }
+    }
+
+    @Override
+    public PackageTypeAllDetailsResponse getPackageTypeDetailsById(
+            CommonIdRequest commonIdRequest) {
+
+        try {
+
+            String query = """
+                SELECT
+                    pt.id,
+                    pt.name,
+                    pt.description,
+                    pt.color,
+                    pt.hover_color,
+                    pt.created_at,
+                    pt.created_by,
+                    pt.updated_at,
+                    pt.updated_by,
+                    pt.terminated_at,
+                    pt.terminated_by,
+
+                    cs.name AS status,
+
+                    uc.username AS created_by_name,
+                    uu.username AS updated_by_name,
+
+                    (
+                        SELECT COUNT(*)
+                        FROM packages p
+                        WHERE p.package_type_id = pt.id
+                        AND p.terminated_at IS NULL
+                    ) AS total_packages
+
+                FROM package_type pt
+
+                INNER JOIN common_status cs
+                    ON cs.id = pt.status
+
+                LEFT JOIN user uc
+                    ON uc.user_id = pt.created_by
+
+                LEFT JOIN user uu
+                    ON uu.user_id = pt.updated_by
+
+                WHERE pt.id = ?
+                AND pt.terminated_at IS NULL
+                """;
+
+            List<PackageTypeAllDetailsResponse> results = jdbcTemplate.query(
+                    query,
+                    new Object[]{commonIdRequest.getId()},
+                    (rs, rowNum) -> {
+
+                        Long typeId = rs.getLong("id");
+
+                        return PackageTypeAllDetailsResponse.builder()
+                                .typeId(typeId)
+                                .typeName(rs.getString("name"))
+                                .description(rs.getString("description"))
+                                .color(rs.getString("color"))
+                                .hoverColor(rs.getString("hover_color"))
+                                .status(rs.getString("status"))
+
+                                .createdAt(rs.getTimestamp("created_at"))
+                                .createdBy(rs.getLong("created_by"))
+                                .createdByName(rs.getString("created_by_name"))
+
+                                .updatedAt(rs.getTimestamp("updated_at"))
+                                .updatedBy(rs.getLong("updated_by"))
+                                .updatedByName(rs.getString("updated_by_name"))
+
+                                .terminatedAt(rs.getTimestamp("terminated_at"))
+                                .terminatedBy(rs.getLong("terminated_by"))
+
+                                .totalTours(rs.getInt("total_packages"))
+
+                                .images(getPackageTypeImages(typeId))
+
+                                .tours(getPackagesByPackageTypeId(typeId))
+
+                                .build();
+                    }
+            );
+
+            if (results.isEmpty()) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Package type not found with id : "
+                                + commonIdRequest.getId()
+                );
+            }
+
+            return results.get(0);
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching package type details",
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch package type details"
+            );
+
+        } catch (DataNotFoundErrorExceptionHandler ex) {
+
+            throw ex;
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching package type details",
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching package type details"
+            );
+        }
+    }
+
+    @Override
+    public PackageTypeBasicDetailsResponse getPackageTypeBasicDetailsById(
+            CommonIdRequest commonIdRequest) {
+
+        try {
+
+            String query = """
+                SELECT
+                    pt.id,
+                    pt.name,
+                    pt.description,
+                    pt.color,
+                    pt.hover_color,
+
+                    cs.name AS status
+
+                FROM package_type pt
+
+                INNER JOIN common_status cs
+                    ON cs.id = pt.status
+
+                WHERE pt.id = ?
+                AND pt.terminated_at IS NULL
+                """;
+
+            List<PackageTypeBasicDetailsResponse> results =
+                    jdbcTemplate.query(
+                            query,
+                            new Object[]{commonIdRequest.getId()},
+                            (rs, rowNum) -> {
+
+                                Long typeId = rs.getLong("id");
+
+                                return PackageTypeBasicDetailsResponse.builder()
+                                        .typeId(typeId)
+                                        .typeName(rs.getString("name"))
+                                        .description(rs.getString("description"))
+                                        .color(rs.getString("color"))
+                                        .hoverColor(rs.getString("hover_color"))
+                                        .status(rs.getString("status"))
+                                        .images(getPackageTypeImages(typeId))
+                                        .build();
+                            });
+
+            if (results.isEmpty()) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Package type not found with id : "
+                                + commonIdRequest.getId()
+                );
+            }
+
+            return results.get(0);
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while fetching package type basic details",
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch package type basic details"
+            );
+
+        } catch (DataNotFoundErrorExceptionHandler ex) {
+
+            throw ex;
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while fetching package type basic details",
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while fetching package type basic details"
+            );
+        }
+    }
+
+    @Override
+    public void terminatePackageType(CommonIdRequest commonIdRequest, Long userId) {
+
+        try {
+
+            Long packageTypeId = commonIdRequest.getId();
+
+            Long terminatedStatusId =
+                    statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
+
+            String query = """
+                UPDATE package_type
+                SET
+                    status = ?,
+                    terminated_at = CURRENT_TIMESTAMP,
+                    terminated_by = ?,
+                    updated_at = CURRENT_TIMESTAMP,
+                    updated_by = ?
+                WHERE id = ?
+                """;
+
+            int updatedRows = jdbcTemplate.update(
+                    query,
+                    terminatedStatusId,
+                    userId,
+                    userId,
+                    packageTypeId
+            );
+
+            if (updatedRows == 0) {
+
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Package type not found for id: " + packageTypeId
+                );
+            }
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while terminating package type: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to terminate package type"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while terminating package type: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while terminating package type"
+            );
+        }
+    }
+
+    @Override
+    public Long insertPackageTypeBasicDetails(
+            PackageTypeInsertRequest packageTypeInsertRequest,
+            Long userId) {
+
+        try {
+
+            Long statusId = statusRepository.getStatusIdByName(
+                    packageTypeInsertRequest.getStatus()
+            );
+
+            String query = """
+                INSERT INTO package_type (
+                    name,
+                    description,
+                    color,
+                    hover_color,
+                    status,
+                    created_by,
+                    updated_by
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """;
+
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+
+            jdbcTemplate.update(connection -> {
+
+                PreparedStatement ps = connection.prepareStatement(
+                        query,
+                        Statement.RETURN_GENERATED_KEYS
+                );
+
+                ps.setString(1, packageTypeInsertRequest.getTypeName());
+                ps.setString(2, packageTypeInsertRequest.getDescription());
+                ps.setString(3, packageTypeInsertRequest.getColor());
+                ps.setString(4, packageTypeInsertRequest.getHoverColor());
+                ps.setLong(5, statusId);
+                ps.setLong(6, userId);
+                ps.setLong(7, userId);
+
+                return ps;
+
+            }, keyHolder);
+
+            Number key = keyHolder.getKey();
+
+            if (key == null) {
+
+                throw new InternalServerErrorExceptionHandler(
+                        "Failed to generate package type id"
+                );
+            }
+
+            return key.longValue();
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while inserting package type: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to insert package type"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while inserting package type: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while inserting package type"
+            );
+        }
+    }
+
+    @Override
+    public void insertPackageTypeImages(
+            Long packageTypeId,
+            List<PackageTypeImageInsertRequest> images,
+            Long userId) {
+
+        try {
+
+            if (images == null || images.isEmpty()) {
+                return;
+            }
+
+            String query = """
+                INSERT INTO package_types_images (
+                    package_types_id,
+                    name,
+                    description,
+                    image_url,
+                    status,
+                    created_by,
+                    updated_by
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """;
+
+            List<Object[]> batchArgs = new ArrayList<>();
+
+            for (PackageTypeImageInsertRequest image : images) {
+
+                Long statusId = statusRepository.getStatusIdByName(
+                        image.getStatus()
+                );
+
+                batchArgs.add(new Object[]{
+                        packageTypeId,
+                        image.getName(),
+                        image.getDescription(),
+                        image.getImageUrl(),
+                        statusId,
+                        userId,
+                        userId
+                });
+            }
+
+            jdbcTemplate.batchUpdate(query, batchArgs);
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while inserting package type images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to insert package type images"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while inserting package type images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while inserting package type images"
+            );
+        }
+    }
+
+    @Override
+    public void updatePackageTypeBasicDetails(
+            PackageTypeUpdateRequest request,
+            Long userId) {
+
+        try {
+
+            Long statusId = statusRepository.getStatusIdByName(request.getStatus());
+
+            String query = """
+                UPDATE package_type
+                SET
+                    name = ?,
+                    description = ?,
+                    color = ?,
+                    hover_color = ?,
+                    status = ?,
+                    updated_by = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """;
+
+            int updatedRows = jdbcTemplate.update(
+                    query,
+                    request.getTypeName(),
+                    request.getDescription(),
+                    request.getColor(),
+                    request.getHoverColor(),
+                    statusId,
+                    userId,
+                    request.getTypeId()
+            );
+
+            if (updatedRows == 0) {
+                throw new DataNotFoundErrorExceptionHandler(
+                        "Package type not found for id: " + request.getTypeId()
+                );
+            }
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while updating package type: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to update package type"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while updating package type: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while updating package type"
+            );
+        }
+    }
+
+    @Override
+    public void removePackageTypeImages(
+            Long typeId,
+            List<Long> removeImageIds,
+            Long userId) {
+
+        try {
+
+            if (removeImageIds == null || removeImageIds.isEmpty()) {
+                return;
+            }
+
+            String query = """
+                UPDATE package_types_images
+                SET
+                    status = ?,
+                    terminated_at = CURRENT_TIMESTAMP,
+                    terminated_by = ?,
+                    updated_by = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE package_types_id = ?
+                AND id = ?
+                """;
+
+            Long terminatedStatusId =
+                    statusRepository.getStatusIdByName("TERMINATED");
+
+            List<Object[]> batchArgs = new ArrayList<>();
+
+            for (Long imageId : removeImageIds) {
+                batchArgs.add(new Object[]{
+                        terminatedStatusId,
+                        userId,
+                        userId,
+                        typeId,
+                        imageId
+                });
+            }
+
+            jdbcTemplate.batchUpdate(query, batchArgs);
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while removing package type images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to remove package type images"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while removing package type images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while removing package type images"
+            );
+        }
+    }
+
+    @Override
+    public void updatePackageTypeImages(
+            Long typeId,
+            List<PackageTypeImageUpdateRequest> updateImages,
+            Long userId) {
+
+        try {
+
+            if (updateImages == null || updateImages.isEmpty()) {
+                return;
+            }
+
+            String query = """
+                UPDATE package_types_images
+                SET
+                    name = ?,
+                    description = ?,
+                    image_url = ?,
+                    status = ?,
+                    updated_by = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                AND package_types_id = ?
+                """;
+
+            List<Object[]> batchArgs = new ArrayList<>();
+
+            for (PackageTypeImageUpdateRequest image : updateImages) {
+
+                Long statusId =
+                        statusRepository.getStatusIdByName(image.getStatus());
+
+                batchArgs.add(new Object[]{
+                        image.getName(),
+                        image.getDescription(),
+                        image.getImageUrl(),
+                        statusId,
+                        userId,
+                        image.getImageId(),
+                        typeId
+                });
+            }
+
+            jdbcTemplate.batchUpdate(query, batchArgs);
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Database error while updating package type images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to update package type images"
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Unexpected error while updating package type images: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Unexpected error occurred while updating package type images"
+            );
+        }
+    }
+
+    @Override
+    public PackageScheduleWithParamsResponse getPackageScheduleWithParams(
+            PackageScheduleDataRequest request) {
+
+        try {
+
+            StringBuilder query = new StringBuilder(
+                    PackageQueries.BASE_PACKAGE_SCHEDULE_QUERY);
+
+            StringBuilder countQuery = new StringBuilder(
+                    PackageQueries.COUNT_PACKAGE_SCHEDULE_QUERY);
+
+            List<Object> params = new ArrayList<>();
+            List<Object> countParams = new ArrayList<>();
+
+            // =========================
+            // NAME FILTER
+            // =========================
+            if (request.getName() != null && !request.getName().isBlank()) {
+
+                String search = "%" + request.getName().trim() + "%";
+
+                query.append("""
+                AND (ps.name LIKE ? OR p.name LIKE ?)
+            """);
+
+                countQuery.append("""
+                AND (ps.name LIKE ? OR p.name LIKE ?)
+            """);
+
+                params.add(search);
+                params.add(search);
+
+                countParams.add(search);
+                countParams.add(search);
+            }
+
+            // =========================
+            // PACKAGE ID
+            // =========================
+            if (request.getPackageId() != null) {
+
+                query.append(" AND p.package_id = ? ");
+                countQuery.append(" AND p.package_id = ? ");
+
+                params.add(request.getPackageId());
+                countParams.add(request.getPackageId());
+            }
+
+            // =========================
+            // TOUR SCHEDULE ID
+            // =========================
+            if (request.getTourScheduleId() != null) {
+
+                query.append(" AND ps.tour_shedule_id = ? ");
+                countQuery.append(" AND ps.tour_shedule_id = ? ");
+
+                params.add(request.getTourScheduleId());
+                countParams.add(request.getTourScheduleId());
+            }
+
+            // =========================
+            // TOUR ID
+            // =========================
+            if (request.getTourId() != null) {
+
+                query.append(" AND p.tour_id = ? ");
+                countQuery.append(" AND p.tour_id = ? ");
+
+                params.add(request.getTourId());
+                countParams.add(request.getTourId());
+            }
+
+            // =========================
+            // START DATE
+            // =========================
+            if (request.getStartDate() != null) {
+
+                query.append(" AND ps.assume_start_date >= ? ");
+                countQuery.append(" AND ps.assume_start_date >= ? ");
+
+                params.add(request.getStartDate());
+                countParams.add(request.getStartDate());
+            }
+
+            // =========================
+            // END DATE
+            // =========================
+            if (request.getEndDate() != null) {
+
+                query.append(" AND ps.assume_end_date <= ? ");
+                countQuery.append(" AND ps.assume_end_date <= ? ");
+
+                params.add(request.getEndDate());
+                countParams.add(request.getEndDate());
+            }
+
+            // =========================
+            // STATUS
+            // =========================
+            if (request.getStatus() != null && !request.getStatus().isBlank()) {
+
+                Long statusId = statusRepository.getStatusIdByName(request.getStatus());
+
+                if (statusId != null) {
+
+                    query.append(" AND ps.status = ? ");
+                    countQuery.append(" AND ps.status = ? ");
+
+                    params.add(statusId);
+                    countParams.add(statusId);
+                }
+            }
+
+            // =========================
+            // SORTING
+            // =========================
+            String sortColumn = mapPackageScheduleSortColumn(request.getSortBy());
+
+            String sortDirection =
+                    "ASC".equalsIgnoreCase(request.getSortDirection())
+                            ? "ASC"
+                            : "DESC";
+
+            query.append(" ORDER BY ")
+                    .append(sortColumn)
+                    .append(" ")
+                    .append(sortDirection);
+
+            // =========================
+            // PAGINATION
+            // =========================
+            int pageSize = request.getPageSize() > 0 ? request.getPageSize() : 10;
+            int pageNumber = request.getPageNumber() > 0 ? request.getPageNumber() : 0;
+
+            int offset = pageNumber * pageSize;
+
+            query.append(" LIMIT ? OFFSET ? ");
+
+            params.add(pageSize);
+            params.add(offset);
+
+            // =========================
+            // COUNT QUERY
+            // =========================
+            Integer totalCount = jdbcTemplate.queryForObject(
+                    countQuery.toString(),
+                    countParams.toArray(),
+                    Integer.class
+            );
+
+            // =========================
+            // MAIN RESULT
+            // =========================
+            List<com.felicita.model.response.packages.schedule.PackageScheduleResponse> result =
+                    jdbcTemplate.query(query.toString(), params.toArray(),
+                            (rs, rowNum) -> com.felicita.model.response.packages.schedule.PackageScheduleResponse.builder()
+
+                                    .packageScheduleId(rs.getLong("package_schedule_id"))
+                                    .packageScheduleName(rs.getString("package_schedule_name"))
+
+                                    .packageId(rs.getLong("package_id"))
+                                    .packageName(rs.getString("package_name"))
+
+                                    .startDate(rs.getDate("assume_start_date"))
+                                    .endDate(rs.getDate("assume_end_date"))
+                                    .durationStart(rs.getInt("duration_start"))
+                                    .durationEnd(rs.getInt("duration_end"))
+
+                                    .status(rs.getString("status"))
+                                    .specialNote(rs.getString("special_note"))
+                                    .description(rs.getString("description"))
+
+                                    .tourScheduleId(rs.getLong("tour_shedule_id"))
+                                    .tourScheduleName(rs.getString("tour_schedule_name"))
+
+                                    .build()
+                    );
+
+            return PackageScheduleWithParamsResponse.builder()
+                    .packageScheduleCount(totalCount != null ? totalCount : 0)
+                    .packageScheduleResponses(result)
+                    .build();
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching package schedules: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch package schedules");
+        }
+    }
+
+    @Override
+    public PackageScheduleAllDetailsResponse getPackageScheduleDetailsById(
+            CommonIdRequest request) {
+
+        try {
+
+            String sql = """
+            SELECT
+                ps.id AS package_schedule_id,
+                ps.name AS package_schedule_name,
+                ps.assume_start_date,
+                ps.assume_end_date,
+                ps.duration_start,
+                ps.duration_end,
+                ps.special_note,
+                ps.description,
+                ps.status AS schedule_status,
+                ps.created_at,
+                ps.updated_at,
+
+                p.package_id,
+                p.name AS package_name,
+                p.description AS package_description,
+                p.total_price,
+                p.discount_percentage,
+                p.price_per_person,
+                p.min_person_count,
+                p.max_person_count,
+                p.color,
+                p.hover_color,
+                p.status AS package_status,
+                p.created_at AS package_created_at,
+                p.updated_at AS package_updated_at,
+
+                pt.id AS package_type_id,
+                pt.name AS package_type_name,
+                pt.description AS package_type_description,
+
+                t.tour_id,
+                t.name AS tour_name,
+                t.description AS tour_description,
+                t.duration,
+                t.start_location,
+                t.end_location,
+                t.season,
+                t.status AS tour_status,
+
+                ts.id AS tour_schedule_id,
+                ts.name AS tour_schedule_name
+
+            FROM package_schedule ps
+            JOIN packages p ON p.package_id = ps.package_id
+            LEFT JOIN package_type pt ON pt.id = p.package_type_id
+            LEFT JOIN tour t ON t.tour_id = p.tour_id
+            LEFT JOIN tour_schedule ts ON ts.id = ps.tour_shedule_id
+
+            WHERE ps.id = ?
+        """;
+
+            PackageScheduleAllDetailsResponse response =
+                    jdbcTemplate.queryForObject(sql, new Object[]{request.getId()},
+                            (rs, rowNum) -> PackageScheduleAllDetailsResponse.builder()
+
+                                    // =========================
+                                    // PACKAGE SCHEDULE
+                                    // =========================
+                                    .packageScheduleId(rs.getLong("package_schedule_id"))
+                                    .packageScheduleName(rs.getString("package_schedule_name"))
+                                    .assumeStartDate(rs.getString("assume_start_date"))
+                                    .assumeEndDate(rs.getString("assume_end_date"))
+                                    .durationStart(rs.getInt("duration_start"))
+                                    .durationEnd(rs.getInt("duration_end"))
+                                    .specialNote(rs.getString("special_note"))
+                                    .description(rs.getString("description"))
+                                    .scheduleStatus(rs.getString("schedule_status"))
+                                    .createdAt(rs.getTimestamp("created_at"))
+                                    .updatedAt(rs.getTimestamp("updated_at"))
+
+                                    // =========================
+                                    // PACKAGE
+                                    // =========================
+                                    .packageId(rs.getLong("package_id"))
+                                    .packageName(rs.getString("package_name"))
+                                    .packageDescription(rs.getString("package_description"))
+                                    .totalPrice(rs.getBigDecimal("total_price"))
+                                    .discountPercentage(rs.getBigDecimal("discount_percentage"))
+                                    .pricePerPerson(rs.getBigDecimal("price_per_person"))
+                                    .minPersonCount(rs.getInt("min_person_count"))
+                                    .maxPersonCount(rs.getInt("max_person_count"))
+                                    .color(rs.getString("color"))
+                                    .hoverColor(rs.getString("hover_color"))
+                                    .packageStatus(rs.getString("package_status"))
+                                    .packageCreatedAt(rs.getTimestamp("package_created_at"))
+                                    .packageUpdatedAt(rs.getTimestamp("package_updated_at"))
+
+                                    // =========================
+                                    // PACKAGE TYPE
+                                    // =========================
+                                    .packageTypeId(rs.getLong("package_type_id"))
+                                    .packageTypeName(rs.getString("package_type_name"))
+                                    .packageTypeDescription(rs.getString("package_type_description"))
+
+                                    // =========================
+                                    // TOUR
+                                    // =========================
+                                    .tourId(rs.getLong("tour_id"))
+                                    .tourName(rs.getString("tour_name"))
+                                    .tourDescription(rs.getString("tour_description"))
+                                    .tourDuration(rs.getInt("duration"))
+                                    .startLocation(rs.getString("start_location"))
+                                    .endLocation(rs.getString("end_location"))
+                                    .season(rs.getString("season"))
+                                    .tourStatus(rs.getString("tour_status"))
+
+                                    // =========================
+                                    // TOUR SCHEDULE
+                                    // =========================
+                                    .tourScheduleId(rs.getLong("tour_schedule_id"))
+                                    .tourScheduleName(rs.getString("tour_schedule_name"))
+
+                                    // =========================
+                                    // LIST DATA (separate queries)
+                                    // =========================
+                                    .features(getPackageFeatures(request.getId()))
+                                    .accommodations(getPackageDayAccommodations(request.getId()))
+
+                                    .build()
+                    );
+
+            return response;
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching package schedule details: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch package schedule details");
+        }
+    }
+
+    @Override
+    public Long createPackageSchedule(PackageScheduleInsertRequest request) {
+
+        try {
+
+            String sql = """
+            INSERT INTO package_schedule
+            (
+                name,
+                package_id,
+                assume_start_date,
+                assume_end_date,
+                duration_start,
+                duration_end,
+                special_note,
+                description,
+                status,
+                tour_shedule_id,
+                created_at,
+                created_by
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+        """;
+
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+
+            jdbcTemplate.update(connection -> {
+
+                PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+                ps.setString(1, request.getPackageScheduleName());
+                ps.setLong(2, request.getPackageId());
+
+                if (request.getAssumeStartDate() != null) {
+                    ps.setDate(3, new java.sql.Date(request.getAssumeStartDate().getTime()));
+                } else {
+                    ps.setNull(3, Types.DATE);
+                }
+
+                if (request.getAssumeEndDate() != null) {
+                    ps.setDate(4, new java.sql.Date(request.getAssumeEndDate().getTime()));
+                } else {
+                    ps.setNull(4, Types.DATE);
+                }
+
+                if (request.getDurationStart() != null) {
+                    ps.setInt(5, request.getDurationStart());
+                } else {
+                    ps.setNull(5, Types.INTEGER);
+                }
+
+                if (request.getDurationEnd() != null) {
+                    ps.setInt(6, request.getDurationEnd());
+                } else {
+                    ps.setNull(6, Types.INTEGER);
+                }
+
+                ps.setString(7, request.getSpecialNote());
+                ps.setString(8, request.getDescription());
+
+                // status (assuming FK to common_status id)
+                ps.setLong(9, Long.parseLong(request.getStatus()));
+
+                ps.setLong(10, request.getTourScheduleId());
+
+                // created_by (if you don't have user context, set null or system user)
+                ps.setNull(11, Types.BIGINT);
+
+                return ps;
+
+            }, keyHolder);
+
+            return keyHolder.getKey().longValue();
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error creating package schedule: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to create package schedule");
+        }
+    }
+
+    @Override
+    public PacakgeScheduleBasicDetailsResponse getPackageScheduleBasicDetails(Long packageScheduleId) {
+
+        try {
+
+            String sql = """
+            SELECT 
+                ps.id AS package_schedule_id,
+                ps.name AS package_schedule_name,
+
+                ps.package_id,
+                p.name AS package_name,
+
+                ps.tour_shedule_id,
+                ts.name AS tour_schedule_name,
+
+                ps.assume_start_date,
+                ps.assume_end_date,
+                ps.duration_start,
+                ps.duration_end,
+
+                ps.special_note,
+                ps.description,
+                ps.status,
+
+                ps.created_by,
+                ps.created_at,
+                ps.updated_by,
+                ps.updated_at
+
+            FROM package_schedule ps
+            JOIN packages p ON p.package_id = ps.package_id
+            LEFT JOIN tour_schedule ts ON ts.tour_schedule_id = ps.tour_shedule_id
+
+            WHERE ps.id = ?
+        """;
+
+            return jdbcTemplate.queryForObject(
+                    sql,
+                    new Object[]{packageScheduleId},
+                    (rs, rowNum) -> PacakgeScheduleBasicDetailsResponse.builder()
+                            .packageScheduleId(rs.getLong("package_schedule_id"))
+                            .packageScheduleName(rs.getString("package_schedule_name"))
+
+                            .packageId(rs.getLong("package_id"))
+                            .packageName(rs.getString("package_name"))
+
+                            .tourScheduleId(rs.getLong("tour_shedule_id"))
+                            .tourScheduleName(rs.getString("tour_schedule_name"))
+
+                            .assumeStartDate(rs.getDate("assume_start_date"))
+                            .assumeEndDate(rs.getDate("assume_end_date"))
+
+                            .durationStart(rs.getInt("duration_start"))
+                            .durationEnd(rs.getInt("duration_end"))
+
+                            .specialNote(rs.getString("special_note"))
+                            .description(rs.getString("description"))
+                            .status(rs.getString("status"))
+
+                            .createdBy(rs.getLong("created_by"))
+                            .createdAt(rs.getDate("created_at"))
+                            .updatedBy(rs.getLong("updated_by"))
+                            .updatedAt(rs.getDate("updated_at"))
+
+                            .build()
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching package schedule basic details: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to fetch package schedule details");
+        }
+    }
+
+    @Override
+    public void updatePackageSchedule(
+            PackageScheduleUpdateRequest request,
+            Long userId
+    ) {
+
+        try {
+
+            String sql = """
+            UPDATE package_schedule
+            SET 
+                name = ?,
+                package_id = ?,
+                assume_start_date = ?,
+                assume_end_date = ?,
+                duration_start = ?,
+                duration_end = ?,
+                special_note = ?,
+                description = ?,
+                status = ?,
+                tour_shedule_id = ?,
+                updated_by = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """;
+
+            jdbcTemplate.update(
+                    sql,
+                    request.getPackageScheduleName(),
+                    request.getPackageId(),
+                    request.getAssumeStartDate(),
+                    request.getAssumeEndDate(),
+                    request.getDurationStart(),
+                    request.getDurationEnd(),
+                    request.getSpecialNote(),
+                    request.getDescription(),
+                    request.getStatus(),
+                    request.getTourScheduleId(),
+                    userId,
+                    request.getPackageScheduleId()
+            );
+
+        } catch (Exception ex) {
+            LOGGER.error("Error updating package schedule: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to update package schedule");
+        }
+    }
+
+    @Override
+    public void terminatePackageScheduleById(CommonIdRequest commonIdRequest, Long userId) {
+
+        try {
+
+            String sql = """
+            UPDATE package_schedule
+            SET 
+                status = 0,
+                terminated_at = CURRENT_TIMESTAMP,
+                terminated_by = ?
+            WHERE id = ?
+        """;
+
+            int updated = jdbcTemplate.update(
+                    sql,
+                    userId,
+                    commonIdRequest.getId()
+            );
+
+            if (updated == 0) {
+                throw new RuntimeException("Package schedule not found with id: " + commonIdRequest.getId());
+            }
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error terminating package schedule: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to terminate package schedule");
+        }
+    }
+
+    private List<PackageScheduleAllDetailsResponse.PackageFeatureDetails> getPackageFeatures(Long packageScheduleId) {
+
+        String sql = """
+        SELECT
+            id,
+            name,
+            value,
+            description,
+            special_note,
+            color,
+            hover_color,
+            status,
+            created_at
+        FROM package_features
+        WHERE package_id = ?
+          AND (terminated_at IS NULL)
+    """;
+
+        return jdbcTemplate.query(sql, new Object[]{packageScheduleId},
+                (rs, rowNum) -> PackageScheduleAllDetailsResponse.PackageFeatureDetails.builder()
+
+                        .featureId(rs.getLong("id"))
+                        .name(rs.getString("name"))
+                        .value(rs.getString("value"))
+                        .description(rs.getString("description"))
+                        .specialNote(rs.getString("special_note"))
+                        .color(rs.getString("color"))
+                        .hoverColor(rs.getString("hover_color"))
+                        .status(rs.getString("status"))
+                        .createdAt(rs.getTimestamp("created_at"))
+
+                        .build()
+        );
+    }
+
+    private List<PackageScheduleAllDetailsResponse.PackageDayAccommodationDetails> getPackageDayAccommodations(Long packageId) {
+
+        String sql = """
+        SELECT
+            package_day_accommodation_id,
+            day_number,
+
+            breakfast,
+            breakfast_description,
+            lunch,
+            lunch_description,
+            dinner,
+            dinner_description,
+            morning_tea,
+            morning_tea_description,
+            evening_tea,
+            evening_tea_description,
+            snacks,
+            snack_note,
+
+            hotel_id,
+            transport_id,
+
+            local_price,
+            price,
+            discount,
+            service_charge,
+            tax,
+            extra_charge,
+            extra_charge_note,
+            transport_cost,
+
+            other_notes,
+            status,
+            created_at,
+            updated_at
+
+        FROM package_day_accommodation
+        WHERE package_id = ?
+          AND (terminated_at IS NULL)
+        ORDER BY day_number ASC
+    """;
+
+        return jdbcTemplate.query(sql, new Object[]{packageId},
+                (rs, rowNum) -> PackageScheduleAllDetailsResponse.PackageDayAccommodationDetails.builder()
+
+                        .accommodationId(rs.getLong("package_day_accommodation_id"))
+                        .dayNumber(rs.getInt("day_number"))
+
+                        // meals
+                        .breakfast(rs.getBoolean("breakfast"))
+                        .breakfastDescription(rs.getString("breakfast_description"))
+                        .lunch(rs.getBoolean("lunch"))
+                        .lunchDescription(rs.getString("lunch_description"))
+                        .dinner(rs.getBoolean("dinner"))
+                        .dinnerDescription(rs.getString("dinner_description"))
+                        .morningTea(rs.getBoolean("morning_tea"))
+                        .morningTeaDescription(rs.getString("morning_tea_description"))
+                        .eveningTea(rs.getBoolean("evening_tea"))
+                        .eveningTeaDescription(rs.getString("evening_tea_description"))
+                        .snacks(rs.getBoolean("snacks"))
+                        .snackNote(rs.getString("snack_note"))
+
+                        // transport/hotel
+                        .hotelId(rs.getLong("hotel_id"))
+                        .transportId(rs.getLong("transport_id"))
+
+                        // price details
+                        .localPrice(rs.getInt("local_price"))
+                        .price(rs.getInt("price"))
+                        .discount(rs.getInt("discount"))
+                        .serviceCharge(rs.getInt("service_charge"))
+                        .tax(rs.getInt("tax"))
+                        .extraCharge(rs.getInt("extra_charge"))
+                        .extraChargeNote(rs.getString("extra_charge_note"))
+                        .transportCost(rs.getInt("transport_cost"))
+
+                        .otherNotes(rs.getString("other_notes"))
+                        .status(rs.getString("status"))
+                        .createdAt(rs.getTimestamp("created_at"))
+                        .updatedAt(rs.getTimestamp("updated_at"))
+
+                        .build()
+        );
+    }
+
+    private List<PackageTypeAllDetailsResponse.PackageBasicDetails>
+    getPackagesByPackageTypeId(Long typeId) {
+
+        String query = """
+            SELECT
+                p.package_id,
+                p.name,
+                p.description,
+                p.color,
+                p.hover_color,
+                p.start_date,
+                p.end_date,
+
+                cs.name AS status,
+
+                CASE
+                    WHEN p.package_type_id = ?
+                    THEN TRUE
+                    ELSE FALSE
+                END AS primary_type
+
+            FROM packages p
+
+            INNER JOIN common_status cs
+                ON cs.id = p.status
+
+            WHERE p.package_type_id = ?
+            AND p.terminated_at IS NULL
+
+            ORDER BY p.created_at DESC
+            """;
+
+        return jdbcTemplate.query(
+                query,
+                new Object[]{typeId, typeId},
+                (rs, rowNum) ->
+                        PackageTypeAllDetailsResponse.PackageBasicDetails.builder()
+                                .packageId(rs.getLong("package_id"))
+                                .packageName(rs.getString("name"))
+                                .description(rs.getString("description"))
+                                .color(rs.getString("color"))
+                                .hoverColor(rs.getString("hover_color"))
+                                .status(rs.getString("status"))
+                                .startDate(rs.getDate("start_date"))
+                                .endDate(rs.getDate("end_date"))
+                                .primaryType(rs.getBoolean("primary_type"))
+                                .build()
+        );
+    }
+
+    private List<PackageTypeImageResponse> getPackageTypeImages(Long typeId) {
+
+        String query = """
+            SELECT
+                pti.id,
+                pti.name,
+                pti.description,
+                pti.image_url,
+                cs.name AS status
+            FROM package_types_images pti
+            INNER JOIN common_status cs
+                ON cs.id = pti.status
+            WHERE pti.package_types_id = ?
+            AND pti.terminated_at IS NULL
+            ORDER BY pti.created_at DESC
+            """;
+
+        return jdbcTemplate.query(
+                query,
+                new Object[]{typeId},
+                (rs, rowNum) ->
+                        PackageTypeImageResponse.builder()
+                                .imageId(rs.getLong("id"))
+                                .name(rs.getString("name"))
+                                .description(rs.getString("description"))
+                                .imageUrl(rs.getString("image_url"))
+                                .status(rs.getString("status"))
+                                .build()
+        );
+    }
+
+    @Override
     public void removeAllDayByDayAccommodations(Long packageId, Long userId) {
         try {
             Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
@@ -2780,6 +4237,30 @@ public class PackageRepositoryImpl implements PackageRepository {
             LOGGER.error("Failed to remove all day accommodations", e);
             throw new InternalServerErrorExceptionHandler("Failed to remove all day accommodations");
         }
+    }
+
+    private String mapPackageScheduleSortColumn(String sortBy) {
+
+        if (sortBy == null ||
+                !Sortings.ALLOWED_PACKAGE_SCHEDULE_SORT_COLUMNS.contains(sortBy)) {
+            return "ps.created_at";
+        }
+
+        return switch (sortBy) {
+
+            case "name" -> "ps.name";
+            case "packageName" -> "p.name";
+            case "startDate" -> "ps.assume_start_date";
+            case "endDate" -> "ps.assume_end_date";
+            case "durationStart" -> "ps.duration_start";
+            case "durationEnd" -> "ps.duration_end";
+            case "status" -> "ps.status";
+            case "tourScheduleName" -> "ts.name";
+            case "createdAt" -> "ps.created_at";
+            case "updatedAt" -> "ps.updated_at";
+
+            default -> "ps.created_at";
+        };
     }
 
 }

@@ -1628,5 +1628,38 @@ public class PackageQueries {
         """;
 
 
+    public static final String BASE_PACKAGE_SCHEDULE_QUERY = """
+    SELECT
+        ps.id AS package_schedule_id,
+        ps.name AS package_schedule_name,
+
+        p.package_id,
+        p.name AS package_name,
+
+        ps.assume_start_date,
+        ps.assume_end_date,
+        ps.duration_start,
+        ps.duration_end,
+
+        ps.status,
+        ps.special_note,
+        ps.description,
+
+        ps.tour_shedule_id,
+        ts.name AS tour_schedule_name
+
+    FROM package_schedule ps
+    JOIN packages p ON p.package_id = ps.package_id
+    LEFT JOIN tour_schedule ts ON ts.id = ps.tour_shedule_id
+    WHERE 1=1
+""";
+
+    public static final String COUNT_PACKAGE_SCHEDULE_QUERY = """
+    SELECT COUNT(*)
+    FROM package_schedule ps
+    JOIN packages p ON p.package_id = ps.package_id
+    LEFT JOIN tour_schedule ts ON ts.id = ps.tour_shedule_id
+    WHERE 1=1
+""";
 
 }

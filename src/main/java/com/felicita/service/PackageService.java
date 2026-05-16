@@ -2,7 +2,17 @@ package com.felicita.service;
 
 import com.felicita.model.dto.*;
 import com.felicita.model.request.*;
+import com.felicita.model.request.packages.schedule.PackageScheduleDataRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleInsertRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleUpdateRequest;
+import com.felicita.model.request.packages.type.PackageTypeInsertRequest;
+import com.felicita.model.request.packages.type.PackageTypeUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.packages.schedule.PackageScheduleAllDetailsResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleParamsResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleWithParamsResponse;
+import com.felicita.model.response.packages.type.PackageTypeAllDetailsResponse;
+import com.felicita.model.response.packages.type.PackageTypeBasicDetailsResponse;
 import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.PackageStatisticsResponse;
 import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
@@ -68,4 +78,28 @@ public interface PackageService {
     CommonResponse<PackageTypeStatisticsResponse> getPackageTypeStatistics();
 
     CommonResponse<AddPackageParamResponse> getInsertPackageParams(AddPackageParamRequest addPackageParamRequest);
+
+    CommonResponse<List<PackageTypeBasicDetailsResponse>> getPackageTypes();
+
+    CommonResponse<PackageTypeAllDetailsResponse> getPackageTypeDetailsById(CommonIdRequest commonIdRequest);
+
+    CommonResponse<PackageTypeBasicDetailsResponse> getPackageTypeBasicDetailsById(CommonIdRequest commonIdRequest);
+
+    CommonResponse<TerminateResponse> terminatePackageType(CommonIdRequest commonIdRequest);
+
+    CommonResponse<InsertResponse> insertPackageType(PackageTypeInsertRequest packageTypeInsertRequest);
+
+    CommonResponse<UpdateResponse> updatePackageType(PackageTypeUpdateRequest packageTypeUpdateRequest);
+
+    CommonResponse<PackageScheduleWithParamsResponse> getPackageScheduleWithParams(PackageScheduleDataRequest packageScheduleDataRequest);
+
+    CommonResponse<PackageScheduleParamsResponse> getPackageScheduleParams();
+
+    CommonResponse<PackageScheduleAllDetailsResponse> getPackageScheduleDetailsById(CommonIdRequest packageScheduleId);
+
+    CommonResponse<InsertResponse> createPackageSchedule(PackageScheduleInsertRequest packageScheduleInsertRequest);
+
+    CommonResponse<UpdateResponse> updatePackageSchedule(PackageScheduleUpdateRequest packageScheduleUpdateRequest);
+
+    CommonResponse<TerminateResponse> termiantePackageScheduleById(CommonIdRequest commonIdRequest);
 }

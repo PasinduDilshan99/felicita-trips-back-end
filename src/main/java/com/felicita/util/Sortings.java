@@ -29,4 +29,16 @@ public class Sortings {
             "createdAt",
             "updatedAt"
     );
+    public static final List<String> ALLOWED_PACKAGE_SCHEDULE_SORT_COLUMNS = List.of(
+            "name",
+            "packageName",
+            "startDate",
+            "endDate",
+            "durationStart",
+            "durationEnd",
+            "status",
+            "tourScheduleName",
+            "createdAt",
+            "updatedAt"
+    );
 }

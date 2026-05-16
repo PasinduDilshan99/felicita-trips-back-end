@@ -681,6 +681,34 @@ public class CommonRepositoryImpl implements CommonRepository {
                         .build()
         );
     }
+
+    @Override
+    public List<PackageIdAndNamesResponse> getPackageIdAndNameResponses() {
+        try {
+
+            String sql = """
+            SELECT 
+                package_id,
+                name
+            FROM packages
+            WHERE status = 1
+            ORDER BY name ASC
+        """;
+
+            return jdbcTemplate.query(sql, (rs, rowNum) ->
+                    PackageIdAndNamesResponse.builder()
+                            .packageId(rs.getLong("package_id"))
+                            .packageName(rs.getString("name"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching package id and names: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to fetch packages");
+        }
+    }
+
     @Override
     public List<DestinationIdAndNameResponse> getDestinationIdAndNameResponses() {
 

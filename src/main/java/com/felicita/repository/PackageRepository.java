@@ -2,7 +2,19 @@ package com.felicita.repository;
 
 import com.felicita.model.dto.*;
 import com.felicita.model.request.*;
+import com.felicita.model.request.packages.schedule.PackageScheduleDataRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleInsertRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleUpdateRequest;
+import com.felicita.model.request.packages.type.PackageTypeImageInsertRequest;
+import com.felicita.model.request.packages.type.PackageTypeImageUpdateRequest;
+import com.felicita.model.request.packages.type.PackageTypeInsertRequest;
+import com.felicita.model.request.packages.type.PackageTypeUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.packages.schedule.PacakgeScheduleBasicDetailsResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleAllDetailsResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleWithParamsResponse;
+import com.felicita.model.response.packages.type.PackageTypeAllDetailsResponse;
+import com.felicita.model.response.packages.type.PackageTypeBasicDetailsResponse;
 import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.PackageStatisticsResponse;
 import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
@@ -174,4 +186,34 @@ public interface PackageRepository {
     List<String> getTourConditions(AddPackageParamRequest addPackageParamRequest);
 
     List<AddPackageParamResponse.TravelTips> getTourTravelTips(AddPackageParamRequest addPackageParamRequest);
+
+    List<PackageTypeBasicDetailsResponse> getPackageTypes();
+
+    PackageTypeAllDetailsResponse getPackageTypeDetailsById(CommonIdRequest commonIdRequest);
+
+    PackageTypeBasicDetailsResponse getPackageTypeBasicDetailsById(CommonIdRequest commonIdRequest);
+
+    void terminatePackageType(CommonIdRequest commonIdRequest, Long userId);
+
+    Long insertPackageTypeBasicDetails(PackageTypeInsertRequest packageTypeInsertRequest, Long userId);
+
+    void insertPackageTypeImages(Long packageTypeId, List<PackageTypeImageInsertRequest> images, Long userId);
+
+    void updatePackageTypeBasicDetails(PackageTypeUpdateRequest packageTypeUpdateRequest, Long userId);
+
+    void removePackageTypeImages(Long typeId, List<Long> removeImageIds, Long userId);
+
+    void updatePackageTypeImages(Long typeId, List<PackageTypeImageUpdateRequest> updateImages, Long userId);
+
+    PackageScheduleWithParamsResponse getPackageScheduleWithParams(PackageScheduleDataRequest packageScheduleDataRequest);
+
+    PackageScheduleAllDetailsResponse getPackageScheduleDetailsById(CommonIdRequest packageScheduleId);
+
+    Long createPackageSchedule(PackageScheduleInsertRequest packageScheduleInsertRequest);
+
+    PacakgeScheduleBasicDetailsResponse getPackageScheduleBasicDetails(Long packageScheduleId);
+
+    void updatePackageSchedule(PackageScheduleUpdateRequest packageScheduleUpdateRequest, Long userId);
+
+    void terminatePackageScheduleById(CommonIdRequest commonIdRequest, Long userId);
 }

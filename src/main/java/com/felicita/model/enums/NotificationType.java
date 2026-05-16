@@ -89,6 +89,10 @@ public enum NotificationType {
     PACKAGE_UPDATED("Triggered when a package is updated"),
     PACKAGE_TERMINATED("Triggered when a package is terminated or deactivated"),
 
+    PACKAGE_TYPE_TERMINATED(""),
+    PACKAGE_TYPE_CREATED(""),
+    PACKAGE_TYPE_UPDATED(""),
+
     // =========================
     // PACKAGE SCHEDULE
     // =========================
