@@ -1853,8 +1853,8 @@ public class TourEmailHelperServiceImpl implements TourEmailHelperService {
         for (TourImageInsertRequest img : images) {
             sb.append("<tr>")
                     .append("<td>").append(i++).append("</td>")
-                    .append("<td>").append(escapeHtml(img.getImageName())).append("</td>")
-                    .append("<td>").append(img.getImageDescription() != null ? escapeHtml(img.getImageDescription()) : "—").append("</td>")
+                    .append("<td>").append(escapeHtml(img.getName())).append("</td>")
+                    .append("<td>").append(img.getDescription() != null ? escapeHtml(img.getDescription()) : "—").append("</td>")
                     .append("<td>").append(buildStatusPill(img.getStatus())).append("</td>")
                     .append("<td>").append(img.getImageUrl() != null ?
                             "<a href='" + img.getImageUrl() + "' style='color:#0e7c7b;text-decoration:none;' target='_blank'>🔗 View</a>" : "—").append("</td>")

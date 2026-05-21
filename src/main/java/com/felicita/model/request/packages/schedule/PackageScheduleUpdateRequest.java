@@ -14,22 +14,14 @@ import java.util.Date;
 public class PackageScheduleUpdateRequest {
 
     private Long packageScheduleId;
-
     private String packageScheduleName;
-
     private Long packageId;
-
     private Date assumeStartDate;
     private Date assumeEndDate;
-
     private Integer durationStart;
     private Integer durationEnd;
-
     private String specialNote;
-
     private String description;
-
     private String status;
-
     private Long tourScheduleId;
 }

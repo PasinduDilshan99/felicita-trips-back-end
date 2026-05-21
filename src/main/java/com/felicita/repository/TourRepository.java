@@ -81,7 +81,6 @@ public interface TourRepository {
 
     Long insertTourDetails(TourInsertRequest tourInsertRequest, Long userId);
 
-
     void insertTourImages(Long tourId, List<TourImageInsertRequest> images, Long userId);
 
     void insertTourInclusions(Long tourId, List<TourInclusionInsertRequest> inclusions, Long userId);

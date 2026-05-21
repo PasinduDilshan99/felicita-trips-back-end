@@ -14,20 +14,13 @@ import java.util.Date;
 public class PackageScheduleInsertRequest {
 
     private String packageScheduleName;
-
     private Long packageId;
-
     private Date assumeStartDate;
     private Date assumeEndDate;
-
     private Integer durationStart;
     private Integer durationEnd;
-
     private String specialNote;
-
     private String description;
-
     private String status;
-
     private Long tourScheduleId;
 }

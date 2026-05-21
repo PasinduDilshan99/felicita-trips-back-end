@@ -3153,8 +3153,8 @@ public class TourServiceImpl implements TourService {
             List<TourComparisonResult.TourImageChange> imagesToAdd =
                     tourUpdateRequest.getAddImages().stream()
                             .map(img -> TourComparisonResult.TourImageChange.builder()
-                                    .imageName(img.getImageName())
-                                    .imageDescription(img.getImageDescription())
+                                    .imageName(img.getName())
+                                    .imageDescription(img.getDescription())
                                     .imageUrl(img.getImageUrl())
                                     .status(img.getStatus())
                                     .build())

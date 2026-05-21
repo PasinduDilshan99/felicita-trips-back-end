@@ -2905,7 +2905,7 @@ public class PackageRepositoryImpl implements PackageRepository {
 
                                 .images(getPackageTypeImages(typeId))
 
-                                .tours(getPackagesByPackageTypeId(typeId))
+                                .packageBasicDetails(getPackagesByPackageTypeId(typeId))
 
                                 .build();
                     }
@@ -3785,6 +3785,7 @@ public class PackageRepositoryImpl implements PackageRepository {
     public Long createPackageSchedule(PackageScheduleInsertRequest request) {
 
         try {
+            Long statusId = statusRepository.getStatusIdByName(request.getStatus());
 
             String sql = """
             INSERT INTO package_schedule
@@ -3841,12 +3842,10 @@ public class PackageRepositoryImpl implements PackageRepository {
                 ps.setString(7, request.getSpecialNote());
                 ps.setString(8, request.getDescription());
 
-                // status (assuming FK to common_status id)
-                ps.setLong(9, Long.parseLong(request.getStatus()));
+                ps.setLong(9, statusId);
 
                 ps.setLong(10, request.getTourScheduleId());
 
-                // created_by (if you don't have user context, set null or system user)
                 ps.setNull(11, Types.BIGINT);
 
                 return ps;
@@ -3895,7 +3894,7 @@ public class PackageRepositoryImpl implements PackageRepository {
 
             FROM package_schedule ps
             JOIN packages p ON p.package_id = ps.package_id
-            LEFT JOIN tour_schedule ts ON ts.tour_schedule_id = ps.tour_shedule_id
+            LEFT JOIN tour_schedule ts ON ts.id = ps.tour_shedule_id
 
             WHERE ps.id = ?
         """;
@@ -3944,6 +3943,7 @@ public class PackageRepositoryImpl implements PackageRepository {
     ) {
 
         try {
+            Long statusId = statusRepository.getStatusIdByName(request.getStatus());
 
             String sql = """
             UPDATE package_schedule
@@ -3973,7 +3973,7 @@ public class PackageRepositoryImpl implements PackageRepository {
                     request.getDurationEnd(),
                     request.getSpecialNote(),
                     request.getDescription(),
-                    request.getStatus(),
+                    statusId,
                     request.getTourScheduleId(),
                     userId,
                     request.getPackageScheduleId()
@@ -3989,11 +3989,12 @@ public class PackageRepositoryImpl implements PackageRepository {
     public void terminatePackageScheduleById(CommonIdRequest commonIdRequest, Long userId) {
 
         try {
+            Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
 
             String sql = """
             UPDATE package_schedule
-            SET 
-                status = 0,
+            SET
+                status = ?,
                 terminated_at = CURRENT_TIMESTAMP,
                 terminated_by = ?
             WHERE id = ?
@@ -4001,6 +4002,7 @@ public class PackageRepositoryImpl implements PackageRepository {
 
             int updated = jdbcTemplate.update(
                     sql,
+                    statusId,
                     userId,
                     commonIdRequest.getId()
             );
@@ -4200,7 +4202,6 @@ public class PackageRepositoryImpl implements PackageRepository {
             INNER JOIN common_status cs
                 ON cs.id = pti.status
             WHERE pti.package_types_id = ?
-            AND pti.terminated_at IS NULL
             ORDER BY pti.created_at DESC
             """;
 

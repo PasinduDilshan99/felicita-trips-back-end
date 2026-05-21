@@ -1681,13 +1681,16 @@ public class TourRepositoryImpl implements TourRepository {
             return;
         }
 
+        LOGGER.info(images.toString());
+
         try {
             for (TourImageInsertRequest image : images) {
+                LOGGER.debug("image: {} for tour: {}", image.getName(), tourId);
                 jdbcTemplate.update(
                         TourQueries.INSERT_TOUR_IMAGE,
                         tourId,
-                        image.getImageName(),
-                        image.getImageDescription(),
+                        image.getName(),
+                        image.getDescription(),
                         image.getImageUrl(),
                         image.getStatus(),
                         userId
@@ -4171,8 +4174,8 @@ public class TourRepositoryImpl implements TourRepository {
                                         .season(rs.getString("season"))
                                         .tourStatus(rs.getString("tour_status"))
 
-                                        .categories(getCategoriesByTourId(request.getTourId()))
-                                        .types(getTypesByTourId(request.getTourId()))
+                                        .categories(getCategoriesByTourId(rs.getLong("tour_id")))
+                                        .types(getTypesByTourId(rs.getLong("tour_id")))
 
                                         .build();
                             });
@@ -4385,15 +4388,15 @@ public class TourRepositoryImpl implements TourRepository {
             ts.description,
             cs.name AS status,
             ts.created_by,
-            cb.name AS created_by_name,
+            cb.username AS created_by_name,
             ts.updated_by,
-            ub.name AS updated_by_name,
+            ub.username AS updated_by_name,
             ts.created_at,
             ts.updated_at
         FROM tour_schedule ts
         LEFT JOIN common_status cs ON cs.id = ts.status
-        LEFT JOIN users cb ON cb.id = ts.created_by
-        LEFT JOIN users ub ON ub.id = ts.updated_by
+        LEFT JOIN user cb ON cb.user_id = ts.created_by
+        LEFT JOIN user ub ON ub.user_id = ts.updated_by
         WHERE ts.id = ?
     """;
 
@@ -4527,7 +4530,7 @@ public class TourRepositoryImpl implements TourRepository {
     }
 
     private List<TourScheduleDetailsResponse.TourDayAccommodationDetails> getTourDayAccommodationsByTourId(Long tourId) {
-
+LOGGER.info("tourId" + tourId);
         String sql = """
         SELECT *
         FROM tour_day_accommodation
@@ -4581,7 +4584,6 @@ public class TourRepositoryImpl implements TourRepository {
     }
 
     private List<TourScheduleResponse.TourCategoryDetails> getCategoriesByTourId(Long tourId) {
-
         String sql = """
                     SELECT c.id, c.name
                     FROM tour_category_map tcm

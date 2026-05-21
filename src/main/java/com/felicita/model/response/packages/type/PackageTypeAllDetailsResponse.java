@@ -36,7 +36,7 @@ public class PackageTypeAllDetailsResponse {
 
     private List<PackageTypeImageResponse> images;
 
-    private List<PackageBasicDetails> tours;
+    private List<PackageBasicDetails> packageBasicDetails;
 
 
     @Data

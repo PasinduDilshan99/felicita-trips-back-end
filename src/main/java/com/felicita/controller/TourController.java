@@ -401,7 +401,7 @@ public class TourController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PostMapping(path = "/terminate-activities-schedule")
+    @PostMapping(path = "/terminate-tour-schedule")
     public ResponseEntity<CommonResponse<TerminateResponse>> termianteTourScheduleById(@RequestBody CommonIdRequest commonIdRequest) {
         LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<TerminateResponse> response = tourService.termianteTourScheduleById(commonIdRequest);
