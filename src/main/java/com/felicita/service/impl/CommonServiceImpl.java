@@ -275,6 +275,29 @@ public class CommonServiceImpl implements CommonService {
     }
 
     @Override
+    public List<ActivityScheduleIdAndNameResponse> getActivityScheduleIdAndNames() {
+        LOGGER.info("Start fetching tour id and name responses");
+        try {
+            List<ActivityScheduleIdAndNameResponse> responses = commonRepository.getActivityScheduleIdAndNames();
+
+            if (responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching tour id and name responses");
+        }
+    }
+
+    @Override
     public String generateRandomOtp() {
         SecureRandom secureRandom = new SecureRandom();
         StringBuilder otp = new StringBuilder();

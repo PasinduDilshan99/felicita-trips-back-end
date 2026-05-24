@@ -565,7 +565,7 @@ public class PackageQueries {
             LEFT JOIN common_status cs3 ON pt.status = cs3.id
             LEFT JOIN tour t ON p.tour_id = t.tour_id
             LEFT JOIN package_schedule ps ON p.package_id = ps.package_id
-            LEFT JOIN features f ON p.package_id = f.package_id
+            LEFT JOIN package_features f ON p.package_id = f.package_id
             LEFT JOIN package_images pi ON p.package_id = pi.package_id
             WHERE p.package_id IN (:packageIds)
             ORDER BY p.package_id

@@ -4482,6 +4482,122 @@ public class TourRepositoryImpl implements TourRepository {
         );
     }
 
+    @Override
+    public Double getMinPriceForTour() {
+
+        try {
+
+            String sql = """
+            SELECT MIN(price_per_person)
+            FROM packages
+            WHERE price_per_person IS NOT NULL
+              AND terminated_at IS NULL
+        """;
+
+            Double minPrice = jdbcTemplate.queryForObject(
+                    sql,
+                    Double.class
+            );
+
+            return minPrice != null ? minPrice : 0.0;
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching minimum package price: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch minimum price");
+        }
+    }
+
+    @Override
+    public Double getMaxPriceForTour() {
+
+        try {
+
+            String sql = """
+            SELECT MAX(price_per_person)
+            FROM packages
+            WHERE price_per_person IS NOT NULL
+              AND terminated_at IS NULL
+        """;
+
+            Double maxPrice = jdbcTemplate.queryForObject(
+                    sql,
+                    Double.class
+            );
+
+            return maxPrice != null ? maxPrice : 0.0;
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching maximum package price: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch maximum price");
+        }
+    }
+
+    @Override
+    public List<Integer> getDistnictDurations() {
+
+        try {
+
+            String sql = """
+            SELECT DISTINCT duration
+            FROM tour
+            WHERE duration IS NOT NULL
+              AND terminated_at IS NULL
+            ORDER BY duration ASC
+        """;
+
+            return jdbcTemplate.query(
+                    sql,
+                    (rs, rowNum) -> rs.getInt("duration")
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching distinct tour durations: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch distinct durations");
+        }
+    }
+
+    @Override
+    public List<String> getDistinctLocations() {
+
+        try {
+
+            String sql = """
+            SELECT DISTINCT start_location
+            FROM tour
+            WHERE start_location IS NOT NULL
+              AND start_location != ''
+              AND terminated_at IS NULL
+
+            UNION
+
+            SELECT DISTINCT end_location
+            FROM tour
+            WHERE end_location IS NOT NULL
+              AND end_location != ''
+              AND terminated_at IS NULL
+
+            ORDER BY 1 ASC
+        """;
+
+            return jdbcTemplate.query(
+                    sql,
+                    (rs, rowNum) -> rs.getString(1)
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching distinct locations: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch distinct locations");
+        }
+    }
+
     private List<TourScheduleDetailsResponse.TourTypeDetails> getTourTypesByTourId(Long tourId) {
 
         String sql = """

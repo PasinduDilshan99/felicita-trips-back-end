@@ -8,6 +8,7 @@ import com.felicita.model.request.activity.category.ActivityCategoryUpdateReques
 import com.felicita.model.request.activity.schedule.ActivityScheduleUpdateRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.activity.category.ActivityCategoryDetailsResponse;
+import com.felicita.model.response.common.ActivityScheduleIdAndNameResponse;
 import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
 import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
 
@@ -76,4 +77,8 @@ public interface ActivitiesService {
     CommonResponse<InsertResponse> insertActivityCategory(ActivityCategoryInsertRequest activityCategoryInsertRequest);
 
     CommonResponse<UpdateResponse> updateActivityCategory(ActivityCategoryUpdateRequest activityCategoryUpdateRequest);
+
+    CommonResponse<List<ActivityIdAndNameResponse>> getActivitiesByDestinationId(CommonIdRequest destinationId);
+
+    CommonResponse<List<ActivityScheduleIdAndNameResponse>> getActivityScheduleIdAndNames();
 }

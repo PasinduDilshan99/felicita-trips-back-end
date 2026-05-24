@@ -8,6 +8,7 @@ import com.felicita.model.request.activity.category.ActivityCategoryUpdateReques
 import com.felicita.model.request.activity.schedule.ActivityScheduleUpdateRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.activity.category.ActivityCategoryDetailsResponse;
+import com.felicita.model.response.common.ActivityScheduleIdAndNameResponse;
 import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
 import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
 import com.felicita.service.ActivitiesService;
@@ -217,6 +218,14 @@ public class ActivitiesController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @GetMapping(path = "/activities-schedule-id-and-names")
+    public ResponseEntity<CommonResponse<List<ActivityScheduleIdAndNameResponse>>> getActivityScheduleIdAndNames() {
+        LOGGER.info("{} Start execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<ActivityScheduleIdAndNameResponse>> response = activitiesService.getActivityScheduleIdAndNames();
+        LOGGER.info("{} End execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     @PostMapping(path = "/activities-schedule-details-by-id")
     public ResponseEntity<CommonResponse<ActivityScheduleDetailsResponse>> getActivityScheduleDetailsById(@RequestBody CommonIdRequest activityScheduleId) {
         LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
@@ -277,6 +286,14 @@ public class ActivitiesController {
     public ResponseEntity<CommonResponse<UpdateResponse>> updateActivityCategory(@RequestBody ActivityCategoryUpdateRequest activityCategoryUpdateRequest) {
         LOGGER.info("{} Start execute update activity {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<UpdateResponse> response = activitiesService.updateActivityCategory(activityCategoryUpdateRequest);
+        LOGGER.info("{} End execute update activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/activities-for-destination-id")
+    public ResponseEntity<CommonResponse<List<ActivityIdAndNameResponse>>> getActivitiesByDestinationId(@RequestBody CommonIdRequest destinationId) {
+        LOGGER.info("{} Start execute update activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<ActivityIdAndNameResponse>> response = activitiesService.getActivitiesByDestinationId(destinationId);
         LOGGER.info("{} End execute update activity {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

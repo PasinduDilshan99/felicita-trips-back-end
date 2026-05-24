@@ -710,6 +710,34 @@ public class CommonRepositoryImpl implements CommonRepository {
     }
 
     @Override
+    public List<ActivityScheduleIdAndNameResponse> getActivityScheduleIdAndNames() {
+        try {
+
+            String sql = """
+            SELECT
+                ash.id,
+                ash.name
+            FROM activities_schedule ash
+            LEFT JOIN common_status cs ON cs.id = ash.status
+            WHERE cs.name = 'ACTIVE'
+            ORDER BY name ASC
+        """;
+
+            return jdbcTemplate.query(sql, (rs, rowNum) ->
+                    ActivityScheduleIdAndNameResponse.builder()
+                            .activityScheduleId(rs.getLong("id"))
+                            .activityScheduleName(rs.getString("name"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching package id and names: {}", ex.getMessage(), ex);
+            throw new RuntimeException("Failed to fetch packages");
+        }
+    }
+
+    @Override
     public List<DestinationIdAndNameResponse> getDestinationIdAndNameResponses() {
 
         try {

@@ -8,6 +8,8 @@ import com.felicita.model.request.packages.schedule.PackageScheduleUpdateRequest
 import com.felicita.model.request.packages.type.PackageTypeInsertRequest;
 import com.felicita.model.request.packages.type.PackageTypeUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.PackageScheduleIdAndNameResponse;
+import com.felicita.model.response.packages.ParamsForPackageRequestResponse;
 import com.felicita.model.response.packages.schedule.PackageScheduleAllDetailsResponse;
 import com.felicita.model.response.packages.schedule.PackageScheduleParamsResponse;
 import com.felicita.model.response.packages.schedule.PackageScheduleWithParamsResponse;
@@ -102,4 +104,8 @@ public interface PackageService {
     CommonResponse<UpdateResponse> updatePackageSchedule(PackageScheduleUpdateRequest packageScheduleUpdateRequest);
 
     CommonResponse<TerminateResponse> termiantePackageScheduleById(CommonIdRequest commonIdRequest);
+
+    CommonResponse<List<PackageScheduleIdAndNameResponse>> getPackageScheduleIdAndNames();
+
+    CommonResponse<ParamsForPackageRequestResponse> getParamsForPackageRequest();
 }

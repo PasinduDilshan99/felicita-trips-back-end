@@ -3830,6 +3830,46 @@ public class ActivitiesRepositoryImpl implements ActivitiesRepository {
         }
     }
 
+    @Override
+    public List<ActivityIdAndNameResponse> getActivitiesByDestinationId(
+            CommonIdRequest destinationId
+    ) {
+
+        try {
+
+            String sql = """
+            SELECT 
+                a.id AS activity_id,
+                a.name AS activity_name
+            FROM activities a
+            LEFT JOIN common_status cs
+                ON cs.id = a.status
+            WHERE a.destination_id = ?
+              AND cs.name = 'ACTIVE'
+            ORDER BY a.name ASC
+        """;
+
+            return jdbcTemplate.query(
+                    sql,
+                    new Object[]{destinationId.getId()},
+                    (rs, rowNum) -> ActivityIdAndNameResponse.builder()
+                            .activityId(rs.getLong("activity_id"))
+                            .activityName(rs.getString("activity_name"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Error fetching activities by destination id: {}",
+                    ex.getMessage(),
+                    ex
+            );
+
+            throw new RuntimeException("Failed to fetch activities");
+        }
+    }
+
     private List<ActivityCategoryDto> getCategoriesByActivityId(Long activityId) {
 
         return jdbcTemplate.query(

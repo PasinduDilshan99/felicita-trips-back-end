@@ -14,10 +14,12 @@ import com.felicita.model.request.tour.schedule.TourScheduleUpdateRequest;
 import com.felicita.model.request.tour.type.TourTypeInsertRequest;
 import com.felicita.model.request.tour.type.TourTypeUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.TourScheduleIdAndNameResponse;
 import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
 import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.TourStatisticsResponse;
 import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
+import com.felicita.model.response.tour.ParamsForTourRequestResponse;
 import com.felicita.model.response.tour.category.TourCategoryAllDetailsResponse;
 import com.felicita.model.response.tour.category.TourCategoryBasicDetailsResponse;
 import com.felicita.model.response.tour.schedule.TourScheduleDetailsResponse;
@@ -119,4 +121,8 @@ public interface TourService {
     CommonResponse<UpdateResponse> updateTourSchedule(TourScheduleUpdateRequest tourScheduleUpdateRequest);
 
     CommonResponse<TerminateResponse> termianteTourScheduleById(CommonIdRequest commonIdRequest);
+
+    CommonResponse<List<TourScheduleIdAndNameResponse>> getTourScheduleIdAndNames();
+
+    CommonResponse<ParamsForTourRequestResponse> getParamsForTourRequest();
 }

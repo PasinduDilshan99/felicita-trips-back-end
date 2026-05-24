@@ -41,6 +41,7 @@ import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.Date;
 import java.util.stream.Collectors;
 
 @Repository
@@ -4015,6 +4016,234 @@ public class PackageRepositoryImpl implements PackageRepository {
 
             LOGGER.error("Error terminating package schedule: {}", ex.getMessage(), ex);
             throw new RuntimeException("Failed to terminate package schedule");
+        }
+    }
+
+    @Override
+    public Double getMinPriceForPackage() {
+
+        try {
+
+            String sql = """
+            SELECT MIN(price_per_person)
+            FROM packages
+            WHERE price_per_person IS NOT NULL
+              AND terminated_at IS NULL
+        """;
+
+            Double minPrice = jdbcTemplate.queryForObject(
+                    sql,
+                    Double.class
+            );
+
+            return minPrice != null ? minPrice : 0.0;
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching minimum package price: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch minimum package price");
+        }
+    }
+
+    @Override
+    public Double getMaxPriceForPackage() {
+
+        try {
+
+            String sql = """
+            SELECT MAX(price_per_person)
+            FROM packages
+            WHERE price_per_person IS NOT NULL
+              AND terminated_at IS NULL
+        """;
+
+            Double maxPrice = jdbcTemplate.queryForObject(
+                    sql,
+                    Double.class
+            );
+
+            return maxPrice != null ? maxPrice : 0.0;
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching maximum package price: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch maximum package price");
+        }
+    }
+
+    @Override
+    public List<Integer> getDistinctDurationsForPackage() {
+
+        try {
+
+            String sql = """
+            SELECT DISTINCT t.duration
+            FROM packages p
+            INNER JOIN tour t ON t.tour_id = p.tour_id
+            WHERE t.duration IS NOT NULL
+              AND p.terminated_at IS NULL
+              AND t.terminated_at IS NULL
+            ORDER BY t.duration ASC
+        """;
+
+            return jdbcTemplate.query(
+                    sql,
+                    (rs, rowNum) -> rs.getInt("duration")
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching distinct package durations: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch package durations");
+        }
+    }
+
+    @Override
+    public List<String> getDistinctLocationsForPackage() {
+
+        try {
+
+            String sql = """
+            SELECT DISTINCT location
+            FROM (
+                SELECT t.start_location AS location
+                FROM packages p
+                INNER JOIN tour t ON t.tour_id = p.tour_id
+                WHERE t.start_location IS NOT NULL
+                  AND t.start_location != ''
+                  AND p.terminated_at IS NULL
+                  AND t.terminated_at IS NULL
+
+                UNION
+
+                SELECT t.end_location AS location
+                FROM packages p
+                INNER JOIN tour t ON t.tour_id = p.tour_id
+                WHERE t.end_location IS NOT NULL
+                  AND t.end_location != ''
+                  AND p.terminated_at IS NULL
+                  AND t.terminated_at IS NULL
+            ) locations
+            ORDER BY location ASC
+        """;
+
+            return jdbcTemplate.query(
+                    sql,
+                    (rs, rowNum) -> rs.getString("location")
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching distinct package locations: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch package locations");
+        }
+    }
+
+    @Override
+    public Integer getMinGroupSizeForPackage() {
+
+        try {
+
+            String sql = """
+            SELECT MIN(min_person_count)
+            FROM packages
+            WHERE min_person_count IS NOT NULL
+              AND terminated_at IS NULL
+        """;
+
+            Integer minGroupSize = jdbcTemplate.queryForObject(
+                    sql,
+                    Integer.class
+            );
+
+            return minGroupSize != null ? minGroupSize : 0;
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching minimum group size: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch minimum group size");
+        }
+    }
+
+    @Override
+    public Integer getMaxGroupSizeForPackage() {
+
+        try {
+
+            String sql = """
+            SELECT MAX(max_person_count)
+            FROM packages
+            WHERE max_person_count IS NOT NULL
+              AND terminated_at IS NULL
+        """;
+
+            Integer maxGroupSize = jdbcTemplate.queryForObject(
+                    sql,
+                    Integer.class
+            );
+
+            return maxGroupSize != null ? maxGroupSize : 0;
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching maximum group size: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch maximum group size");
+        }
+    }
+
+    @Override
+    public Date getFromDateForPackage() {
+
+        try {
+
+            String sql = """
+            SELECT MIN(start_date)
+            FROM packages
+            WHERE start_date IS NOT NULL
+              AND terminated_at IS NULL
+        """;
+
+            return jdbcTemplate.queryForObject(
+                    sql,
+                    Date.class
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching minimum package start date: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch minimum start date");
+        }
+    }
+
+    @Override
+    public Date getToDateForPackage() {
+
+        try {
+
+            String sql = """
+            SELECT MAX(end_date)
+            FROM packages
+            WHERE end_date IS NOT NULL
+              AND terminated_at IS NULL
+        """;
+
+            return jdbcTemplate.queryForObject(
+                    sql,
+                    Date.class
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching maximum package end date: {}", ex.getMessage(), ex);
+
+            throw new RuntimeException("Failed to fetch maximum end date");
         }
     }
 

@@ -22,10 +22,12 @@ import com.felicita.model.request.tour.type.TourTypeInsertRequest;
 import com.felicita.model.request.tour.type.TourTypeUpdateRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.common.SortByResponse;
+import com.felicita.model.response.common.TourScheduleIdAndNameResponse;
 import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
 import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.TourStatisticsResponse;
 import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
+import com.felicita.model.response.tour.ParamsForTourRequestResponse;
 import com.felicita.model.response.tour.category.TourCategoryAllDetailsResponse;
 import com.felicita.model.response.tour.category.TourCategoryBasicDetailsResponse;
 import com.felicita.model.response.tour.category.TourCategoryImageResponse;
@@ -2471,6 +2473,56 @@ public class TourServiceImpl implements TourService {
             throw new InternalServerErrorExceptionHandler("Failed to terminate tour schedule in database");
         } finally {
             LOGGER.info("End terminating tour schedule from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<List<TourScheduleIdAndNameResponse>> getTourScheduleIdAndNames() {
+        LOGGER.info("Start fetching tour type details by id from repository");
+        try {
+            List<TourScheduleIdAndNameResponse> tourScheduleIdAndNameResponses = commonService.getTourScheduleIdAndNameResponses();
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourScheduleIdAndNameResponses,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour type details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour type details from database");
+        } finally {
+            LOGGER.info("End fetching tour type details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<ParamsForTourRequestResponse> getParamsForTourRequest() {
+        LOGGER.info("Start fetching params for tour request from repository");
+        try {
+            ParamsForTourRequestResponse paramsForTourRequest = new ParamsForTourRequestResponse();
+            paramsForTourRequest.setMinPrice(tourRepository.getMinPriceForTour());
+            paramsForTourRequest.setMaxPrice(tourRepository.getMaxPriceForTour());
+            paramsForTourRequest.setDurations(tourRepository.getDistnictDurations());
+            paramsForTourRequest.setLocations(tourRepository.getDistinctLocations());
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    paramsForTourRequest,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching params for tour request: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch params for tour request from database");
+        } finally {
+            LOGGER.info("End fetching params for tour request from repository");
         }
     }
 

@@ -14,7 +14,9 @@ import com.felicita.model.request.packages.type.PackageTypeImageUpdateRequest;
 import com.felicita.model.request.packages.type.PackageTypeInsertRequest;
 import com.felicita.model.request.packages.type.PackageTypeUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.PackageScheduleIdAndNameResponse;
 import com.felicita.model.response.common.SortByResponse;
+import com.felicita.model.response.packages.ParamsForPackageRequestResponse;
 import com.felicita.model.response.packages.schedule.PacakgeScheduleBasicDetailsResponse;
 import com.felicita.model.response.packages.schedule.PackageScheduleAllDetailsResponse;
 import com.felicita.model.response.packages.schedule.PackageScheduleParamsResponse;
@@ -1800,6 +1802,60 @@ public class PackageServiceImpl implements PackageService {
             throw new InternalServerErrorExceptionHandler("Failed to terminate package schedule in database");
         } finally {
             LOGGER.info("End terminating package schedule from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<List<PackageScheduleIdAndNameResponse>> getPackageScheduleIdAndNames() {
+        LOGGER.info("Start terminating package schedule by id from repository");
+        try {
+
+            List<PackageScheduleIdAndNameResponse> packageScheduleIdAndNameResponses = commonService.getPackageScheduleIdAndNameResponses();
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    packageScheduleIdAndNameResponses,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while terminating package schedule: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to terminate package schedule in database");
+        } finally {
+            LOGGER.info("End terminating package schedule from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<ParamsForPackageRequestResponse> getParamsForPackageRequest() {
+        LOGGER.info("Start fetching params for package request from repository");
+        try {
+            ParamsForPackageRequestResponse paramsForPackageRequest = new ParamsForPackageRequestResponse();
+            paramsForPackageRequest.setMinPrice(packageRepository.getMinPriceForPackage());
+            paramsForPackageRequest.setMaxPrice(packageRepository.getMaxPriceForPackage());
+            paramsForPackageRequest.setDurations(packageRepository.getDistinctDurationsForPackage());
+            paramsForPackageRequest.setLocations(packageRepository.getDistinctLocationsForPackage());
+            paramsForPackageRequest.setMinGroupSize(packageRepository.getMinGroupSizeForPackage());
+            paramsForPackageRequest.setMaxGroupSize(packageRepository.getMaxGroupSizeForPackage());
+            paramsForPackageRequest.setFromDate(packageRepository.getFromDateForPackage());
+            paramsForPackageRequest.setToDate(packageRepository.getToDateForPackage());
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    paramsForPackageRequest,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching params for package request: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch params for package request from database");
+        } finally {
+            LOGGER.info("End fetching params for package request from repository");
         }
     }
 

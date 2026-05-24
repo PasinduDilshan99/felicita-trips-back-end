@@ -15,10 +15,12 @@ import com.felicita.model.request.tour.type.TourTypeInsertRequest;
 import com.felicita.model.request.tour.type.TourTypeUpdateRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.activity.category.ActivityCategoryDetailsResponse;
+import com.felicita.model.response.common.TourScheduleIdAndNameResponse;
 import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
 import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.TourStatisticsResponse;
 import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
+import com.felicita.model.response.tour.ParamsForTourRequestResponse;
 import com.felicita.model.response.tour.category.TourCategoryAllDetailsResponse;
 import com.felicita.model.response.tour.category.TourCategoryBasicDetailsResponse;
 import com.felicita.model.response.tour.schedule.TourScheduleDetailsResponse;
@@ -69,6 +71,14 @@ public class TourController {
     public ResponseEntity<CommonResponse<ToursDetailsWithParamResponse>> getToursToShowWithParam(@RequestBody TourDataRequest tourDataRequest) {
         LOGGER.info("{} Start execute get active tours for request {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<ToursDetailsWithParamResponse> response = tourService.getToursToShowWithParam(tourDataRequest);
+        LOGGER.info("{} End execute get active tours for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/params-for-tour-request")
+    public ResponseEntity<CommonResponse<ParamsForTourRequestResponse>> getParamsForTourRequest() {
+        LOGGER.info("{} Start execute get active tours for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<ParamsForTourRequestResponse> response = tourService.getParamsForTourRequest();
         LOGGER.info("{} End execute get active tours for request {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -406,6 +416,14 @@ public class TourController {
         LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<TerminateResponse> response = tourService.termianteTourScheduleById(commonIdRequest);
         LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/tour-schedule-id-and-names")
+    public ResponseEntity<CommonResponse<List<TourScheduleIdAndNameResponse>>> getTourScheduleIdAndNames() {
+        LOGGER.info("{} Start execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<TourScheduleIdAndNameResponse>> response = tourService.getTourScheduleIdAndNames();
+        LOGGER.info("{} End execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

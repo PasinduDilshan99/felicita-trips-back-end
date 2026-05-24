@@ -19,6 +19,7 @@ import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.PackageStatisticsResponse;
 import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
 
+import java.util.Date;
 import java.util.List;
 
 public interface PackageRepository {
@@ -216,4 +217,20 @@ public interface PackageRepository {
     void updatePackageSchedule(PackageScheduleUpdateRequest packageScheduleUpdateRequest, Long userId);
 
     void terminatePackageScheduleById(CommonIdRequest commonIdRequest, Long userId);
+
+    Double getMinPriceForPackage();
+
+    Double getMaxPriceForPackage();
+
+    List<Integer> getDistinctDurationsForPackage();
+
+    List<String> getDistinctLocationsForPackage();
+
+    Integer getMinGroupSizeForPackage();
+
+    Integer getMaxGroupSizeForPackage();
+
+    Date getFromDateForPackage();
+
+    Date getToDateForPackage();
 }

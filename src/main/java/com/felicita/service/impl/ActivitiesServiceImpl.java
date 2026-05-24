@@ -20,6 +20,7 @@ import com.felicita.model.request.activity.category.ActivityCategoryUpdateReques
 import com.felicita.model.request.activity.schedule.ActivityScheduleUpdateRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.activity.category.ActivityCategoryDetailsResponse;
+import com.felicita.model.response.common.ActivityScheduleIdAndNameResponse;
 import com.felicita.model.response.common.SortByResponse;
 import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
 import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
@@ -1458,6 +1459,57 @@ public class ActivitiesServiceImpl implements ActivitiesService {
             throw new InternalServerErrorExceptionHandler("Failed to update activity category in database");
         } finally {
             LOGGER.info("End updating activity category from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<List<ActivityIdAndNameResponse>> getActivitiesByDestinationId(CommonIdRequest destinationId) {
+        LOGGER.info("Start fetching activity history images details by activity id : {} from repository", destinationId);
+        try {
+            List<ActivityIdAndNameResponse> activityIdAndNameResponses = activitiesRepository.getActivitiesByDestinationId(destinationId);
+
+            if (activityIdAndNameResponses.isEmpty()) {
+                LOGGER.warn("No activity history images details by activity id : {} found in database", destinationId);
+                throw new DataNotFoundErrorExceptionHandler("No activity history images details by activity id : " + destinationId);
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    activityIdAndNameResponses,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching activity history images details by activity id : {} , {}", destinationId, e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch activity history images details by activity id : {}" + destinationId);
+        } finally {
+            LOGGER.info("End fetching activity history images details by activity id : {} from repository", destinationId);
+        }
+    }
+
+    @Override
+    public CommonResponse<List<ActivityScheduleIdAndNameResponse>> getActivityScheduleIdAndNames() {
+        LOGGER.info("Start fetching activity history images details by activity id : from repository");
+        try {
+            List<ActivityScheduleIdAndNameResponse> activityScheduleIdAndNameResponses = commonService.getActivityScheduleIdAndNames();
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    activityScheduleIdAndNameResponses,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching activity history images details by activity id :", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch activity history images details by activity id :" );
+        } finally {
+            LOGGER.info("End fetching activity history images details by activity id : from repository");
         }
     }
 

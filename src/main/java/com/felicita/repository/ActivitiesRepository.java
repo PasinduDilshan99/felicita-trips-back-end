@@ -129,4 +129,6 @@ public interface ActivitiesRepository {
     void removeActivityCategoryImages(Long categoryId, List<Long> removeImageIds);
 
     void updateActivityCategoryImages(Long categoryId, List<ActivityCategoryImageUpdateRequest> updateImages);
+
+    List<ActivityIdAndNameResponse> getActivitiesByDestinationId(CommonIdRequest destinationId);
 }

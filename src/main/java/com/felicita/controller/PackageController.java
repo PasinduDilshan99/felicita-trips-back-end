@@ -10,6 +10,8 @@ import com.felicita.model.request.packages.type.PackageTypeUpdateRequest;
 import com.felicita.model.request.tour.schedule.TourScheduleInsertRequest;
 import com.felicita.model.request.tour.schedule.TourScheduleUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.PackageScheduleIdAndNameResponse;
+import com.felicita.model.response.packages.ParamsForPackageRequestResponse;
 import com.felicita.model.response.packages.schedule.PackageScheduleAllDetailsResponse;
 import com.felicita.model.response.packages.schedule.PackageScheduleParamsResponse;
 import com.felicita.model.response.packages.schedule.PackageScheduleWithParamsResponse;
@@ -61,6 +63,14 @@ public class PackageController {
     public ResponseEntity<CommonResponse<PackageWithParamsResponse>> getPackagesWithParams(@RequestBody PackageDataRequest packageDataRequest) {
         LOGGER.info("{} Start execute get active package for request {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<PackageWithParamsResponse> response = packageService.getPackagesWithParams(packageDataRequest);
+        LOGGER.info("{} End execute get active packages for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/params-for-tour-request")
+    public ResponseEntity<CommonResponse<ParamsForPackageRequestResponse>> getParamsForPackageRequest() {
+        LOGGER.info("{} Start execute get active package for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<ParamsForPackageRequestResponse> response = packageService.getParamsForPackageRequest();
         LOGGER.info("{} End execute get active packages for request {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -334,6 +344,14 @@ public class PackageController {
         LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<TerminateResponse> response = packageService.termiantePackageScheduleById(commonIdRequest);
         LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/package-schedule-id-and-names")
+    public ResponseEntity<CommonResponse<List<PackageScheduleIdAndNameResponse>>> getPackageScheduleIdAndNames() {
+        LOGGER.info("{} Start execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<PackageScheduleIdAndNameResponse>> response = packageService.getPackageScheduleIdAndNames();
+        LOGGER.info("{} End execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

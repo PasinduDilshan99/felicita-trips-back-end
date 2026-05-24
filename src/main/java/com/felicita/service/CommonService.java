@@ -58,4 +58,6 @@ public interface CommonService {
     List<TourIdAndNameResponse> getTourIdAndNameResponses();
 
     List<PackageIdAndNamesResponse> getPacakgeIdAndNameResponses();
+
+    List<ActivityScheduleIdAndNameResponse> getActivityScheduleIdAndNames();
 }

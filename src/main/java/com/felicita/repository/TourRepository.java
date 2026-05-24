@@ -256,4 +256,12 @@ public interface TourRepository {
     void updateTourSchedule(TourScheduleUpdateRequest tourScheduleUpdateRequest,Long userId);
 
     void terminateTourScheduleById(CommonIdRequest commonIdRequest, Long userId);
+
+    Double getMinPriceForTour();
+
+    Double getMaxPriceForTour();
+
+    List<Integer> getDistnictDurations();
+
+    List<String> getDistinctLocations();
 }
