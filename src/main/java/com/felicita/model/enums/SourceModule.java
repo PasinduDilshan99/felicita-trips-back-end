@@ -14,5 +14,6 @@ public enum SourceModule {
     PACKAGE_SCHEDULE,
     PRIVILEGE,
     ROLE,
-    EMPLOYEE
+    EMPLOYEE,
+    SEASON
 }

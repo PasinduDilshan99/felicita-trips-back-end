@@ -98,7 +98,11 @@ public enum NotificationType {
     // =========================
     PACKAGE_SCHEDULE_CREATED("Triggered when a new package schedule is created"),
     PACKAGE_SCHEDULE_UPDATED("Triggered when a package schedule is updated"),
-    PACKAGE_SCHEDULE_TERMINATED("Triggered when a package schedule is terminated or deactivated");
+    PACKAGE_SCHEDULE_TERMINATED("Triggered when a package schedule is terminated or deactivated"),
+
+    SEASON_TERMINATED("Triggered when a season is terminated or deactivated"),
+    SEASON_CREATED("Triggered when a new season is created"),
+    SEASON_UPDATED("Triggered when a season is updated");
 
     private final String description;
 

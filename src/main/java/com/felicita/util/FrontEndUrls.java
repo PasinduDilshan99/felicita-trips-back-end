@@ -6,6 +6,7 @@ public class FrontEndUrls {
     public static final String VIEW_ACTIVITY_DETAILS = "/web-management/activities/view";
     public static final String VIEW_TOUR_DETAILS = "/web-management/tours/view";
     public static final String VIEW_PACKAGE_DETAILS = "/web-management/packages/view";
+    public static final String VIEW_SEASON_DETAILS = "/web-management/seasons/view";
 
     public static final String VIEW_ACTIVITY_SCHEDULE_DETAILS = "/web-management/activities-schedules/view";
     public static final String VIEW_TOUR_SCHEDULE_DETAILS = "/web-management/tours-schedules/view";
