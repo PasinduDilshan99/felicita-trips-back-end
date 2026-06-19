@@ -48,6 +48,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.sql.*;
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -330,8 +331,8 @@ public class TourRepositoryImpl implements TourRepository {
                             TourScheduleResponseDto schedule = new TourScheduleResponseDto();
                             schedule.setScheduleId(scheduleId);
                             schedule.setScheduleName(rs.getString("schedule_name"));
-                            schedule.setAssumeStartDate(rs.getObject("assume_start_date", LocalDate.class));
-                            schedule.setAssumeEndDate(rs.getObject("assume_end_date", LocalDate.class));
+                            schedule.setAssumeStartDate(rs.getObject("assume_start_date", Date.class));
+                            schedule.setAssumeEndDate(rs.getObject("assume_end_date", Date.class));
                             schedule.setDurationStart(rs.getObject("duration_start", Integer.class));
                             schedule.setDurationEnd(rs.getObject("duration_end", Integer.class));
                             schedule.setSpecialNote(rs.getString("special_note"));
@@ -1091,8 +1092,8 @@ public class TourRepositoryImpl implements TourRepository {
                         TourScheduleResponseDto schedule = new TourScheduleResponseDto();
                         schedule.setScheduleId(scheduleId);
                         schedule.setScheduleName(rs.getString("schedule_name"));
-                        schedule.setAssumeStartDate(rs.getObject("assume_start_date", LocalDate.class));
-                        schedule.setAssumeEndDate(rs.getObject("assume_end_date", LocalDate.class));
+                        schedule.setAssumeStartDate(rs.getObject("assume_start_date", Date.class));
+                        schedule.setAssumeEndDate(rs.getObject("assume_end_date", Date.class));
                         schedule.setDurationStart(rs.getObject("duration_start", Integer.class));
                         schedule.setDurationEnd(rs.getObject("duration_end", Integer.class));
                         schedule.setSpecialNote(rs.getString("special_note"));

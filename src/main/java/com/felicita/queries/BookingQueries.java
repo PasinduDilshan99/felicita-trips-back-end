@@ -1202,4 +1202,729 @@ public class BookingQueries {
                 b.updated_at = NOW()
             WHERE b.booking_id = ?
             """;
+
+    public static final String GET_POPULAR_ACTIVITIES = """
+    SELECT
+        a.id AS activity_id,
+        a.name AS activity_name,
+        COUNT(DISTINCT ba.booking_id)
+            AS total_bookings,
+        COALESCE(
+            SUM(ba.number_of_participants),
+            0
+        ) AS total_participants,
+        COALESCE(
+            SUM(ba.total_price),
+            0
+        ) AS total_revenue
+    FROM booking_activities ba
+    INNER JOIN activities a
+        ON ba.activity_id = a.id
+    GROUP BY
+        a.id,
+        a.name
+    ORDER BY total_bookings DESC
+    LIMIT 10
+    """;
+
+    public static final String GET_TOP_TOURS = """
+    SELECT
+        t.tour_id,
+        t.name AS tour_name,
+        COUNT(*) AS total_bookings,
+        COALESCE(SUM(b.total_persons),0)
+            AS total_participants,
+        COALESCE(SUM(b.final_amount),0)
+            AS total_revenue
+    FROM bookings b
+    INNER JOIN tour t
+        ON b.tour_id = t.tour_id
+    GROUP BY
+        t.tour_id,
+        t.name
+    ORDER BY total_bookings DESC
+    LIMIT 10
+    """;
+
+    public static final String GET_BOOKING_FUNNEL = """
+    SELECT
+        CASE bs.name
+            WHEN 'NEW_INQUIRY' THEN 1
+            WHEN 'PENDING' THEN 2
+            WHEN 'CONTACTED' THEN 3
+            WHEN 'QUOTATION_SENT' THEN 4
+            WHEN 'NEGOTIATION' THEN 5
+            WHEN 'CONFIRMED' THEN 6
+            WHEN 'PAYMENT_PENDING' THEN 7
+            WHEN 'BOOKED' THEN 8
+            WHEN 'COMPLETED' THEN 9
+            ELSE 99
+        END AS step_order,
+
+        bs.name AS booking_status_name,
+
+        COUNT(*) AS total_bookings,
+
+        ROUND(
+            COUNT(*) * 100.0 /
+            (
+                SELECT COUNT(*)
+                FROM bookings b2
+                INNER JOIN booking_status bs2
+                    ON b2.booking_status_id = bs2.id
+                WHERE bs2.name='NEW_INQUIRY'
+            ),
+            2
+        ) AS conversion_percentage
+
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+
+    GROUP BY
+        step_order,
+        bs.name
+
+    ORDER BY
+        step_order
+    """;
+
+    public static final String GET_BOOKING_STATUS_DISTRIBUTION = """
+    SELECT
+        bs.id AS booking_status_id,
+        bs.name AS booking_status_name,
+        COUNT(*) AS total_bookings,
+        ROUND(
+            COUNT(*) * 100.0 /
+            (SELECT COUNT(*) FROM bookings),
+            2
+        ) AS percentage
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    GROUP BY
+        bs.id,
+        bs.name
+    ORDER BY total_bookings DESC
+    """;
+
+    public static final String GET_MONTHLY_REVENUE_TRENDS = """
+    SELECT
+        YEAR(b.created_at) AS year,
+        MONTH(b.created_at) AS month,
+        COALESCE(SUM(b.final_amount),0) AS total_revenue
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    WHERE bs.name IN ('BOOKED','COMPLETED')
+    GROUP BY
+        YEAR(b.created_at),
+        MONTH(b.created_at)
+    ORDER BY
+        year,
+        month
+    """;
+
+    public static final String GET_MONTHLY_BOOKING_TRENDS = """
+    SELECT
+        YEAR(created_at) AS year,
+        MONTH(created_at) AS month,
+        COUNT(*) AS total_bookings
+    FROM bookings
+    GROUP BY
+        YEAR(created_at),
+        MONTH(created_at)
+    ORDER BY
+        year,
+        month
+    """;
+
+    public static final String GET_BOOKING_SUMMARY_STATISTICS = """
+    SELECT
+        COUNT(*) AS total_bookings,
+
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN bs.name IN ('BOOKED','COMPLETED')
+                    THEN b.final_amount
+                    ELSE 0
+                END
+            ),0
+        ) AS total_revenue,
+
+        COUNT(
+            CASE
+                WHEN bs.name IN (
+                    'NEW_INQUIRY',
+                    'PENDING',
+                    'CONTACTED',
+                    'QUOTATION_SENT',
+                    'NEGOTIATION',
+                    'CONFIRMED',
+                    'PAYMENT_PENDING',
+                    'BOOKED'
+                )
+                THEN 1
+            END
+        ) AS active_bookings,
+
+        COUNT(
+            CASE
+                WHEN bs.name='CANCELLED'
+                THEN 1
+            END
+        ) AS cancelled_bookings,
+
+        COALESCE(SUM(b.total_persons),0) AS total_travellers,
+
+        COALESCE(AVG(b.final_amount),0) AS average_booking_value
+
+    FROM bookings b
+    LEFT JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    """;
+
+    public static final String GET_BOOKING_STATUS_SUMMARY_STATISTICS = """
+    SELECT
+        (SELECT COUNT(*) FROM booking_status) AS total_statuses,
+
+        (
+            SELECT COUNT(*)
+            FROM booking_status bs
+            INNER JOIN common_status cs
+                ON bs.status = cs.id
+            WHERE UPPER(cs.name) = 'ACTIVE'
+        ) AS active_statuses,
+
+        (
+            SELECT bs.name
+            FROM bookings b
+            INNER JOIN booking_status bs
+                ON b.booking_status_id = bs.id
+            GROUP BY bs.id, bs.name
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+        ) AS most_used_status,
+
+        (
+            SELECT COUNT(*)
+            FROM bookings b
+            INNER JOIN booking_status bs
+                ON b.booking_status_id = bs.id
+            GROUP BY bs.id
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+        ) AS most_used_status_count,
+
+        ROUND(
+            (
+                (
+                    SELECT COUNT(*)
+                    FROM bookings b
+                    INNER JOIN booking_status bs
+                        ON b.booking_status_id = bs.id
+                    WHERE bs.name IN ('BOOKED','COMPLETED')
+                )
+                /
+                NULLIF(
+                    (
+                        SELECT COUNT(*)
+                        FROM bookings b
+                        INNER JOIN booking_status bs
+                            ON b.booking_status_id = bs.id
+                        WHERE bs.name = 'NEW_INQUIRY'
+                    ),
+                    0
+                )
+            ) * 100,
+            2
+        ) AS inquiry_to_booked_percentage
+    """;
+
+    public static final String GET_STATUS_DISTRIBUTIONS = """
+    SELECT
+        bs.id AS booking_status_id,
+        bs.name AS booking_status_name,
+        COUNT(*) AS total_bookings,
+        ROUND(
+            COUNT(*) * 100.0 /
+            (SELECT COUNT(*) FROM bookings),
+            2
+        ) AS percentage
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    GROUP BY
+        bs.id,
+        bs.name
+    ORDER BY total_bookings DESC
+    """;
+
+    public static final String GET_STATUS_FUNNELS = """
+    SELECT
+        CASE bs.name
+            WHEN 'NEW_INQUIRY' THEN 1
+            WHEN 'PENDING' THEN 2
+            WHEN 'CONTACTED' THEN 3
+            WHEN 'QUOTATION_SENT' THEN 4
+            WHEN 'NEGOTIATION' THEN 5
+            WHEN 'CONFIRMED' THEN 6
+            WHEN 'PAYMENT_PENDING' THEN 7
+            WHEN 'BOOKED' THEN 8
+            WHEN 'COMPLETED' THEN 9
+            WHEN 'CANCELLED' THEN 10
+            WHEN 'REJECTED' THEN 11
+            WHEN 'EXPIRED' THEN 12
+            ELSE 99
+        END AS step_order,
+
+        bs.name AS booking_status_name,
+
+        COUNT(*) AS total_bookings,
+
+        ROUND(
+            COUNT(*) * 100.0 /
+            NULLIF(
+                (
+                    SELECT COUNT(*)
+                    FROM bookings b2
+                    INNER JOIN booking_status bs2
+                        ON b2.booking_status_id = bs2.id
+                    WHERE bs2.name='NEW_INQUIRY'
+                ),
+                0
+            ),
+            2
+        ) AS conversion_percentage
+
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    GROUP BY
+        step_order,
+        bs.name
+    ORDER BY
+        step_order
+    """;
+
+    public static final String GET_STATUS_TRENDS = """
+    SELECT
+        YEAR(b.created_at) AS year,
+        MONTH(b.created_at) AS month,
+        bs.id AS booking_status_id,
+        bs.name AS booking_status_name,
+        COUNT(*) AS total_bookings
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    GROUP BY
+        YEAR(b.created_at),
+        MONTH(b.created_at),
+        bs.id,
+        bs.name
+    ORDER BY
+        year,
+        month,
+        booking_status_name
+    """;
+
+    public static final String GET_DROP_OFF_STATISTICS = """
+    SELECT
+        bs.name AS booking_status_name,
+        COUNT(*) AS total_bookings,
+        ROUND(
+            COUNT(*) * 100.0 /
+            (SELECT COUNT(*) FROM bookings),
+            2
+        ) AS percentage
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    WHERE bs.name IN (
+        'CANCELLED',
+        'REJECTED',
+        'EXPIRED'
+    )
+    GROUP BY
+        bs.name
+    ORDER BY
+        total_bookings DESC
+    """;
+
+
+    public static final String GET_BOOKING_ASSIGN_SUMMARY_STATISTICS = """
+    SELECT
+        COUNT(*) AS total_bookings,
+
+        COUNT(
+            CASE
+                WHEN assign_to IS NOT NULL
+                THEN 1
+            END
+        ) AS assigned_bookings,
+
+        COUNT(
+            CASE
+                WHEN assign_to IS NULL
+                THEN 1
+            END
+        ) AS unassigned_bookings,
+
+        COUNT(DISTINCT assign_to)
+            AS total_assigned_employees,
+
+        ROUND(
+            COUNT(
+                CASE
+                    WHEN assign_to IS NOT NULL
+                    THEN 1
+                END
+            ) /
+            NULLIF(
+                COUNT(DISTINCT assign_to),
+                0
+            ),
+            2
+        ) AS average_bookings_per_employee
+
+    FROM bookings
+    """;
+
+    public static final String GET_EMPLOYEE_WORKLOADS = """
+    SELECT
+        e.id AS employee_id,
+        u.user_id,
+        CONCAT(
+            u.first_name,
+            ' ',
+            u.last_name
+        ) AS employee_name,
+        ed.designation_name,
+        dep.department_name,
+        COUNT(b.booking_id)
+            AS total_bookings
+
+    FROM bookings b
+    INNER JOIN user u
+        ON b.assign_to = u.user_id
+    INNER JOIN employees e
+        ON u.user_id = e.user_id
+    LEFT JOIN employee_designations ed
+        ON e.designation_id = ed.id
+    LEFT JOIN employee_departments dep
+        ON e.department_id = dep.id
+
+    GROUP BY
+        e.id,
+        u.user_id,
+        employee_name,
+        ed.designation_name,
+        dep.department_name
+
+    ORDER BY
+        total_bookings DESC
+    """;
+
+    public static final String GET_EMPLOYEE_REVENUES = """
+    SELECT
+        e.id AS employee_id,
+        u.user_id,
+        CONCAT(
+            u.first_name,
+            ' ',
+            u.last_name
+        ) AS employee_name,
+        COUNT(b.booking_id)
+            AS total_bookings,
+        COALESCE(
+            SUM(b.final_amount),
+            0
+        ) AS total_revenue
+
+    FROM bookings b
+    INNER JOIN user u
+        ON b.assign_to = u.user_id
+    INNER JOIN employees e
+        ON u.user_id = e.user_id
+
+    GROUP BY
+        e.id,
+        u.user_id,
+        employee_name
+
+    ORDER BY
+        total_revenue DESC
+    """;
+
+    public static final String GET_DEPARTMENT_DISTRIBUTIONS = """
+    SELECT
+        dep.id AS department_id,
+        dep.department_name,
+        COUNT(*) AS total_bookings,
+
+        ROUND(
+            COUNT(*) * 100.0 /
+            (
+                SELECT COUNT(*)
+                FROM bookings
+                WHERE assign_to IS NOT NULL
+            ),
+            2
+        ) AS percentage
+
+    FROM bookings b
+    INNER JOIN employees e
+        ON b.assign_to = e.user_id
+    INNER JOIN employee_departments dep
+        ON e.department_id = dep.id
+
+    GROUP BY
+        dep.id,
+        dep.department_name
+
+    ORDER BY
+        total_bookings DESC
+    """;
+
+    public static final String GET_DESIGNATION_DISTRIBUTIONS = """
+    SELECT
+        ed.id AS designation_id,
+        ed.designation_name,
+        COUNT(*) AS total_bookings,
+
+        ROUND(
+            COUNT(*) * 100.0 /
+            (
+                SELECT COUNT(*)
+                FROM bookings
+                WHERE assign_to IS NOT NULL
+            ),
+            2
+        ) AS percentage
+
+    FROM bookings b
+    INNER JOIN employees e
+        ON b.assign_to = e.user_id
+    INNER JOIN employee_designations ed
+        ON e.designation_id = ed.id
+
+    GROUP BY
+        ed.id,
+        ed.designation_name
+
+    ORDER BY
+        total_bookings DESC
+    """;
+
+    public static final String GET_MONTHLY_ASSIGNMENT_TRENDS = """
+    SELECT
+        YEAR(created_at) AS year,
+        MONTH(created_at) AS month,
+        COUNT(*) AS total_assigned_bookings
+
+    FROM bookings
+    WHERE assign_to IS NOT NULL
+
+    GROUP BY
+        YEAR(created_at),
+        MONTH(created_at)
+
+    ORDER BY
+        year,
+        month
+    """;
+
+    public static final String GET_ASSIGNMENT_STATUS_DISTRIBUTIONS = """
+    SELECT
+        CASE
+            WHEN assign_to IS NULL
+                THEN 'UNASSIGNED'
+            ELSE 'ASSIGNED'
+        END AS assignment_type,
+
+        COUNT(*) AS total_bookings,
+
+        ROUND(
+            COUNT(*) * 100.0 /
+            (SELECT COUNT(*) FROM bookings),
+            2
+        ) AS percentage
+
+    FROM bookings
+
+    GROUP BY
+        assignment_type
+    """;
+
+    public static final String GET_BOOKING_HISTORY_SUMMARY_STATISTICS = """
+    SELECT
+        COUNT(*) AS total_bookings,
+        COALESCE(SUM(final_amount), 0) AS total_revenue,
+        MIN(booking_date) AS first_booking_date,
+        MAX(booking_date) AS latest_booking_date,
+        ROUND(
+            COUNT(*) /
+            NULLIF(
+                COUNT(DISTINCT DATE_FORMAT(booking_date, '%Y-%m')),
+                0
+            ),
+            2
+        ) AS average_monthly_bookings,
+        ROUND(
+            COALESCE(SUM(final_amount), 0) /
+            NULLIF(
+                COUNT(DISTINCT DATE_FORMAT(booking_date, '%Y-%m')),
+                0
+            ),
+            2
+        ) AS average_monthly_revenue
+    FROM bookings
+    """;
+
+
+    public static final String GET_BOOKING_GROWTH_TRENDS = """
+    SELECT
+        YEAR(booking_date) AS year,
+        MONTH(booking_date) AS month,
+        COUNT(*) AS total_bookings
+    FROM bookings
+    WHERE booking_date IS NOT NULL
+    GROUP BY
+        YEAR(booking_date),
+        MONTH(booking_date)
+    ORDER BY
+        year,
+        month
+    """;
+
+
+    public static final String GET_REVENUE_GROWTH_TRENDS = """
+    SELECT
+        YEAR(booking_date) AS year,
+        MONTH(booking_date) AS month,
+        COALESCE(SUM(final_amount), 0) AS total_revenue
+    FROM bookings
+    WHERE booking_date IS NOT NULL
+    GROUP BY
+        YEAR(booking_date),
+        MONTH(booking_date)
+    ORDER BY
+        year,
+        month
+    """;
+
+
+    public static final String GET_BOOKING_STATUS_HISTORIES = """
+    SELECT
+        YEAR(b.booking_date) AS year,
+        MONTH(b.booking_date) AS month,
+        bs.id AS booking_status_id,
+        bs.name AS booking_status_name,
+        COUNT(*) AS total_bookings
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    WHERE b.booking_date IS NOT NULL
+    GROUP BY
+        YEAR(b.booking_date),
+        MONTH(b.booking_date),
+        bs.id,
+        bs.name
+    ORDER BY
+        year,
+        month,
+        booking_status_name
+    """;
+
+
+    public static final String GET_CANCELLATION_TRENDS = """
+    SELECT
+        YEAR(cancellation_date) AS year,
+        MONTH(cancellation_date) AS month,
+        COUNT(*) AS total_cancelled_bookings,
+        ROUND(
+            COUNT(*) * 100.0 /
+            NULLIF(
+                (
+                    SELECT COUNT(*)
+                ),
+                0
+            ),
+            2
+        ) AS cancellation_rate
+    FROM bookings
+    WHERE cancellation_date IS NOT NULL
+    GROUP BY
+        YEAR(cancellation_date),
+        MONTH(cancellation_date)
+    ORDER BY
+        year,
+        month
+    """;
+
+
+    public static final String GET_HISTORICAL_TOP_TOURS = """
+    SELECT
+        t.tour_id,
+        t.name AS tour_name,
+        COUNT(b.booking_id) AS total_bookings,
+        COALESCE(SUM(b.total_persons), 0) AS total_participants,
+        COALESCE(SUM(b.final_amount), 0) AS total_revenue
+    FROM bookings b
+    INNER JOIN tour t
+        ON b.tour_id = t.tour_id
+    GROUP BY
+        t.tour_id,
+        t.name
+    ORDER BY
+        total_bookings DESC,
+        total_revenue DESC
+    """;
+
+
+    public static final String GET_CUSTOMER_RETURN_STATISTICS = """
+    SELECT
+        customer_type,
+        COUNT(*) AS total_customers,
+        ROUND(
+            COUNT(*) * 100.0 /
+            (
+                SELECT COUNT(DISTINCT user_id)
+                FROM bookings
+                WHERE user_id IS NOT NULL
+            ),
+            2
+        ) AS percentage
+    FROM
+    (
+        SELECT
+            user_id,
+            CASE
+                WHEN COUNT(*) = 1
+                    THEN 'NEW_CUSTOMER'
+                ELSE 'RETURNING_CUSTOMER'
+            END AS customer_type
+        FROM bookings
+        WHERE user_id IS NOT NULL
+        GROUP BY user_id
+    ) x
+    GROUP BY customer_type
+    """;
+
+
+    public static final String GET_PEAK_BOOKING_PERIODS = """
+    SELECT
+        MONTH(booking_date) AS month,
+        MONTHNAME(booking_date) AS month_name,
+        COUNT(*) AS total_bookings
+    FROM bookings
+    WHERE booking_date IS NOT NULL
+    GROUP BY
+        MONTH(booking_date),
+        MONTHNAME(booking_date)
+    ORDER BY
+        total_bookings DESC
+    """;
+
 }

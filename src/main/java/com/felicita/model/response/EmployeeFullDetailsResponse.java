@@ -30,6 +30,7 @@ public class EmployeeFullDetailsResponse {
     private String email;
     private String mobileNumber;
     private String nic;
+    private String imageUrl;
 
     private Long employeeTypeId;
     private String employeeType;

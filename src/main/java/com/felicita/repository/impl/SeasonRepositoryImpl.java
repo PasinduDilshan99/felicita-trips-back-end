@@ -32,10 +32,7 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Repository
 public class SeasonRepositoryImpl implements SeasonRepository {
@@ -380,6 +377,10 @@ public class SeasonRepositoryImpl implements SeasonRepository {
 
             Map<Long, SeasonAllDetailsResponse> seasonMap = new LinkedHashMap<>();
 
+            Set<Long> imageIds = new HashSet<>();
+            Set<Long> activityIds = new HashSet<>();
+            Set<Long> tourIds = new HashSet<>();
+
             jdbcTemplate.query(
                     SeasonQueries.GET_SEASON_ALL_DETAILS_BY_ID,
                     new Object[]{request.getId()},
@@ -430,7 +431,7 @@ public class SeasonRepositoryImpl implements SeasonRepository {
                         // =========================
                         Long imageId = rs.getObject("image_id", Long.class);
 
-                        if (imageId != null) {
+                        if (imageId != null && imageIds.add(imageId)) {
 
                             SeasonImageResponse image =
                                     SeasonImageResponse.builder()
@@ -438,7 +439,7 @@ public class SeasonRepositoryImpl implements SeasonRepository {
                                             .name(rs.getString("image_name"))
                                             .description(rs.getString("image_description"))
                                             .imageUrl(rs.getString("image_url"))
-                                            .status(rs.getObject("image_status", Integer.class))
+                                            .status(rs.getObject("image_status", String.class))
                                             .createdAt(rs.getTimestamp("image_created_at") != null
                                                     ? rs.getTimestamp("image_created_at").toLocalDateTime() : null)
                                             .createdBy(rs.getObject("image_created_by", Integer.class))
@@ -455,7 +456,7 @@ public class SeasonRepositoryImpl implements SeasonRepository {
                         // =========================
                         Long activityId = rs.getObject("activity_id", Long.class);
 
-                        if (activityId != null) {
+                        if (activityId != null && activityIds.add(activityId)) {
 
                             SeasonAllDetailsResponse.SeasonActivity activity =
                                     SeasonAllDetailsResponse.SeasonActivity.builder()
@@ -473,7 +474,7 @@ public class SeasonRepositoryImpl implements SeasonRepository {
                         // =========================
                         Long tourId = rs.getObject("tour_id", Long.class);
 
-                        if (tourId != null) {
+                        if (tourId != null && tourIds.add(tourId)) {
 
                             SeasonAllDetailsResponse.SeasonTour tour =
                                     SeasonAllDetailsResponse.SeasonTour.builder()
@@ -534,6 +535,8 @@ public class SeasonRepositoryImpl implements SeasonRepository {
 
             KeyHolder keyHolder = new GeneratedKeyHolder();
 
+            Long statusId = statusRepository.getStatusIdByName(req.getStatus());
+
             jdbcTemplate.update(connection -> {
 
                 PreparedStatement ps = connection.prepareStatement(
@@ -554,7 +557,7 @@ public class SeasonRepositoryImpl implements SeasonRepository {
                 ps.setBoolean(11, req.getIsPeak() != null ? req.getIsPeak() : false);
                 ps.setObject(12, req.getDisplayOrder());
                 ps.setString(13, req.getDescription());
-                ps.setString(14, req.getStatus());
+                ps.setLong(14, statusId);
                 ps.setLong(15, userId);
 
                 return ps;
@@ -598,13 +601,21 @@ public class SeasonRepositoryImpl implements SeasonRepository {
                     VALUES (?, ?, ?, ?, ?, NOW(), ?)
                     """;
 
+            Map<String, Long> statusCache = new HashMap<>();
+
             jdbcTemplate.batchUpdate(sql, images, images.size(),
                     (ps, img) -> {
+
+                        Long statusId = statusCache.computeIfAbsent(
+                                img.getStatus(),
+                                statusRepository::getStatusIdByName
+                        );
+
                         ps.setLong(1, seasonId);
                         ps.setString(2, img.getName());
                         ps.setString(3, img.getDescription());
                         ps.setString(4, img.getImageUrl());
-                        ps.setInt(5, img.getStatus());
+                        ps.setLong(5, statusId);
                         ps.setLong(6, userId);
                     });
 
@@ -680,6 +691,8 @@ public class SeasonRepositoryImpl implements SeasonRepository {
         try {
             LOGGER.info("Updating season basic details id: {}", req.getId());
 
+            Long statusId = statusRepository.getStatusIdByName(req.getStatus());
+
             jdbcTemplate.update(
                     SeasonQueries.UPDATE_SEASON,
                     req.getName(),
@@ -695,7 +708,7 @@ public class SeasonRepositoryImpl implements SeasonRepository {
                     req.getIsPeak(),
                     req.getDisplayOrder(),
                     req.getDescription(),
-                    req.getStatus(),
+                    statusId,
                     req.getId()
             );
 
@@ -751,14 +764,18 @@ public class SeasonRepositoryImpl implements SeasonRepository {
                         updated_by = ?
                     WHERE id = ? AND season_id = ?
                     """;
+            Map<String, Long> statusCache = new HashMap<>();
 
             jdbcTemplate.batchUpdate(sql, images, images.size(),
                     (ps, img) -> {
-
+                        Long statusId = statusCache.computeIfAbsent(
+                                img.getStatus(),
+                                statusRepository::getStatusIdByName
+                        );
                         ps.setString(1, img.getName());
                         ps.setString(2, img.getDescription());
                         ps.setString(3, img.getImageUrl());
-                        ps.setInt(4, img.getStatus());
+                        ps.setLong(4,statusId);
                         ps.setLong(5, userId);
                         ps.setLong(6, img.getId());
                         ps.setLong(7, seasonId);

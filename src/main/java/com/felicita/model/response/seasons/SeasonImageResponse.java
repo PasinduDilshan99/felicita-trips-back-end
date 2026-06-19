@@ -16,7 +16,7 @@ public class SeasonImageResponse {
     private String name;
     private String description;
     private String imageUrl;
-    private Integer status;
+    private String status;
 
     private LocalDateTime createdAt;
     private Integer createdBy;

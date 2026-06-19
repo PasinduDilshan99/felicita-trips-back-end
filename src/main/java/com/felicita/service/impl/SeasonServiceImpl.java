@@ -24,6 +24,7 @@ import com.felicita.model.response.statistics.SeasonStatisticsResponse;
 import com.felicita.repository.SeasonRepository;
 import com.felicita.security.model.User;
 import com.felicita.service.CommonService;
+import com.felicita.service.EmailService;
 import com.felicita.service.SeasonService;
 import com.felicita.util.CommonResponseMessages;
 import com.felicita.validation.SeasonValidationService;
@@ -48,13 +49,15 @@ public class SeasonServiceImpl implements SeasonService {
     private final SeasonEmailHelperService seasonEmailHelperService;
     private final CommonService commonService;
     private final SeasonValidationService seasonValidationService;
+    private final EmailService emailService;
 
     @Autowired
-    public SeasonServiceImpl(SeasonRepository seasonRepository, SeasonEmailHelperService seasonEmailHelperService, CommonService commonService, SeasonValidationService seasonValidationService) {
+    public SeasonServiceImpl(SeasonRepository seasonRepository, SeasonEmailHelperService seasonEmailHelperService, CommonService commonService, SeasonValidationService seasonValidationService, EmailService emailService) {
         this.seasonRepository = seasonRepository;
         this.seasonEmailHelperService = seasonEmailHelperService;
         this.commonService = commonService;
         this.seasonValidationService = seasonValidationService;
+        this.emailService = emailService;
     }
 
     @Override
@@ -217,7 +220,7 @@ public class SeasonServiceImpl implements SeasonService {
             String subject = seasonEmailHelperService.buildSeasonTerminateSuccessfullSubject(loggedUser, seasonResponse);
             String body = seasonEmailHelperService.buildSeasonTerminateSuccessfullBody(loggedUser, seasonResponse);
 
-//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
 
             return new CommonResponse<>(
                     CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
@@ -806,8 +809,8 @@ public class SeasonServiceImpl implements SeasonService {
                     String newDescription = updateRequest.getDescription();
                     String oldImageUrl = existingImage.getImageUrl();
                     String newImageUrl = updateRequest.getImageUrl();
-                    Integer oldImgStatus = existingImage.getStatus();
-                    Integer newImgStatus = updateRequest.getStatus();
+                    String oldImgStatus = existingImage.getStatus();
+                    String newImgStatus = updateRequest.getStatus();
 
                     if (!Objects.equals(oldName, newName) && newName != null) {
                         hasImageChanges = true;

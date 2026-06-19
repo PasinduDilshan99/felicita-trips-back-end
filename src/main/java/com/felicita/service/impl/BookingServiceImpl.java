@@ -8,6 +8,10 @@ import com.felicita.model.request.BookingCancelledRequest;
 import com.felicita.model.request.BookingRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
+import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
+import com.felicita.model.response.statistics.BookingStatisticsResponse;
+import com.felicita.model.response.statistics.BookingStatusStatisticsResponse;
 import com.felicita.repository.BookingRepository;
 import com.felicita.service.*;
 import com.felicita.util.CommonResponseMessages;
@@ -531,6 +535,194 @@ public class BookingServiceImpl implements BookingService {
             throw new InternalServerErrorExceptionHandler("Failed to cancelled booking tours inquiry to database");
         } finally {
             LOGGER.info("End cancelled booking tours inquiry to repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<BookingStatisticsResponse> getBookingStatistics() {
+        LOGGER.info("Start fetching booking statistics from repository");
+        try {
+            BookingStatisticsResponse bookingStatisticsResponse = new BookingStatisticsResponse();
+
+            BookingStatisticsResponse.Summary summary = bookingRepository.getBookingSummaryStatistics();
+            bookingStatisticsResponse.setSummary(summary);
+
+            List<BookingStatisticsResponse.MonthlyBookingTrend> monthlyBookingTrends = bookingRepository.getMonthlyBookingTrendsStatistics();
+            bookingStatisticsResponse.setMonthlyBookingTrends(monthlyBookingTrends);
+
+            List<BookingStatisticsResponse.MonthlyRevenueTrend> monthlyRevenueTrends = bookingRepository.getMonthlyRevenueTrendsStatistics();
+            bookingStatisticsResponse.setMonthlyRevenueTrends(monthlyRevenueTrends);
+
+            List<BookingStatisticsResponse.BookingStatusDistribution> bookingStatusDistributions = bookingRepository.getBookingStatusDistributionsStatistics();
+            bookingStatisticsResponse.setBookingStatusDistributions(bookingStatusDistributions);
+
+            List<BookingStatisticsResponse.BookingFunnel> bookingFunnels = bookingRepository.getBookingFunnelsStatistics();
+            bookingStatisticsResponse.setBookingFunnels(bookingFunnels);
+
+            List<BookingStatisticsResponse.TopTour> topTours = bookingRepository.getTopToursStatistics();
+            bookingStatisticsResponse.setTopTours(topTours);
+
+            List<BookingStatisticsResponse.PopularActivity> popularActivities = bookingRepository.getPopularActivitiesStatistics();
+            bookingStatisticsResponse.setPopularActivities(popularActivities);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    bookingStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching booking statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch booking statistics from database");
+        } finally {
+            LOGGER.info("End fetching booking statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<BookingStatusStatisticsResponse> getBookingStatusStatistics() {
+        LOGGER.info("Start fetching booking status statistics from repository");
+        try {
+            BookingStatusStatisticsResponse bookingStatusStatisticsResponse = new BookingStatusStatisticsResponse();
+
+            BookingStatusStatisticsResponse.Summary summary = bookingRepository.getBookingStatusSummaryStatistics();
+            bookingStatusStatisticsResponse.setSummary(summary);
+
+            List<BookingStatusStatisticsResponse.StatusDistribution> statusDistributions = bookingRepository.getStatusDistributionsStatistics();
+            bookingStatusStatisticsResponse.setStatusDistributions(statusDistributions);
+
+            List<BookingStatusStatisticsResponse.StatusFunnel> statusFunnels = bookingRepository.getStatusFunnelsStatistics();
+            bookingStatusStatisticsResponse.setStatusFunnels(statusFunnels);
+
+            List<BookingStatusStatisticsResponse.StatusTrend> statusTrends = bookingRepository.getStatusTrendsStatistics();
+            bookingStatusStatisticsResponse.setStatusTrends(statusTrends);
+
+            List<BookingStatusStatisticsResponse.DropOffStatistics> dropOffStatistics = bookingRepository.getDropOffStatisticsStatistics();
+            bookingStatusStatisticsResponse.setDropOffStatistics(dropOffStatistics);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    bookingStatusStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching booking status statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch booking status statistics from database");
+        } finally {
+            LOGGER.info("End fetching booking status statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<BookingAssignStatisticsResponse> getBookingAssignStatistics() {
+        LOGGER.info("Start fetching booking assignment statistics from repository");
+        try {
+            BookingAssignStatisticsResponse bookingAssignStatisticsResponse = new BookingAssignStatisticsResponse();
+
+            // Summary
+            BookingAssignStatisticsResponse.Summary summary = bookingRepository.getBookingAssignSummaryStatistics();
+            bookingAssignStatisticsResponse.setSummary(summary);
+
+            // Employee Workloads
+            List<BookingAssignStatisticsResponse.EmployeeWorkload> employeeWorkloads = bookingRepository.getEmployeeWorkloadsStatistics();
+            bookingAssignStatisticsResponse.setEmployeeWorkloads(employeeWorkloads);
+
+            // Employee Revenues
+            List<BookingAssignStatisticsResponse.EmployeeRevenue> employeeRevenues = bookingRepository.getEmployeeRevenuesStatistics();
+            bookingAssignStatisticsResponse.setEmployeeRevenues(employeeRevenues);
+
+            // Department Distributions
+            List<BookingAssignStatisticsResponse.DepartmentDistribution> departmentDistributions = bookingRepository.getDepartmentDistributionsStatistics();
+            bookingAssignStatisticsResponse.setDepartmentDistributions(departmentDistributions);
+
+            // Designation Distributions
+            List<BookingAssignStatisticsResponse.DesignationDistribution> designationDistributions = bookingRepository.getDesignationDistributionsStatistics();
+            bookingAssignStatisticsResponse.setDesignationDistributions(designationDistributions);
+
+            // Monthly Assignment Trends
+            List<BookingAssignStatisticsResponse.MonthlyAssignmentTrend> monthlyAssignmentTrends = bookingRepository.getMonthlyAssignmentTrendsStatistics();
+            bookingAssignStatisticsResponse.setMonthlyAssignmentTrends(monthlyAssignmentTrends);
+
+            // Assignment Status Distributions
+            List<BookingAssignStatisticsResponse.AssignmentStatusDistribution> assignmentStatusDistributions = bookingRepository.getAssignmentStatusDistributionsStatistics();
+            bookingAssignStatisticsResponse.setAssignmentStatusDistributions(assignmentStatusDistributions);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    bookingAssignStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching booking assignment statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch booking assignment statistics from database");
+        } finally {
+            LOGGER.info("End fetching booking assignment statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<BookingHistoryStatisticsResponse> getBookingHistoryStatistics() {
+        LOGGER.info("Start fetching booking history statistics from repository");
+        try {
+            BookingHistoryStatisticsResponse bookingHistoryStatisticsResponse = new BookingHistoryStatisticsResponse();
+
+            // Summary
+            BookingHistoryStatisticsResponse.Summary summary = bookingRepository.getBookingHistorySummaryStatistics();
+            bookingHistoryStatisticsResponse.setSummary(summary);
+
+            // Booking Growth Trends
+            List<BookingHistoryStatisticsResponse.BookingGrowthTrend> bookingGrowthTrends = bookingRepository.getBookingGrowthTrendsStatistics();
+            bookingHistoryStatisticsResponse.setBookingGrowthTrends(bookingGrowthTrends);
+
+            // Revenue Growth Trends
+            List<BookingHistoryStatisticsResponse.RevenueGrowthTrend> revenueGrowthTrends = bookingRepository.getRevenueGrowthTrendsStatistics();
+            bookingHistoryStatisticsResponse.setRevenueGrowthTrends(revenueGrowthTrends);
+
+            // Booking Status Histories
+            List<BookingHistoryStatisticsResponse.BookingStatusHistory> bookingStatusHistories = bookingRepository.getBookingStatusHistoriesStatistics();
+            bookingHistoryStatisticsResponse.setBookingStatusHistories(bookingStatusHistories);
+
+            // Cancellation Trends
+            List<BookingHistoryStatisticsResponse.CancellationTrend> cancellationTrends = bookingRepository.getCancellationTrendsStatistics();
+            bookingHistoryStatisticsResponse.setCancellationTrends(cancellationTrends);
+
+            // Historical Top Tours
+            List<BookingHistoryStatisticsResponse.HistoricalTopTour> historicalTopTours = bookingRepository.getHistoricalTopToursStatistics();
+            bookingHistoryStatisticsResponse.setHistoricalTopTours(historicalTopTours);
+
+            // Customer Return Statistics
+            List<BookingHistoryStatisticsResponse.CustomerReturnStatistics> customerReturnStatistics = bookingRepository.getCustomerReturnStatisticsStatistics();
+            bookingHistoryStatisticsResponse.setCustomerReturnStatistics(customerReturnStatistics);
+
+            // Peak Booking Periods
+            List<BookingHistoryStatisticsResponse.PeakBookingPeriod> peakBookingPeriods = bookingRepository.getPeakBookingPeriodsStatistics();
+            bookingHistoryStatisticsResponse.setPeakBookingPeriods(peakBookingPeriods);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    bookingHistoryStatisticsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching booking history statistics: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch booking history statistics from database");
+        } finally {
+            LOGGER.info("End fetching booking history statistics from repository");
         }
     }
 

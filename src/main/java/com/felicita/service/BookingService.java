@@ -4,6 +4,10 @@ import com.felicita.model.request.BookingCancelledRequest;
 import com.felicita.model.request.BookingRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
+import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
+import com.felicita.model.response.statistics.BookingStatisticsResponse;
+import com.felicita.model.response.statistics.BookingStatusStatisticsResponse;
 
 import java.util.List;
 
@@ -29,4 +33,12 @@ public interface BookingService {
     CommonResponse<InsertResponse> tourBookingInquiry(TourBookingInquiryRequest tourBookingInquiryRequest);
 
     CommonResponse<UpdateResponse> cancelledPendingBooking(BookingCancelledRequest bookingCancelledRequest);
+
+    CommonResponse<BookingStatisticsResponse> getBookingStatistics();
+
+    CommonResponse<BookingStatusStatisticsResponse> getBookingStatusStatistics();
+
+    CommonResponse<BookingAssignStatisticsResponse> getBookingAssignStatistics();
+
+    CommonResponse<BookingHistoryStatisticsResponse> getBookingHistoryStatistics();
 }

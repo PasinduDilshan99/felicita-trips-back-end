@@ -81,7 +81,7 @@ public class SeasonUpdateComparisonResult {
         private String name;
         private String description;
         private String imageUrl;
-        private Integer status;
+        private String status;
     }
 
     @Data
@@ -96,7 +96,7 @@ public class SeasonUpdateComparisonResult {
         private String newDescription;
         private String oldImageUrl;
         private String newImageUrl;
-        private Integer oldStatus;
-        private Integer newStatus;
+        private String oldStatus;
+        private String newStatus;
     }
 }

@@ -8,6 +8,10 @@ import com.felicita.model.request.BookingCancelledRequest;
 import com.felicita.model.request.BookingRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
+import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
+import com.felicita.model.response.statistics.BookingStatisticsResponse;
+import com.felicita.model.response.statistics.BookingStatusStatisticsResponse;
 import com.felicita.queries.ActivitiesQueries;
 import com.felicita.queries.BookingQueries;
 import com.felicita.queries.TourQueries;
@@ -1635,5 +1639,989 @@ public class BookingRepositoryImpl implements BookingRepository {
             throw new InternalServerErrorExceptionHandler("Unexpected error while cancelling booking");
         }
     }
+
+    @Override
+    public BookingStatisticsResponse.Summary getBookingSummaryStatistics() {
+
+        try {
+            LOGGER.info("Fetching booking summary statistics");
+
+            return jdbcTemplate.queryForObject(
+                    BookingQueries.GET_BOOKING_SUMMARY_STATISTICS,
+                    (rs, rowNum) ->
+                            BookingStatisticsResponse.Summary.builder()
+                                    .totalBookings(rs.getLong("total_bookings"))
+                                    .totalRevenue(rs.getBigDecimal("total_revenue"))
+                                    .activeBookings(rs.getLong("active_bookings"))
+                                    .cancelledBookings(rs.getLong("cancelled_bookings"))
+                                    .totalTravellers(rs.getLong("total_travellers"))
+                                    .averageBookingValue(
+                                            rs.getBigDecimal("average_booking_value"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Error fetching booking summary statistics", ex);
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking summary statistics");
+        }
+    }
+
+    @Override
+    public List<BookingStatisticsResponse.MonthlyBookingTrend>
+    getMonthlyBookingTrendsStatistics() {
+
+        try {
+            LOGGER.info("Fetching monthly booking trends");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_MONTHLY_BOOKING_TRENDS,
+                    (rs, rowNum) ->
+                            BookingStatisticsResponse.MonthlyBookingTrend.builder()
+                                    .year(rs.getInt("year"))
+                                    .month(rs.getInt("month"))
+                                    .totalBookings(
+                                            rs.getLong("total_bookings"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Error fetching monthly booking trends", ex);
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch monthly booking trends");
+        }
+    }
+
+    @Override
+    public List<BookingStatisticsResponse.MonthlyRevenueTrend>
+    getMonthlyRevenueTrendsStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching monthly revenue trends");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_MONTHLY_REVENUE_TRENDS,
+                    (rs, rowNum) ->
+                            BookingStatisticsResponse.MonthlyRevenueTrend.builder()
+                                    .year(rs.getInt("year"))
+                                    .month(rs.getInt("month"))
+                                    .totalRevenue(
+                                            rs.getBigDecimal("total_revenue"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Error fetching monthly revenue trends", ex);
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch monthly revenue trends");
+        }
+    }
+
+    @Override
+    public List<BookingStatisticsResponse.BookingStatusDistribution>
+    getBookingStatusDistributionsStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching booking status distributions");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_BOOKING_STATUS_DISTRIBUTION,
+                    (rs, rowNum) ->
+                            BookingStatisticsResponse
+                                    .BookingStatusDistribution
+                                    .builder()
+                                    .bookingStatusId(
+                                            rs.getLong("booking_status_id"))
+                                    .bookingStatusName(
+                                            rs.getString("booking_status_name"))
+                                    .totalBookings(
+                                            rs.getLong("total_bookings"))
+                                    .percentage(
+                                            rs.getBigDecimal("percentage"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Error fetching booking status distribution", ex);
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking status distribution");
+        }
+    }
+
+    @Override
+    public List<BookingStatisticsResponse.BookingFunnel>
+    getBookingFunnelsStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching booking funnel statistics");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_BOOKING_FUNNEL,
+                    (rs, rowNum) ->
+                            BookingStatisticsResponse.BookingFunnel.builder()
+                                    .stepOrder(rs.getInt("step_order"))
+                                    .bookingStatusName(
+                                            rs.getString("booking_status_name"))
+                                    .totalBookings(
+                                            rs.getLong("total_bookings"))
+                                    .conversionPercentage(
+                                            rs.getBigDecimal(
+                                                    "conversion_percentage"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Error fetching booking funnel statistics", ex);
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking funnel statistics");
+        }
+    }
+
+    @Override
+    public List<BookingStatisticsResponse.TopTour>
+    getTopToursStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching top tours statistics");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_TOP_TOURS,
+                    (rs, rowNum) ->
+                            BookingStatisticsResponse.TopTour.builder()
+                                    .tourId(rs.getLong("tour_id"))
+                                    .tourName(rs.getString("tour_name"))
+                                    .totalBookings(
+                                            rs.getLong("total_bookings"))
+                                    .totalParticipants(
+                                            rs.getLong(
+                                                    "total_participants"))
+                                    .totalRevenue(
+                                            rs.getBigDecimal(
+                                                    "total_revenue"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Error fetching top tours statistics", ex);
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch top tours statistics");
+        }
+    }
+
+    @Override
+    public List<BookingStatisticsResponse.PopularActivity>
+    getPopularActivitiesStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching popular activities statistics");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_POPULAR_ACTIVITIES,
+                    (rs, rowNum) ->
+                            BookingStatisticsResponse.PopularActivity.builder()
+                                    .activityId(
+                                            rs.getLong("activity_id"))
+                                    .activityName(
+                                            rs.getString("activity_name"))
+                                    .totalBookings(
+                                            rs.getLong("total_bookings"))
+                                    .totalParticipants(
+                                            rs.getLong(
+                                                    "total_participants"))
+                                    .totalRevenue(
+                                            rs.getBigDecimal(
+                                                    "total_revenue"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Error fetching popular activities statistics", ex);
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch popular activities statistics");
+        }
+    }
+    @Override
+    public BookingStatusStatisticsResponse.Summary
+    getBookingStatusSummaryStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching booking status summary statistics");
+
+            return jdbcTemplate.queryForObject(
+                    BookingQueries.GET_BOOKING_STATUS_SUMMARY_STATISTICS,
+                    (rs, rowNum) ->
+                            BookingStatusStatisticsResponse.Summary.builder()
+                                    .totalStatuses(
+                                            rs.getLong("total_statuses"))
+                                    .activeStatuses(
+                                            rs.getLong("active_statuses"))
+                                    .mostUsedStatus(
+                                            rs.getString("most_used_status"))
+                                    .mostUsedStatusCount(
+                                            rs.getLong("most_used_status_count"))
+                                    .inquiryToBookedPercentage(
+                                            rs.getBigDecimal(
+                                                    "inquiry_to_booked_percentage"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Error while fetching booking status summary statistics",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking status summary statistics");
+        }
+    }
+
+    @Override
+    public List<BookingStatusStatisticsResponse.StatusDistribution>
+    getStatusDistributionsStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching status distributions");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_STATUS_DISTRIBUTIONS,
+                    (rs, rowNum) ->
+                            BookingStatusStatisticsResponse
+                                    .StatusDistribution
+                                    .builder()
+                                    .bookingStatusId(
+                                            rs.getLong(
+                                                    "booking_status_id"))
+                                    .bookingStatusName(
+                                            rs.getString(
+                                                    "booking_status_name"))
+                                    .totalBookings(
+                                            rs.getLong(
+                                                    "total_bookings"))
+                                    .percentage(
+                                            rs.getBigDecimal(
+                                                    "percentage"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error while fetching status distributions",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch status distributions");
+        }
+    }
+
+    @Override
+    public List<BookingStatusStatisticsResponse.StatusFunnel>
+    getStatusFunnelsStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching booking status funnel statistics");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_STATUS_FUNNELS,
+                    (rs, rowNum) ->
+                            BookingStatusStatisticsResponse
+                                    .StatusFunnel
+                                    .builder()
+                                    .stepOrder(
+                                            rs.getInt("step_order"))
+                                    .bookingStatusName(
+                                            rs.getString(
+                                                    "booking_status_name"))
+                                    .totalBookings(
+                                            rs.getLong(
+                                                    "total_bookings"))
+                                    .conversionPercentage(
+                                            rs.getBigDecimal(
+                                                    "conversion_percentage"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error while fetching booking status funnels",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking status funnels");
+        }
+    }
+
+    @Override
+    public List<BookingStatusStatisticsResponse.StatusTrend>
+    getStatusTrendsStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching booking status trends");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_STATUS_TRENDS,
+                    (rs, rowNum) ->
+                            BookingStatusStatisticsResponse
+                                    .StatusTrend
+                                    .builder()
+                                    .year(
+                                            rs.getInt("year"))
+                                    .month(
+                                            rs.getInt("month"))
+                                    .bookingStatusId(
+                                            rs.getLong(
+                                                    "booking_status_id"))
+                                    .bookingStatusName(
+                                            rs.getString(
+                                                    "booking_status_name"))
+                                    .totalBookings(
+                                            rs.getLong(
+                                                    "total_bookings"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error while fetching booking status trends",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking status trends");
+        }
+    }
+
+
+    @Override
+    public List<BookingStatusStatisticsResponse.DropOffStatistics>
+    getDropOffStatisticsStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching booking drop-off statistics");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_DROP_OFF_STATISTICS,
+                    (rs, rowNum) ->
+                            BookingStatusStatisticsResponse
+                                    .DropOffStatistics
+                                    .builder()
+                                    .bookingStatusName(
+                                            rs.getString(
+                                                    "booking_status_name"))
+                                    .totalBookings(
+                                            rs.getLong(
+                                                    "total_bookings"))
+                                    .percentage(
+                                            rs.getBigDecimal(
+                                                    "percentage"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error while fetching booking drop-off statistics",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking drop-off statistics");
+        }
+    }
+
+    @Override
+    public BookingAssignStatisticsResponse.Summary
+    getBookingAssignSummaryStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching booking assignment summary statistics");
+
+            return jdbcTemplate.queryForObject(
+                    BookingQueries.GET_BOOKING_ASSIGN_SUMMARY_STATISTICS,
+                    (rs, rowNum) ->
+                            BookingAssignStatisticsResponse
+                                    .Summary
+                                    .builder()
+                                    .totalBookings(
+                                            rs.getLong(
+                                                    "total_bookings"))
+                                    .assignedBookings(
+                                            rs.getLong(
+                                                    "assigned_bookings"))
+                                    .unassignedBookings(
+                                            rs.getLong(
+                                                    "unassigned_bookings"))
+                                    .totalAssignedEmployees(
+                                            rs.getLong(
+                                                    "total_assigned_employees"))
+                                    .averageBookingsPerEmployee(
+                                            rs.getBigDecimal(
+                                                    "average_bookings_per_employee"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching booking assignment summary statistics",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking assignment summary statistics");
+        }
+    }
+
+    @Override
+    public List<BookingAssignStatisticsResponse.EmployeeWorkload>
+    getEmployeeWorkloadsStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching employee workloads");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_EMPLOYEE_WORKLOADS,
+                    (rs, rowNum) ->
+                            BookingAssignStatisticsResponse
+                                    .EmployeeWorkload
+                                    .builder()
+                                    .employeeId(
+                                            rs.getLong(
+                                                    "employee_id"))
+                                    .userId(
+                                            rs.getLong(
+                                                    "user_id"))
+                                    .employeeName(
+                                            rs.getString(
+                                                    "employee_name"))
+                                    .designationName(
+                                            rs.getString(
+                                                    "designation_name"))
+                                    .departmentName(
+                                            rs.getString(
+                                                    "department_name"))
+                                    .totalBookings(
+                                            rs.getLong(
+                                                    "total_bookings"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching employee workloads",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch employee workloads");
+        }
+    }
+
+    @Override
+    public List<BookingAssignStatisticsResponse.EmployeeRevenue>
+    getEmployeeRevenuesStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching employee revenues statistics");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_EMPLOYEE_REVENUES,
+                    (rs, rowNum) ->
+                            BookingAssignStatisticsResponse
+                                    .EmployeeRevenue
+                                    .builder()
+                                    .employeeId(
+                                            rs.getLong(
+                                                    "employee_id"))
+                                    .userId(
+                                            rs.getLong(
+                                                    "user_id"))
+                                    .employeeName(
+                                            rs.getString(
+                                                    "employee_name"))
+                                    .totalBookings(
+                                            rs.getLong(
+                                                    "total_bookings"))
+                                    .totalRevenue(
+                                            rs.getBigDecimal(
+                                                    "total_revenue"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching employee revenues statistics",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch employee revenues statistics");
+        }
+    }
+
+    @Override
+    public List<BookingAssignStatisticsResponse.DepartmentDistribution>
+    getDepartmentDistributionsStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching department distributions");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_DEPARTMENT_DISTRIBUTIONS,
+                    (rs, rowNum) ->
+                            BookingAssignStatisticsResponse
+                                    .DepartmentDistribution
+                                    .builder()
+                                    .departmentId(
+                                            rs.getLong(
+                                                    "department_id"))
+                                    .departmentName(
+                                            rs.getString(
+                                                    "department_name"))
+                                    .totalBookings(
+                                            rs.getLong(
+                                                    "total_bookings"))
+                                    .percentage(
+                                            rs.getBigDecimal(
+                                                    "percentage"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching department distributions",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch department distributions");
+        }
+    }
+
+    @Override
+    public List<BookingAssignStatisticsResponse.DesignationDistribution>
+    getDesignationDistributionsStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching designation distributions");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_DESIGNATION_DISTRIBUTIONS,
+                    (rs, rowNum) ->
+                            BookingAssignStatisticsResponse
+                                    .DesignationDistribution
+                                    .builder()
+                                    .designationId(
+                                            rs.getLong(
+                                                    "designation_id"))
+                                    .designationName(
+                                            rs.getString(
+                                                    "designation_name"))
+                                    .totalBookings(
+                                            rs.getLong(
+                                                    "total_bookings"))
+                                    .percentage(
+                                            rs.getBigDecimal(
+                                                    "percentage"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching designation distributions",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch designation distributions");
+        }
+    }
+
+    @Override
+    public List<BookingAssignStatisticsResponse.MonthlyAssignmentTrend>
+    getMonthlyAssignmentTrendsStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching monthly assignment trends");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_MONTHLY_ASSIGNMENT_TRENDS,
+                    (rs, rowNum) ->
+                            BookingAssignStatisticsResponse
+                                    .MonthlyAssignmentTrend
+                                    .builder()
+                                    .year(
+                                            rs.getInt("year"))
+                                    .month(
+                                            rs.getInt("month"))
+                                    .totalAssignedBookings(
+                                            rs.getLong(
+                                                    "total_assigned_bookings"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching monthly assignment trends",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch monthly assignment trends");
+        }
+    }
+
+    @Override
+    public List<BookingAssignStatisticsResponse
+            .AssignmentStatusDistribution>
+    getAssignmentStatusDistributionsStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching assignment status distributions");
+
+            return jdbcTemplate.query(
+                    BookingQueries
+                            .GET_ASSIGNMENT_STATUS_DISTRIBUTIONS,
+                    (rs, rowNum) ->
+                            BookingAssignStatisticsResponse
+                                    .AssignmentStatusDistribution
+                                    .builder()
+                                    .assignmentType(
+                                            rs.getString(
+                                                    "assignment_type"))
+                                    .totalBookings(
+                                            rs.getLong(
+                                                    "total_bookings"))
+                                    .percentage(
+                                            rs.getBigDecimal(
+                                                    "percentage"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching assignment status distributions",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch assignment status distributions");
+        }
+    }
+    @Override
+    public BookingHistoryStatisticsResponse.Summary
+    getBookingHistorySummaryStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching booking history summary statistics");
+
+            return jdbcTemplate.queryForObject(
+                    BookingQueries.GET_BOOKING_HISTORY_SUMMARY_STATISTICS,
+                    (rs, rowNum) ->
+                            BookingHistoryStatisticsResponse.Summary.builder()
+                                    .totalBookings(
+                                            rs.getLong("total_bookings"))
+                                    .totalRevenue(
+                                            rs.getBigDecimal("total_revenue"))
+                                    .firstBookingDate(
+                                            rs.getDate("first_booking_date") != null
+                                                    ? rs.getDate("first_booking_date").toLocalDate()
+                                                    : null)
+                                    .latestBookingDate(
+                                            rs.getDate("latest_booking_date") != null
+                                                    ? rs.getDate("latest_booking_date").toLocalDate()
+                                                    : null)
+                                    .averageMonthlyBookings(
+                                            rs.getBigDecimal("average_monthly_bookings"))
+                                    .averageMonthlyRevenue(
+                                            rs.getBigDecimal("average_monthly_revenue"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching booking history summary statistics",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking history summary statistics");
+        }
+    }
+
+
+    @Override
+    public List<BookingHistoryStatisticsResponse.BookingGrowthTrend>
+    getBookingGrowthTrendsStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching booking growth trends");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_BOOKING_GROWTH_TRENDS,
+                    (rs, rowNum) ->
+                            BookingHistoryStatisticsResponse.BookingGrowthTrend
+                                    .builder()
+                                    .year(rs.getInt("year"))
+                                    .month(rs.getInt("month"))
+                                    .totalBookings(
+                                            rs.getLong("total_bookings"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching booking growth trends",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking growth trends");
+        }
+    }
+
+
+    @Override
+    public List<BookingHistoryStatisticsResponse.RevenueGrowthTrend>
+    getRevenueGrowthTrendsStatistics() {
+
+        try {
+
+            LOGGER.info("Fetching revenue growth trends");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_REVENUE_GROWTH_TRENDS,
+                    (rs, rowNum) ->
+                            BookingHistoryStatisticsResponse.RevenueGrowthTrend
+                                    .builder()
+                                    .year(rs.getInt("year"))
+                                    .month(rs.getInt("month"))
+                                    .totalRevenue(
+                                            rs.getBigDecimal("total_revenue"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching revenue growth trends",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch revenue growth trends");
+        }
+    }
+
+
+    @Override
+    public List<BookingHistoryStatisticsResponse.BookingStatusHistory>
+    getBookingStatusHistoriesStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching booking status histories");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_BOOKING_STATUS_HISTORIES,
+                    (rs, rowNum) ->
+                            BookingHistoryStatisticsResponse.BookingStatusHistory
+                                    .builder()
+                                    .year(rs.getInt("year"))
+                                    .month(rs.getInt("month"))
+                                    .bookingStatusId(
+                                            rs.getLong("booking_status_id"))
+                                    .bookingStatusName(
+                                            rs.getString("booking_status_name"))
+                                    .totalBookings(
+                                            rs.getLong("total_bookings"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching booking status histories",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking status histories");
+        }
+    }
+
+
+    @Override
+    public List<BookingHistoryStatisticsResponse.CancellationTrend>
+    getCancellationTrendsStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching cancellation trends");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_CANCELLATION_TRENDS,
+                    (rs, rowNum) ->
+                            BookingHistoryStatisticsResponse.CancellationTrend
+                                    .builder()
+                                    .year(rs.getInt("year"))
+                                    .month(rs.getInt("month"))
+                                    .totalCancelledBookings(
+                                            rs.getLong(
+                                                    "total_cancelled_bookings"))
+                                    .cancellationRate(
+                                            rs.getBigDecimal(
+                                                    "cancellation_rate"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching cancellation trends",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch cancellation trends");
+        }
+    }
+
+
+    @Override
+    public List<BookingHistoryStatisticsResponse.HistoricalTopTour>
+    getHistoricalTopToursStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching historical top tours");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_HISTORICAL_TOP_TOURS,
+                    (rs, rowNum) ->
+                            BookingHistoryStatisticsResponse.HistoricalTopTour
+                                    .builder()
+                                    .tourId(
+                                            rs.getLong("tour_id"))
+                                    .tourName(
+                                            rs.getString("tour_name"))
+                                    .totalBookings(
+                                            rs.getLong("total_bookings"))
+                                    .totalParticipants(
+                                            rs.getLong("total_participants"))
+                                    .totalRevenue(
+                                            rs.getBigDecimal("total_revenue"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching historical top tours",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch historical top tours");
+        }
+    }
+
+
+    @Override
+    public List<BookingHistoryStatisticsResponse.CustomerReturnStatistics>
+    getCustomerReturnStatisticsStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching customer return statistics");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_CUSTOMER_RETURN_STATISTICS,
+                    (rs, rowNum) ->
+                            BookingHistoryStatisticsResponse
+                                    .CustomerReturnStatistics
+                                    .builder()
+                                    .customerType(
+                                            rs.getString(
+                                                    "customer_type"))
+                                    .totalCustomers(
+                                            rs.getLong(
+                                                    "total_customers"))
+                                    .percentage(
+                                            rs.getBigDecimal(
+                                                    "percentage"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching customer return statistics",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch customer return statistics");
+        }
+    }
+
+
+    @Override
+    public List<BookingHistoryStatisticsResponse.PeakBookingPeriod>
+    getPeakBookingPeriodsStatistics() {
+
+        try {
+
+            LOGGER.info(
+                    "Fetching peak booking periods");
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_PEAK_BOOKING_PERIODS,
+                    (rs, rowNum) ->
+                            BookingHistoryStatisticsResponse.PeakBookingPeriod
+                                    .builder()
+                                    .month(rs.getInt("month"))
+                                    .monthName(
+                                            rs.getString("month_name"))
+                                    .totalBookings(
+                                            rs.getLong("total_bookings"))
+                                    .build()
+            );
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching peak booking periods",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch peak booking periods");
+        }
+    }
+
 
 }

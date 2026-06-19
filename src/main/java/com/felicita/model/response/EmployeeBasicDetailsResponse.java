@@ -24,6 +24,7 @@ public class EmployeeBasicDetailsResponse {
     private String email;
     private String mobileNumber;
     private String nic;
+    private String imageUrl;
 
     // Employee Details
     private Long employeeTypeId;

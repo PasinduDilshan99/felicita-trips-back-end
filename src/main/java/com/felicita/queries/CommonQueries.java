@@ -204,12 +204,10 @@ public class CommonQueries {
         """;
 
     public static final String GET_SEASON_ID_AND_NAME = """
-        SELECT DISTINCT
-            season_id,
-            season
-        FROM activities
-        WHERE season_id IS NOT NULL
-        AND season IS NOT NULL
-        ORDER BY season ASC
+        SELECT
+            id AS season_id,
+            name AS season
+        FROM seasons
+        ORDER BY name ASC
         """;
 }

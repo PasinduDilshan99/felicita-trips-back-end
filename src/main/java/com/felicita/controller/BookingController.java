@@ -4,6 +4,10 @@ import com.felicita.model.request.BookingCancelledRequest;
 import com.felicita.model.request.BookingRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
+import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
+import com.felicita.model.response.statistics.BookingStatisticsResponse;
+import com.felicita.model.response.statistics.BookingStatusStatisticsResponse;
 import com.felicita.service.BookingService;
 import com.felicita.util.Constant;
 import org.slf4j.Logger;
@@ -116,5 +120,39 @@ public class BookingController {
         LOGGER.info("{} End execute create receipt for booking a tour {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    // admin
+    @GetMapping(path = "/booking-statistics")
+    public ResponseEntity<CommonResponse<BookingStatisticsResponse>> getBookingStatistics() {
+        LOGGER.info("{} Start execute get destination categories statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<BookingStatisticsResponse> response = bookingService.getBookingStatistics();
+        LOGGER.info("{} End execute get destination categories statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/booking-status-statistics")
+    public ResponseEntity<CommonResponse<BookingStatusStatisticsResponse>> getBookingStatusStatistics() {
+        LOGGER.info("{} Start execute get destination categories statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<BookingStatusStatisticsResponse> response = bookingService.getBookingStatusStatistics();
+        LOGGER.info("{} End execute get destination categories statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/booking-assign-statistics")
+    public ResponseEntity<CommonResponse<BookingAssignStatisticsResponse>> getBookingAssignStatistics() {
+        LOGGER.info("{} Start execute get destination categories statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<BookingAssignStatisticsResponse> response = bookingService.getBookingAssignStatistics();
+        LOGGER.info("{} End execute get destination categories statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/booking-history-statistics")
+    public ResponseEntity<CommonResponse<BookingHistoryStatisticsResponse>> getBookingHistoryStatistics() {
+        LOGGER.info("{} Start execute get destination categories statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<BookingHistoryStatisticsResponse> response = bookingService.getBookingHistoryStatistics();
+        LOGGER.info("{} End execute get destination categories statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
 
 }

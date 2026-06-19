@@ -5,6 +5,10 @@ import com.felicita.model.request.BookingCancelledRequest;
 import com.felicita.model.request.BookingRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
+import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
+import com.felicita.model.response.statistics.BookingStatisticsResponse;
+import com.felicita.model.response.statistics.BookingStatusStatisticsResponse;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -53,4 +57,58 @@ public interface BookingRepository {
     void insertBookingInquiryToBookings(TourBookingInquiryRequest tourBookingInquiryRequest, Long userId, String bookingReference);
 
     void cancelledPendingBooking(BookingCancelledRequest bookingCancelledRequest, Long userId);
+
+    BookingStatisticsResponse.Summary getBookingSummaryStatistics();
+
+    List<BookingStatisticsResponse.MonthlyBookingTrend> getMonthlyBookingTrendsStatistics();
+
+    List<BookingStatisticsResponse.MonthlyRevenueTrend> getMonthlyRevenueTrendsStatistics();
+
+    List<BookingStatisticsResponse.BookingStatusDistribution> getBookingStatusDistributionsStatistics();
+
+    List<BookingStatisticsResponse.BookingFunnel> getBookingFunnelsStatistics();
+
+    List<BookingStatisticsResponse.TopTour> getTopToursStatistics();
+
+    List<BookingStatisticsResponse.PopularActivity> getPopularActivitiesStatistics();
+
+    BookingStatusStatisticsResponse.Summary getBookingStatusSummaryStatistics();
+
+    List<BookingStatusStatisticsResponse.StatusDistribution> getStatusDistributionsStatistics();
+
+    List<BookingStatusStatisticsResponse.StatusFunnel> getStatusFunnelsStatistics();
+
+    List<BookingStatusStatisticsResponse.StatusTrend> getStatusTrendsStatistics();
+
+    List<BookingStatusStatisticsResponse.DropOffStatistics> getDropOffStatisticsStatistics();
+
+    BookingAssignStatisticsResponse.Summary getBookingAssignSummaryStatistics();
+
+    List<BookingAssignStatisticsResponse.EmployeeWorkload> getEmployeeWorkloadsStatistics();
+
+    List<BookingAssignStatisticsResponse.EmployeeRevenue> getEmployeeRevenuesStatistics();
+
+    List<BookingAssignStatisticsResponse.DepartmentDistribution> getDepartmentDistributionsStatistics();
+
+    List<BookingAssignStatisticsResponse.DesignationDistribution> getDesignationDistributionsStatistics();
+
+    List<BookingAssignStatisticsResponse.MonthlyAssignmentTrend> getMonthlyAssignmentTrendsStatistics();
+
+    List<BookingAssignStatisticsResponse.AssignmentStatusDistribution> getAssignmentStatusDistributionsStatistics();
+
+    BookingHistoryStatisticsResponse.Summary getBookingHistorySummaryStatistics();
+
+    List<BookingHistoryStatisticsResponse.BookingGrowthTrend> getBookingGrowthTrendsStatistics();
+
+    List<BookingHistoryStatisticsResponse.RevenueGrowthTrend> getRevenueGrowthTrendsStatistics();
+
+    List<BookingHistoryStatisticsResponse.BookingStatusHistory> getBookingStatusHistoriesStatistics();
+
+    List<BookingHistoryStatisticsResponse.CancellationTrend> getCancellationTrendsStatistics();
+
+    List<BookingHistoryStatisticsResponse.HistoricalTopTour> getHistoricalTopToursStatistics();
+
+    List<BookingHistoryStatisticsResponse.CustomerReturnStatistics> getCustomerReturnStatisticsStatistics();
+
+    List<BookingHistoryStatisticsResponse.PeakBookingPeriod> getPeakBookingPeriodsStatistics();
 }
