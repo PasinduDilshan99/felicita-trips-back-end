@@ -1,18 +1,27 @@
 package com.felicita.service.impl;
 
+import com.felicita.email.BookingEmailHelperService;
 import com.felicita.exception.*;
 import com.felicita.filter.helper.BookingHelperService;
 import com.felicita.model.dto.*;
-import com.felicita.model.enums.BookingStatus;
+import com.felicita.model.enums.*;
 import com.felicita.model.request.BookingCancelledRequest;
 import com.felicita.model.request.BookingRequest;
+import com.felicita.model.request.CommonIdRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
+import com.felicita.model.request.bookings.BookingDataRequest;
+import com.felicita.model.request.bookings.InsertBookingRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.bookings.BookingAllDetailsResponse;
+import com.felicita.model.response.bookings.BookingWithParamsResponse;
+import com.felicita.model.response.bookings.BookingsBasicDetails;
+import com.felicita.model.response.bookings.BookingsRequestParamsResponse;
 import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
 import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
 import com.felicita.model.response.statistics.BookingStatisticsResponse;
 import com.felicita.model.response.statistics.BookingStatusStatisticsResponse;
 import com.felicita.repository.BookingRepository;
+import com.felicita.security.model.User;
 import com.felicita.service.*;
 import com.felicita.util.CommonResponseMessages;
 import com.felicita.validation.BookingValidationService;
@@ -25,6 +34,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import static com.felicita.util.Constant.COMPANY_EMAIL;
+import static com.felicita.util.FrontEndUrls.VIEW_BOOKING_DETAILS;
 
 @Service
 public class BookingServiceImpl implements BookingService {
@@ -39,16 +52,10 @@ public class BookingServiceImpl implements BookingService {
     private final VehicleService vehicleService;
     private final EmailService emailService;
     private final EmailHelperService emailHelperService;
+    private final BookingEmailHelperService bookingEmailHelperService;
 
     @Autowired
-    public BookingServiceImpl(BookingRepository bookingRepository,
-                              CommonService commonService,
-                              BookingValidationService bookingValidationService,
-                              BookingHelperService bookingHelperService,
-                              PackageService packageService,
-                              VehicleService vehicleService,
-                              EmailService emailService,
-                              EmailHelperService emailHelperService) {
+    public BookingServiceImpl(BookingRepository bookingRepository, CommonService commonService, BookingValidationService bookingValidationService, BookingHelperService bookingHelperService, PackageService packageService, VehicleService vehicleService, EmailService emailService, EmailHelperService emailHelperService, BookingEmailHelperService bookingEmailHelperService) {
         this.bookingRepository = bookingRepository;
         this.commonService = commonService;
         this.bookingValidationService = bookingValidationService;
@@ -57,6 +64,7 @@ public class BookingServiceImpl implements BookingService {
         this.vehicleService = vehicleService;
         this.emailService = emailService;
         this.emailHelperService = emailHelperService;
+        this.bookingEmailHelperService = bookingEmailHelperService;
     }
 
     @Override
@@ -723,6 +731,220 @@ public class BookingServiceImpl implements BookingService {
             throw new InternalServerErrorExceptionHandler("Failed to fetch booking history statistics from database");
         } finally {
             LOGGER.info("End fetching booking history statistics from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<BookingWithParamsResponse> getBookingsWithParams(BookingDataRequest bookingDataRequest) {
+        LOGGER.info("Start fetching bookings with params from repository");
+        try {
+            bookingValidationService.validateBookingDataRequest(bookingDataRequest);
+
+            BookingWithParamsResponse bookingWithParams = new BookingWithParamsResponse();
+
+            List<BookingsBasicDetails> bookingsBasicDetails = bookingRepository.getBookingBasicDetailsForParams(bookingDataRequest);
+            Integer bookingCountForParms = bookingRepository.getBookingCountForParams(bookingDataRequest);
+
+            bookingWithParams.setBookingsBasicDetails(bookingsBasicDetails);
+            bookingWithParams.setBookingCount(bookingCountForParms);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    bookingWithParams,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching bookings with params: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch bookings with params from database");
+        } finally {
+            LOGGER.info("End fetching bookings with params from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<BookingsRequestParamsResponse> getBookingsParamsData() {
+        LOGGER.info("Start fetching bookings params data from repository");
+        try {
+            BookingsRequestParamsResponse bookingsParamsData = bookingRepository.getBookingsParamsData();
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    bookingsParamsData,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching bookings params data: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch bookings params data from database");
+        } finally {
+            LOGGER.info("End fetching bookings params data from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<BookingAllDetailsResponse> getBookingAllDetailsById(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start fetching booking all details by id from repository");
+        try {
+            Long bookingId = commonIdRequest.getId();
+
+            BookingAllDetailsResponse bookingAllDetails = new BookingAllDetailsResponse();
+
+            // 1. Booking Information
+            BookingAllDetailsResponse.BookingInformation bookingInformation = bookingRepository.getBookingInformationById(bookingId);
+            bookingAllDetails.setBookingInformation(bookingInformation);
+            LOGGER.info("Booking information: {}", bookingInformation);
+
+            // 2. Customer Information
+            BookingAllDetailsResponse.CustomerInformation customerInformation = bookingRepository.getCustomerInformationByBookingId(bookingId);
+            bookingAllDetails.setCustomerInformation(customerInformation);
+            LOGGER.info("Customer information: {}", customerInformation);
+
+            // 3. Tour Information
+            BookingAllDetailsResponse.TourInformation tourInformation = bookingRepository.getTourInformationByBookingId(bookingId);
+            bookingAllDetails.setTourInformation(tourInformation);
+            LOGGER.info("Tour information: {}", tourInformation);
+
+            // 4. Package Information
+            BookingAllDetailsResponse.PackageInformation packageInformation = bookingRepository.getPackageInformationByBookingId(bookingId);
+            bookingAllDetails.setPackageInformation(packageInformation);
+            LOGGER.info("Package information: {}", packageInformation);
+
+            // 5. Booking Status Information
+            BookingAllDetailsResponse.BookingStatusInformation bookingStatusInformation = bookingRepository.getBookingStatusInformationByBookingId(bookingId);
+            bookingAllDetails.setBookingStatusInformation(bookingStatusInformation);
+            LOGGER.info("Booking status information: {}", bookingStatusInformation);
+
+            // 6. Assignment Information
+            BookingAllDetailsResponse.AssignmentInformation assignmentInformation = bookingRepository.getAssignmentInformationByBookingId(bookingId);
+            bookingAllDetails.setAssignmentInformation(assignmentInformation);
+            LOGGER.info("Assignment information: {}", assignmentInformation);
+
+            // 7. Cancellation Information
+            BookingAllDetailsResponse.CancellationInformation cancellationInformation = bookingRepository.getCancellationInformationByBookingId(bookingId);
+            bookingAllDetails.setCancellationInformation(cancellationInformation);
+            LOGGER.info("Cancellation information: {}", cancellationInformation);
+
+            // 8. Participants List
+            List<BookingAllDetailsResponse.ParticipantInformation> participants = bookingRepository.getParticipantsByBookingId(bookingId);
+            bookingAllDetails.setParticipants(participants);
+            LOGGER.info("Participants: {}", participants);
+
+            // 9. Accommodations List
+            List<BookingAllDetailsResponse.AccommodationInformation> accommodations = bookingRepository.getAccommodationsByBookingId(bookingId);
+            bookingAllDetails.setAccommodations(accommodations);
+            LOGGER.info("Accommodations: {}", accommodations);
+
+            // 10. Transportations List
+            List<BookingAllDetailsResponse.TransportationInformation> transportations = bookingRepository.getTransportationsByBookingId(bookingId);
+            bookingAllDetails.setTransportations(transportations);
+            LOGGER.info("Transportations: {}", transportations);
+
+            // 11. Activities List
+            List<BookingAllDetailsResponse.ActivityInformation> activities = bookingRepository.getActivitiesByBookingId(bookingId);
+            bookingAllDetails.setActivities(activities);
+            LOGGER.info("Activities: {}", activities);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    bookingAllDetails,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error("Error occurred while fetching booking all details: {}", e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching booking all details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch booking all details from database");
+        } finally {
+            LOGGER.info("End fetching booking all details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<InsertResponse> createBooking(InsertBookingRequest insertBookingRequest) {
+        LOGGER.info("Start creating booking from repository");
+        try {
+            bookingValidationService.validateInsertBookingRequest(insertBookingRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            String bookingReference = commonService.createBooingReference();
+
+            Long bookingId = bookingRepository.createBooking(insertBookingRequest,bookingReference, userId);
+            bookingRepository.addParticipantsToBooking(bookingId, insertBookingRequest.getParticipants(), userId);
+            bookingRepository.addAccommodationsToBooking(bookingId, insertBookingRequest.getAccommodations(), userId);
+            bookingRepository.addTransportationsToBooking(bookingId, insertBookingRequest.getTransportations(), userId);
+            bookingRepository.addActivitiesToBooking(bookingId, insertBookingRequest.getActivities(), userId);
+            bookingRepository.addDocumentsToBooking(bookingId, insertBookingRequest.getDocuments(), userId);
+            bookingRepository.addInsuranceToBooking(bookingId, insertBookingRequest.getBookingInsurance(), userId);
+            bookingRepository.addNotesToBooking(bookingId, insertBookingRequest.getBookingNotes(), userId);
+            bookingRepository.addPriceBreakdownToBooking(bookingId, insertBookingRequest.getPriceBreakDowns(), userId);
+            bookingRepository.addBookingInvoiceToBooking(bookingId, insertBookingRequest.getBookingInvoice(), userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.BOOKING_CREATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("New Booking Created")
+                    .message("A new booking '" + bookingReference + "' has been created.")
+                    .actionUrl(VIEW_BOOKING_DETAILS + "/" + bookingId)
+                    .actionText("View Booking")
+                    .icon("CalendarCheck")
+                    .color("#10B981")
+                    .metadata(Map.of(
+                            "bookingId", bookingId,
+                            "bookingReference", bookingReference,
+                            "packageScheduleId", insertBookingRequest.getPackageScheduleId(),
+                            "totalPersons", insertBookingRequest.getTotalPersons(),
+                            "createdBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.BOOKING_CREATE.name())
+                    .sourceModule(SourceModule.BOOKING.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            if (bookingId != null) {
+                List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TOUR_CREATED.name(), supervisorUserIds);
+                emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+                emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+                String body = bookingEmailHelperService.buildBookingCreateSuccessfullBody(insertBookingRequest, bookingId, loggedUser);
+                String subject = bookingEmailHelperService.buildBookingCreateSuccessfullSubject(insertBookingRequest, bookingId, loggedUser);
+//                emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_MESSAGE,
+                    new InsertResponse(),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while creating booking: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to create booking in database");
+        } finally {
+            LOGGER.info("End creating booking from repository");
         }
     }
 

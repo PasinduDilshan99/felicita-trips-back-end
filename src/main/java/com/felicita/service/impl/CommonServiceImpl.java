@@ -298,6 +298,11 @@ public class CommonServiceImpl implements CommonService {
     }
 
     @Override
+    public String createBooingReference() {
+        return "";
+    }
+
+    @Override
     public String generateRandomOtp() {
         SecureRandom secureRandom = new SecureRandom();
         StringBuilder otp = new StringBuilder();

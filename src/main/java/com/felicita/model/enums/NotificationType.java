@@ -102,7 +102,12 @@ public enum NotificationType {
 
     SEASON_TERMINATED("Triggered when a season is terminated or deactivated"),
     SEASON_CREATED("Triggered when a new season is created"),
-    SEASON_UPDATED("Triggered when a season is updated");
+    SEASON_UPDATED("Triggered when a season is updated"),
+
+    BOOKING_CREATED(""),
+    BOOKING_UPDATED(""),
+    BOOKING_TERMINATED("");
+
 
     private final String description;
 

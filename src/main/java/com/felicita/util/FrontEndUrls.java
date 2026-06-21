@@ -21,4 +21,6 @@ public class FrontEndUrls {
     public static final String VIEW_PRIVILEGE_DETAILS = "/employee-management/privileges/view";
     public static final String VIEW_ROLE_DETAILS = "/employee-management/roles/view";
     public static final String VIEW_EMPLOYEE_DETAILS = "/employee-management/employees/view";
+
+    public static final String VIEW_BOOKING_DETAILS = "/booking-management/bookings/view";
 }

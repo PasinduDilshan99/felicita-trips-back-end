@@ -1927,4 +1927,540 @@ public class BookingQueries {
         total_bookings DESC
     """;
 
+    public static final String GET_BOOKING_BASIC_DETAILS_FOR_PARAMS = """
+        SELECT
+            b.booking_id,
+            b.booking_reference,
+            b.booking_date,
+            b.travel_start_date,
+            b.travel_end_date,
+            b.total_persons,
+            b.total_amount,
+            b.discount_amount,
+            b.tax_amount,
+            b.insurance_amount,
+            b.final_amount,
+            b.insurance_required,
+            b.assign_to,
+            b.assign_message,
+            DATE(b.cancellation_date) AS cancellation_date,
+            b.refund_amount,
+            b.special_requirements,
+            b.dietary_restrictions,
+
+            u.user_id,
+            u.username,
+            CONCAT(
+                COALESCE(u.first_name, ''),
+                ' ',
+                COALESCE(u.last_name, '')
+            ) AS customer_name,
+            u.email,
+            u.mobile_number1,
+
+            t.tour_id,
+            t.name AS tour_name,
+            t.duration AS tour_duration,
+            t.start_location,
+            t.end_location,
+
+            p.package_id,
+            p.name AS package_name,
+
+            bs.id AS booking_status_id,
+            bs.name AS booking_status_name,
+
+            au.user_id AS assigned_employee_id,
+            CONCAT(
+                COALESCE(au.first_name, ''),
+                ' ',
+                COALESCE(au.last_name, '')
+            ) AS assigned_employee_name
+
+        FROM bookings b
+        LEFT JOIN user u
+            ON b.user_id = u.user_id
+        LEFT JOIN tour t
+            ON b.tour_id = t.tour_id
+        LEFT JOIN packages p
+            ON b.package_id = p.package_id
+        LEFT JOIN booking_status bs
+            ON b.booking_status_id = bs.id
+        LEFT JOIN employees e
+            ON b.assign_to = e.id
+        LEFT JOIN user au
+            ON e.user_id = au.user_id
+        WHERE 1=1
+        """;
+
+    public static final String GET_BOOKING_COUNT_FOR_PARAMS = """
+        SELECT COUNT(*)
+        FROM bookings b
+        LEFT JOIN user u
+            ON b.user_id = u.user_id
+        LEFT JOIN tour t
+            ON b.tour_id = t.tour_id
+        LEFT JOIN packages p
+            ON b.package_id = p.package_id
+        WHERE 1=1
+        """;
+    public static final String GET_BOOKINGS_REQUEST_PARAMS = """
+        SELECT
+            COALESCE(MIN(final_amount),0) AS min_price,
+            COALESCE(MAX(final_amount),0) AS max_price,
+            COALESCE(MIN(discount_amount),0) AS min_discount_amount,
+            COALESCE(MAX(discount_amount),0) AS max_discount_amount,
+            MIN(booking_date) AS min_booking_date,
+            MAX(booking_date) AS max_booking_date,
+            MIN(travel_start_date) AS min_travel_start_date,
+            MAX(travel_start_date) AS max_travel_start_date
+        FROM bookings
+        """;
+
+    public static final String GET_BOOKING_PARAM_STATUSES = """
+        SELECT
+            id,
+            name
+        FROM booking_status
+        ORDER BY name
+        """;
+
+    public static final String GET_BOOKING_PARAM_TOURS = """
+        SELECT
+            tour_id AS id,
+            name
+        FROM tour
+        ORDER BY name
+        """;
+    public static final String GET_BOOKING_PARAM_PACKAGES = """
+        SELECT
+            package_id AS id,
+            name
+        FROM packages
+        ORDER BY name
+        """;
+    public static final String GET_BOOKING_PARAM_ASSIGN_EMPLOYEES = """
+        SELECT
+            e.id,
+            CONCAT(
+                COALESCE(u.first_name,''),
+                ' ',
+                COALESCE(u.last_name,'')
+            ) AS name
+        FROM employees e
+        INNER JOIN user u
+            ON e.user_id = u.user_id
+        ORDER BY name
+        """;
+
+    public static final String GET_BOOKING_INFORMATION_BY_ID = """
+        SELECT
+            b.booking_id,
+            b.booking_reference,
+            b.booking_date,
+            b.travel_start_date,
+            b.travel_end_date,
+            b.total_persons,
+            b.total_amount,
+            b.discount_amount,
+            b.tax_amount,
+            b.insurance_amount,
+            b.final_amount,
+            b.insurance_required,
+            b.special_requirements,
+            b.dietary_restrictions
+        FROM bookings b
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_CUSTOMER_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            u.user_id,
+            u.username,
+            u.first_name,
+            u.last_name,
+            CONCAT(
+                COALESCE(u.first_name,''),
+                ' ',
+                COALESCE(u.last_name,'')
+            ) AS full_name,
+            u.email,
+            u.mobile_number1,
+            u.passport_number
+        FROM bookings b
+        INNER JOIN user u
+            ON b.user_id = u.user_id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_TOUR_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            t.tour_id,
+            t.name AS tour_name,
+            t.description AS tour_description,
+            t.duration,
+            t.start_location,
+            t.end_location,
+            t.latitude,
+            t.longitude
+        FROM bookings b
+        INNER JOIN tour t
+            ON b.tour_id = t.tour_id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_PACKAGE_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            p.package_id,
+            p.name AS package_name,
+            p.description AS package_description,
+            p.total_price,
+            p.price_per_person,
+            p.discount_percentage
+        FROM bookings b
+        INNER JOIN packages p
+            ON b.package_id = p.package_id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_BOOKING_STATUS_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            bs.id,
+            bs.name,
+            bs.description
+        FROM bookings b
+        INNER JOIN booking_status bs
+            ON b.booking_status_id = bs.id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_ASSIGNMENT_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            e.id AS employee_id,
+            e.user_id,
+            e.employee_code,
+            CONCAT(
+                COALESCE(u.first_name,''),
+                ' ',
+                COALESCE(u.last_name,'')
+            ) AS employee_name,
+            ed.department_name,
+            des.designation_name,
+            b.assign_message
+        FROM bookings b
+        INNER JOIN employees e
+            ON b.assign_to = e.id
+        INNER JOIN user u
+            ON e.user_id = u.user_id
+        LEFT JOIN employee_departments ed
+            ON e.department_id = ed.id
+        LEFT JOIN employee_designations des
+            ON e.designation_id = des.id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_PARTICIPANTS_BY_BOOKING_ID = """
+        SELECT
+            bp.id,
+            bp.first_name,
+            bp.last_name,
+            CONCAT(
+                COALESCE(bp.first_name,''),
+                ' ',
+                COALESCE(bp.last_name,'')
+            ) AS full_name,
+            bp.date_of_birth,
+            g.name AS gender_name,
+            c.name AS country_name,
+            bp.passport_number,
+            bp.email,
+            bp.mobile_number,
+            bp.emergency_contact_name,
+            bp.emergency_contact_phone,
+            bp.emergency_contact_relationship,
+            bp.medical_conditions,
+            bp.allergies,
+            bp.special_assistance_required,
+            bp.assistance_details
+        FROM booking_participants bp
+        LEFT JOIN gender g
+            ON bp.gender_id = g.gender_id
+        LEFT JOIN country c
+            ON bp.nationality_country_id = c.country_id
+        WHERE bp.booking_id = ?
+        ORDER BY bp.id
+        """;
+
+
+    public static final String GET_CANCELLATION_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            DATE(b.cancellation_date) AS cancellation_date,
+            cr.name,
+            b.cancellation_notes,
+            b.refund_amount,
+            rs.name AS refund_status
+        FROM bookings b
+        LEFT JOIN cancellation_reasons cr
+            ON b.cancellation_reason_id = cr.id
+        LEFT JOIN refund_status rs
+            ON b.refund_status_id = rs.id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_ACCOMMODATIONS_BY_BOOKING_ID = """
+        SELECT
+            ba.id,
+            sp.name AS hotel_name,
+            ba.room_type,
+            ba.room_number,
+            ba.confirmation_number,
+            ba.check_in_date,
+            ba.check_out_date
+        FROM booking_accommodation ba
+        LEFT JOIN service_provider sp
+        ON sp.service_provider_id = ba.hotel_id
+        WHERE ba.booking_id = ?
+        ORDER BY ba.check_in_date
+        """;
+
+
+    public static final String GET_TRANSPORTATIONS_BY_BOOKING_ID = """
+        SELECT
+            bt.id,
+            bt.transport_type,
+            bt.departure_date,
+            bt.departure_time,
+            bt.arrival_date,
+            bt.arrival_time,
+            bt.departure_location,
+            bt.arrival_location,
+            bt.carrier_name,
+            bt.reference_number,
+            bt.seat_numbers,
+            v.registration_number
+        FROM booking_transportation bt
+        LEFT JOIN vehicles v
+        ON v.vehicle_id = bt.vehicle_id
+        WHERE bt.booking_id = ?
+        ORDER BY bt.departure_date,
+                 bt.departure_time
+        """;
+
+
+    public static final String GET_ACTIVITIES_BY_BOOKING_ID = """
+        SELECT
+            ba.id,
+            a.id AS activity_id,
+            a.name AS activity_name,
+            ba.activity_date,
+            ba.start_time,
+            ba.end_time,
+            ba.number_of_participants,
+            ba.price_per_person,
+            ba.total_price,
+            cs.name AS status_name
+        FROM booking_activities ba
+        INNER JOIN activities a
+            ON ba.activity_id = a.id
+        LEFT JOIN common_status cs
+            ON ba.status = cs.id
+        WHERE ba.booking_id = ?
+        ORDER BY ba.activity_date,
+                 ba.start_time
+        """;
+
+    public static final String INSERT_BOOKING = """
+    INSERT INTO bookings (
+        booking_reference,
+        user_id,
+        package_schedule_id,
+        total_persons,
+        total_amount,
+        discount_amount,
+        tax_amount,
+        insurance_amount,
+        final_amount,
+        booking_date,
+        travel_start_date,
+        travel_end_date,
+        booking_status_id,
+        special_requirements,
+        dietary_restrictions,
+        insurance_required,
+        created_by,
+        tour_id,
+        package_id,
+        assign_to,
+        assign_message
+    )
+    VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+    """;
+
+    public static final String ADD_BOOKING_PARTICIPANT = """
+    INSERT INTO booking_participants (
+        booking_id,
+        first_name,
+        last_name,
+        date_of_birth,
+        gender_id,
+        passport_number,
+        nationality_country_id,
+        email,
+        mobile_number,
+        emergency_contact_name,
+        emergency_contact_phone,
+        emergency_contact_relationship,
+        medical_conditions,
+        allergies,
+        special_assistance_required,
+        assistance_details,
+        room_sharing_with,
+        created_by
+    )
+    VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+    """;
+
+    public static final String ADD_BOOKING_ACCOMMODATION = """
+    INSERT INTO booking_accommodation (
+        booking_id,
+        check_in_date,
+        check_out_date,
+        hotel_id,
+        room_type,
+        room_number,
+        confirmation_number,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_TRANSPORTATION = """
+    INSERT INTO booking_transportation (
+        booking_id,
+        transport_type,
+        departure_date,
+        departure_time,
+        arrival_date,
+        arrival_time,
+        departure_location,
+        arrival_location,
+        carrier_name,
+        reference_number,
+        seat_numbers,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_ACTIVITY = """
+    INSERT INTO booking_activities (
+        booking_id,
+        activity_id,
+        activity_schedule_id,
+        activity_date,
+        start_time,
+        end_time,
+        number_of_participants,
+        price_per_person,
+        total_price,
+        status,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_DOCUMENT = """
+    INSERT INTO booking_documents (
+        booking_id,
+        document_type,
+        document_name,
+        document_url,
+        file_size,
+        mime_type,
+        status,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_INSURANCE = """
+    INSERT INTO booking_insurance (
+        booking_id,
+        insurance_provider,
+        policy_number,
+        coverage_type,
+        premium_amount,
+        coverage_details,
+        policy_start_date,
+        policy_end_date,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_NOTE = """
+    INSERT INTO booking_notes (
+        booking_id,
+        note_type,
+        note_text,
+        is_important,
+        follow_up_date,
+        follow_up_completed,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_PRICE_BREAKDOWN = """
+    INSERT INTO booking_price_breakdown (
+        booking_id,
+        item_type,
+        item_name,
+        item_description,
+        quantity,
+        unit_price,
+        total_price,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_INVOICE = """
+    INSERT INTO booking_invoices (
+        booking_id,
+        invoice_number,
+        invoice_date,
+        due_date,
+        subtotal,
+        tax_amount,
+        discount_amount,
+        total_amount,
+        amount_paid,
+        balance_due,
+        billing_full_name,
+        billing_address,
+        billing_email,
+        billing_phone,
+        status,
+        insurance_amount,
+        created_by
+    )
+    VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+    """;
+
 }
+

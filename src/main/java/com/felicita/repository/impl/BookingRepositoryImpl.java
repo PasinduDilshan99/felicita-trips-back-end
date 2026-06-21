@@ -7,7 +7,12 @@ import com.felicita.model.dto.*;
 import com.felicita.model.request.BookingCancelledRequest;
 import com.felicita.model.request.BookingRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
+import com.felicita.model.request.bookings.BookingDataRequest;
+import com.felicita.model.request.bookings.InsertBookingRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.bookings.BookingAllDetailsResponse;
+import com.felicita.model.response.bookings.BookingsBasicDetails;
+import com.felicita.model.response.bookings.BookingsRequestParamsResponse;
 import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
 import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
 import com.felicita.model.response.statistics.BookingStatisticsResponse;
@@ -2621,6 +2626,1557 @@ public class BookingRepositoryImpl implements BookingRepository {
             throw new DataAccessErrorExceptionHandler(
                     "Failed to fetch peak booking periods");
         }
+    }
+
+    @Override
+    public List<BookingsBasicDetails> getBookingBasicDetailsForParams(
+            BookingDataRequest request) {
+
+        try {
+
+            StringBuilder sql = new StringBuilder(
+                    BookingQueries.GET_BOOKING_BASIC_DETAILS_FOR_PARAMS);
+
+            List<Object> params = new ArrayList<>();
+
+            if (request.getName() != null
+                    && !request.getName().isBlank()) {
+
+                sql.append("""
+                    AND (
+                        LOWER(t.name) LIKE ?
+                        OR LOWER(CONCAT(
+                                COALESCE(u.first_name,''),
+                                ' ',
+                                COALESCE(u.last_name,'')
+                            )) LIKE ?
+                    )
+                    """);
+
+                String search =
+                        "%" + request.getName().toLowerCase() + "%";
+
+                params.add(search);
+                params.add(search);
+            }
+
+            if (request.getBookingReference() != null
+                    && !request.getBookingReference().isBlank()) {
+
+                sql.append("""
+                    AND LOWER(b.booking_reference)
+                    LIKE ?
+                    """);
+
+                params.add(
+                        "%" +
+                                request.getBookingReference().toLowerCase() +
+                                "%");
+            }
+
+            if (request.getMinPrice() != null) {
+                sql.append("""
+                    AND b.final_amount >= ?
+                    """);
+
+                params.add(request.getMinPrice());
+            }
+
+            if (request.getMaxPrice() != null) {
+                sql.append("""
+                    AND b.final_amount <= ?
+                    """);
+
+                params.add(request.getMaxPrice());
+            }
+
+            if (request.getDiscountAmount() != null) {
+                sql.append("""
+                    AND b.discount_amount >= ?
+                    """);
+
+                params.add(request.getDiscountAmount());
+            }
+
+            if (request.getTravelStartDate() != null) {
+                sql.append("""
+                    AND b.travel_start_date >= ?
+                    """);
+
+                params.add(request.getTravelStartDate());
+            }
+
+            if (request.getTravelEndDate() != null) {
+                sql.append("""
+                    AND b.travel_end_date <= ?
+                    """);
+
+                params.add(request.getTravelEndDate());
+            }
+
+            if (request.getBookingFrom() != null) {
+                sql.append("""
+                    AND b.booking_date >= ?
+                    """);
+
+                params.add(request.getBookingFrom());
+            }
+
+            if (request.getBookingTo() != null) {
+                sql.append("""
+                    AND b.booking_date <= ?
+                    """);
+
+                params.add(request.getBookingTo());
+            }
+
+            if (request.getBookingStatusId() != null) {
+                sql.append("""
+                    AND b.booking_status_id = ?
+                    """);
+
+                params.add(request.getBookingStatusId());
+            }
+
+            if (request.getTourId() != null) {
+                sql.append("""
+                    AND b.tour_id = ?
+                    """);
+
+                params.add(request.getTourId());
+            }
+
+            if (request.getPackageId() != null) {
+                sql.append("""
+                    AND b.package_id = ?
+                    """);
+
+                params.add(request.getPackageId());
+            }
+
+            if (request.getAssignTo() != null) {
+                sql.append("""
+                    AND b.assign_to = ?
+                    """);
+
+                params.add(request.getAssignTo());
+            }
+
+            String sortBy =
+                    request.getSortBy() != null
+                            ? request.getSortBy()
+                            : "b.created_at";
+
+            String sortDirection =
+                    "ASC".equalsIgnoreCase(
+                            request.getSortDirection())
+                            ? "ASC"
+                            : "DESC";
+
+            sql.append("""
+                ORDER BY
+                """)
+                    .append(sortBy)
+                    .append(" ")
+                    .append(sortDirection);
+
+            if (request.getPageSize() != null
+                    && request.getPageNumber() != null) {
+
+                sql.append("""
+                    LIMIT ?
+                    OFFSET ?
+                    """);
+
+                params.add(request.getPageSize());
+
+                params.add(
+                        request.getPageNumber()
+                                * request.getPageSize());
+            }
+
+            return jdbcTemplate.query(
+                    sql.toString(),
+                    params.toArray(),
+                    (rs, rowNum) ->
+                            BookingsBasicDetails.builder()
+                                    .bookingId(
+                                            rs.getLong("booking_id"))
+                                    .bookingReference(
+                                            rs.getString(
+                                                    "booking_reference"))
+                                    .bookingDate(
+                                            rs.getDate("booking_date") != null
+                                                    ? rs.getDate("booking_date")
+                                                    .toLocalDate()
+                                                    : null)
+                                    .travelStartDate(
+                                            rs.getDate(
+                                                    "travel_start_date") != null
+                                                    ? rs.getDate(
+                                                            "travel_start_date")
+                                                    .toLocalDate()
+                                                    : null)
+                                    .travelEndDate(
+                                            rs.getDate(
+                                                    "travel_end_date") != null
+                                                    ? rs.getDate(
+                                                            "travel_end_date")
+                                                    .toLocalDate()
+                                                    : null)
+                                    .userId(
+                                            rs.getLong("user_id"))
+                                    .username(
+                                            rs.getString(
+                                                    "username"))
+                                    .customerName(
+                                            rs.getString(
+                                                    "customer_name"))
+                                    .email(
+                                            rs.getString("email"))
+                                    .mobileNumber(
+                                            rs.getString(
+                                                    "mobile_number1"))
+                                    .tourId(
+                                            rs.getLong("tour_id"))
+                                    .tourName(
+                                            rs.getString(
+                                                    "tour_name"))
+                                    .tourDuration(
+                                            rs.getInt(
+                                                    "tour_duration"))
+                                    .startLocation(
+                                            rs.getString(
+                                                    "start_location"))
+                                    .endLocation(
+                                            rs.getString(
+                                                    "end_location"))
+                                    .packageId(
+                                            rs.getLong("package_id"))
+                                    .packageName(
+                                            rs.getString(
+                                                    "package_name"))
+                                    .totalPersons(
+                                            rs.getInt(
+                                                    "total_persons"))
+                                    .totalAmount(
+                                            rs.getBigDecimal(
+                                                    "total_amount"))
+                                    .discountAmount(
+                                            rs.getBigDecimal(
+                                                    "discount_amount"))
+                                    .taxAmount(
+                                            rs.getBigDecimal(
+                                                    "tax_amount"))
+                                    .insuranceAmount(
+                                            rs.getBigDecimal(
+                                                    "insurance_amount"))
+                                    .finalAmount(
+                                            rs.getBigDecimal(
+                                                    "final_amount"))
+                                    .insuranceRequired(
+                                            rs.getBoolean(
+                                                    "insurance_required"))
+                                    .bookingStatusId(
+                                            rs.getLong(
+                                                    "booking_status_id"))
+                                    .bookingStatusName(
+                                            rs.getString(
+                                                    "booking_status_name"))
+                                    .assignedEmployeeId(
+                                            rs.getObject(
+                                                    "assigned_employee_id",
+                                                    Long.class))
+                                    .assignedEmployeeName(
+                                            rs.getString(
+                                                    "assigned_employee_name"))
+                                    .assignMessage(
+                                            rs.getString(
+                                                    "assign_message"))
+                                    .cancellationDate(
+                                            rs.getDate(
+                                                    "cancellation_date") != null
+                                                    ? rs.getDate(
+                                                            "cancellation_date")
+                                                    .toLocalDate()
+                                                    : null)
+                                    .refundAmount(
+                                            rs.getBigDecimal(
+                                                    "refund_amount"))
+                                    .specialRequirements(
+                                            rs.getString(
+                                                    "special_requirements"))
+                                    .dietaryRestrictions(
+                                            rs.getString(
+                                                    "dietary_restrictions"))
+                                    .build());
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Error fetching booking details",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking details");
+        }
+    }
+
+    @Override
+    public Integer getBookingCountForParams(
+            BookingDataRequest request) {
+
+        try {
+
+            StringBuilder sql = new StringBuilder(
+                    BookingQueries.GET_BOOKING_COUNT_FOR_PARAMS);
+
+            List<Object> params = new ArrayList<>();
+
+            if (request.getName() != null
+                    && !request.getName().isBlank()) {
+
+                sql.append("""
+                    AND (
+                        LOWER(t.name) LIKE ?
+                        OR LOWER(CONCAT(
+                                COALESCE(u.first_name,''),
+                                ' ',
+                                COALESCE(u.last_name,'')
+                            )) LIKE ?
+                    )
+                    """);
+
+                String search =
+                        "%" + request.getName().toLowerCase() + "%";
+
+                params.add(search);
+                params.add(search);
+            }
+
+            if (request.getBookingReference() != null
+                    && !request.getBookingReference().isBlank()) {
+
+                sql.append("""
+                    AND LOWER(b.booking_reference)
+                    LIKE ?
+                    """);
+
+                params.add(
+                        "%" +
+                                request.getBookingReference().toLowerCase() +
+                                "%");
+            }
+
+            if (request.getMinPrice() != null) {
+                sql.append(" AND b.final_amount >= ?");
+                params.add(request.getMinPrice());
+            }
+
+            if (request.getMaxPrice() != null) {
+                sql.append(" AND b.final_amount <= ?");
+                params.add(request.getMaxPrice());
+            }
+
+            if (request.getDiscountAmount() != null) {
+                sql.append(" AND b.discount_amount >= ?");
+                params.add(request.getDiscountAmount());
+            }
+
+            if (request.getTravelStartDate() != null) {
+                sql.append(" AND b.travel_start_date >= ?");
+                params.add(request.getTravelStartDate());
+            }
+
+            if (request.getTravelEndDate() != null) {
+                sql.append(" AND b.travel_end_date <= ?");
+                params.add(request.getTravelEndDate());
+            }
+
+            if (request.getBookingFrom() != null) {
+                sql.append(" AND b.booking_date >= ?");
+                params.add(request.getBookingFrom());
+            }
+
+            if (request.getBookingTo() != null) {
+                sql.append(" AND b.booking_date <= ?");
+                params.add(request.getBookingTo());
+            }
+
+            if (request.getBookingStatusId() != null) {
+                sql.append(" AND b.booking_status_id = ?");
+                params.add(request.getBookingStatusId());
+            }
+
+            if (request.getTourId() != null) {
+                sql.append(" AND b.tour_id = ?");
+                params.add(request.getTourId());
+            }
+
+            if (request.getPackageId() != null) {
+                sql.append(" AND b.package_id = ?");
+                params.add(request.getPackageId());
+            }
+
+            if (request.getAssignTo() != null) {
+                sql.append(" AND b.assign_to = ?");
+                params.add(request.getAssignTo());
+            }
+
+            Integer count =
+                    jdbcTemplate.queryForObject(
+                            sql.toString(),
+                            params.toArray(),
+                            Integer.class);
+
+            return count == null ? 0 : count;
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Error fetching booking count",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking count");
+        }
+    }
+
+    @Override
+    public BookingsRequestParamsResponse getBookingsParamsData() {
+
+        try {
+
+            LOGGER.info("Fetching booking request params data");
+
+            BookingsRequestParamsResponse response =
+                    jdbcTemplate.queryForObject(
+                            BookingQueries.GET_BOOKINGS_REQUEST_PARAMS,
+                            (rs, rowNum) ->
+                                    BookingsRequestParamsResponse.builder()
+                                            .minPrice(
+                                                    rs.getLong("min_price"))
+                                            .maxPrice(
+                                                    rs.getLong("max_price"))
+                                            .minDiscountAmount(
+                                                    rs.getDouble(
+                                                            "min_discount_amount"))
+                                            .maxDiscountAmount(
+                                                    rs.getDouble(
+                                                            "max_discount_amount"))
+                                            .minBookingDate(
+                                                    rs.getDate(
+                                                            "min_booking_date") != null
+                                                            ? rs.getDate(
+                                                                    "min_booking_date")
+                                                            .toLocalDate()
+                                                            : null)
+                                            .maxBookingDate(
+                                                    rs.getDate(
+                                                            "max_booking_date") != null
+                                                            ? rs.getDate(
+                                                                    "max_booking_date")
+                                                            .toLocalDate()
+                                                            : null)
+                                            .minTravelStartDate(
+                                                    rs.getDate(
+                                                            "min_travel_start_date") != null
+                                                            ? rs.getDate(
+                                                                    "min_travel_start_date")
+                                                            .toLocalDate()
+                                                            : null)
+                                            .maxTravelStartDate(
+                                                    rs.getDate(
+                                                            "max_travel_start_date") != null
+                                                            ? rs.getDate(
+                                                                    "max_travel_start_date")
+                                                            .toLocalDate()
+                                                            : null)
+                                            .build());
+
+            if (response == null) {
+                return BookingsRequestParamsResponse.builder().build();
+            }
+
+            response.setBookingStatuses(
+                    getBookingParamStatuses());
+
+            response.setTours(
+                    getBookingParamTours());
+
+            response.setPackages(
+                    getBookingParamPackages());
+
+            response.setAssignEmployees(
+                    getBookingParamAssignEmployees());
+
+            return response;
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching booking request params data",
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking request params data");
+        }
+    }
+
+    @Override
+    public BookingAllDetailsResponse.BookingInformation getBookingInformationById(
+            Long bookingId) {
+
+        try {
+
+            return jdbcTemplate.queryForObject(
+                    BookingQueries.GET_BOOKING_INFORMATION_BY_ID,
+                    new Object[]{bookingId},
+                    (rs, rowNum) ->
+                            BookingAllDetailsResponse.BookingInformation.builder()
+                                    .bookingId(
+                                            rs.getLong("booking_id"))
+                                    .bookingReference(
+                                            rs.getString("booking_reference"))
+                                    .bookingDate(
+                                            rs.getDate("booking_date") != null
+                                                    ? rs.getDate("booking_date").toLocalDate()
+                                                    : null)
+                                    .travelStartDate(
+                                            rs.getDate("travel_start_date") != null
+                                                    ? rs.getDate("travel_start_date").toLocalDate()
+                                                    : null)
+                                    .travelEndDate(
+                                            rs.getDate("travel_end_date") != null
+                                                    ? rs.getDate("travel_end_date").toLocalDate()
+                                                    : null)
+                                    .totalPersons(
+                                            rs.getObject(
+                                                    "total_persons",
+                                                    Integer.class))
+                                    .totalAmount(
+                                            rs.getBigDecimal("total_amount"))
+                                    .discountAmount(
+                                            rs.getBigDecimal("discount_amount"))
+                                    .taxAmount(
+                                            rs.getBigDecimal("tax_amount"))
+                                    .insuranceAmount(
+                                            rs.getBigDecimal("insurance_amount"))
+                                    .finalAmount(
+                                            rs.getBigDecimal("final_amount"))
+                                    .insuranceRequired(
+                                            rs.getBoolean("insurance_required"))
+                                    .specialRequirements(
+                                            rs.getString("special_requirements"))
+                                    .dietaryRestrictions(
+                                            rs.getString("dietary_restrictions"))
+                                    .build());
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Error fetching booking information. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking information");
+        }
+    }
+
+    @Override
+    public BookingAllDetailsResponse.CustomerInformation
+    getCustomerInformationByBookingId(
+            Long bookingId) {
+
+        try {
+
+            return jdbcTemplate.queryForObject(
+                    BookingQueries.GET_CUSTOMER_INFORMATION_BY_BOOKING_ID,
+                    new Object[]{bookingId},
+                    (rs, rowNum) ->
+                            BookingAllDetailsResponse.CustomerInformation.builder()
+                                    .userId(
+                                            rs.getLong("user_id"))
+                                    .username(
+                                            rs.getString("username"))
+                                    .firstName(
+                                            rs.getString("first_name"))
+                                    .lastName(
+                                            rs.getString("last_name"))
+                                    .fullName(
+                                            rs.getString("full_name"))
+                                    .email(
+                                            rs.getString("email"))
+                                    .mobileNumber(
+                                            rs.getString("mobile_number1"))
+                                    .passportNumber(
+                                            rs.getString("passport_number"))
+                                    .build());
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Error fetching customer information. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch customer information");
+        }
+    }
+
+    @Override
+    public BookingAllDetailsResponse.TourInformation
+    getTourInformationByBookingId(
+            Long bookingId) {
+
+        try {
+
+            return jdbcTemplate.queryForObject(
+                    BookingQueries.GET_TOUR_INFORMATION_BY_BOOKING_ID,
+                    new Object[]{bookingId},
+                    (rs, rowNum) ->
+                            BookingAllDetailsResponse.TourInformation.builder()
+                                    .tourId(
+                                            rs.getLong("tour_id"))
+                                    .tourName(
+                                            rs.getString("tour_name"))
+                                    .tourDescription(
+                                            rs.getString("tour_description"))
+                                    .duration(
+                                            rs.getObject(
+                                                    "duration",
+                                                    Integer.class))
+                                    .startLocation(
+                                            rs.getString("start_location"))
+                                    .endLocation(
+                                            rs.getString("end_location"))
+                                    .latitude(
+                                            rs.getObject(
+                                                    "latitude",
+                                                    Double.class))
+                                    .longitude(
+                                            rs.getObject(
+                                                    "longitude",
+                                                    Double.class))
+                                    .build());
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Error fetching tour information. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch tour information");
+        }
+    }
+
+    @Override
+    public BookingAllDetailsResponse.PackageInformation
+    getPackageInformationByBookingId(
+            Long bookingId) {
+
+        try {
+
+            return jdbcTemplate.queryForObject(
+                    BookingQueries.GET_PACKAGE_INFORMATION_BY_BOOKING_ID,
+                    new Object[]{bookingId},
+                    (rs, rowNum) ->
+                            BookingAllDetailsResponse.PackageInformation.builder()
+                                    .packageId(
+                                            rs.getLong("package_id"))
+                                    .packageName(
+                                            rs.getString("package_name"))
+                                    .packageDescription(
+                                            rs.getString("package_description"))
+                                    .packageTotalPrice(
+                                            rs.getBigDecimal("total_price"))
+                                    .pricePerPerson(
+                                            rs.getBigDecimal("price_per_person"))
+                                    .discountPercentage(
+                                            rs.getBigDecimal(
+                                                    "discount_percentage"))
+                                    .build());
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Error fetching package information. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch package information");
+        }
+    }
+
+    @Override
+    public BookingAllDetailsResponse.BookingStatusInformation
+    getBookingStatusInformationByBookingId(
+            Long bookingId) {
+
+        try {
+
+            return jdbcTemplate.queryForObject(
+                    BookingQueries.GET_BOOKING_STATUS_INFORMATION_BY_BOOKING_ID,
+                    new Object[]{bookingId},
+                    (rs, rowNum) ->
+                            BookingAllDetailsResponse.BookingStatusInformation.builder()
+                                    .bookingStatusId(
+                                            rs.getLong("id"))
+                                    .bookingStatusName(
+                                            rs.getString("name"))
+                                    .bookingStatusDescription(
+                                            rs.getString("description"))
+                                    .build());
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Error fetching booking status information. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch booking status information");
+        }
+    }
+
+    @Override
+    public BookingAllDetailsResponse.AssignmentInformation
+    getAssignmentInformationByBookingId(
+            Long bookingId) {
+
+        try {
+
+            List<BookingAllDetailsResponse.AssignmentInformation> assignments =
+                    jdbcTemplate.query(
+                            BookingQueries.GET_ASSIGNMENT_INFORMATION_BY_BOOKING_ID,
+                            new Object[]{bookingId},
+                            (rs, rowNum) ->
+                                    BookingAllDetailsResponse.AssignmentInformation.builder()
+                                            .employeeId(
+                                                    rs.getLong(
+                                                            "employee_id"))
+                                            .employeeUserId(
+                                                    rs.getLong(
+                                                            "user_id"))
+                                            .employeeCode(
+                                                    rs.getString(
+                                                            "employee_code"))
+                                            .employeeName(
+                                                    rs.getString(
+                                                            "employee_name"))
+                                            .departmentName(
+                                                    rs.getString(
+                                                            "department_name"))
+                                            .designationName(
+                                                    rs.getString(
+                                                            "designation_name"))
+                                            .assignMessage(
+                                                    rs.getString(
+                                                            "assign_message"))
+                                            .build());
+
+            return assignments.isEmpty()
+                    ? null
+                    : assignments.get(0);
+
+        } catch (DataAccessException ex) {
+            LOGGER.error(
+                    "Error fetching assignment information. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch assignment information");
+        }
+    }
+
+    @Override
+    public List<BookingAllDetailsResponse.ParticipantInformation>
+    getParticipantsByBookingId(Long bookingId) {
+
+        try {
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_PARTICIPANTS_BY_BOOKING_ID,
+                    new Object[]{bookingId},
+                    (rs, rowNum) ->
+                            BookingAllDetailsResponse.ParticipantInformation.builder()
+                                    .participantId(
+                                            rs.getLong("id"))
+                                    .firstName(
+                                            rs.getString("first_name"))
+                                    .lastName(
+                                            rs.getString("last_name"))
+                                    .fullName(
+                                            rs.getString("full_name"))
+                                    .dateOfBirth(
+                                            rs.getDate("date_of_birth") != null
+                                                    ? rs.getDate("date_of_birth")
+                                                    .toLocalDate()
+                                                    : null)
+                                    .gender(
+                                            rs.getString("gender_name"))
+                                    .nationality(
+                                            rs.getString("country_name"))
+                                    .passportNumber(
+                                            rs.getString("passport_number"))
+                                    .email(
+                                            rs.getString("email"))
+                                    .mobileNumber(
+                                            rs.getString("mobile_number"))
+                                    .emergencyContactName(
+                                            rs.getString(
+                                                    "emergency_contact_name"))
+                                    .emergencyContactPhone(
+                                            rs.getString(
+                                                    "emergency_contact_phone"))
+                                    .emergencyContactRelationship(
+                                            rs.getString(
+                                                    "emergency_contact_relationship"))
+                                    .medicalConditions(
+                                            rs.getString(
+                                                    "medical_conditions"))
+                                    .allergies(
+                                            rs.getString("allergies"))
+                                    .specialAssistanceRequired(
+                                            rs.getBoolean(
+                                                    "special_assistance_required"))
+                                    .assistanceDetails(
+                                            rs.getString(
+                                                    "assistance_details"))
+                                    .build());
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching participants. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch participants");
+        }
+    }
+
+    @Override
+    public BookingAllDetailsResponse.CancellationInformation
+    getCancellationInformationByBookingId(
+            Long bookingId) {
+
+        try {
+
+            List<BookingAllDetailsResponse.CancellationInformation>
+                    cancellations =
+                    jdbcTemplate.query(
+                            BookingQueries
+                                    .GET_CANCELLATION_INFORMATION_BY_BOOKING_ID,
+                            new Object[]{bookingId},
+                            (rs, rowNum) ->
+                                    BookingAllDetailsResponse
+                                            .CancellationInformation
+                                            .builder()
+                                            .cancellationDate(
+                                                    rs.getDate(
+                                                            "cancellation_date")
+                                                            != null
+                                                            ? rs.getDate(
+                                                                    "cancellation_date")
+                                                            .toLocalDate()
+                                                            : null)
+                                            .cancellationReason(
+                                                    rs.getString(
+                                                            "name"))
+                                            .cancellationNotes(
+                                                    rs.getString(
+                                                            "cancellation_notes"))
+                                            .refundAmount(
+                                                    rs.getBigDecimal(
+                                                            "refund_amount"))
+                                            .refundStatus(
+                                                    rs.getString(
+                                                            "refund_status"))
+                                            .build());
+
+            return cancellations.isEmpty()
+                    ? null
+                    : cancellations.get(0);
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching cancellation information. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch cancellation information");
+        }
+    }
+
+    @Override
+    public List<BookingAllDetailsResponse.AccommodationInformation>
+    getAccommodationsByBookingId(
+            Long bookingId) {
+
+        try {
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_ACCOMMODATIONS_BY_BOOKING_ID,
+                    new Object[]{bookingId},
+                    (rs, rowNum) ->
+                            BookingAllDetailsResponse
+                                    .AccommodationInformation
+                                    .builder()
+                                    .accommodationId(
+                                            rs.getLong("id"))
+                                    .hotelName(
+                                            rs.getString("hotel_name"))
+                                    .roomType(
+                                            rs.getString("room_type"))
+                                    .roomNumber(
+                                            rs.getString("room_number"))
+                                    .confirmationNumber(
+                                            rs.getString(
+                                                    "confirmation_number"))
+                                    .checkInDate(
+                                            rs.getDate(
+                                                    "check_in_date") != null
+                                                    ? rs.getDate(
+                                                            "check_in_date")
+                                                    .toLocalDate()
+                                                    : null)
+                                    .checkOutDate(
+                                            rs.getDate(
+                                                    "check_out_date") != null
+                                                    ? rs.getDate(
+                                                            "check_out_date")
+                                                    .toLocalDate()
+                                                    : null)
+                                    .build());
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching accommodations. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch accommodations");
+        }
+    }
+
+    @Override
+    public List<BookingAllDetailsResponse.TransportationInformation>
+    getTransportationsByBookingId(
+            Long bookingId) {
+
+        try {
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_TRANSPORTATIONS_BY_BOOKING_ID,
+                    new Object[]{bookingId},
+                    (rs, rowNum) ->
+                            BookingAllDetailsResponse
+                                    .TransportationInformation
+                                    .builder()
+                                    .transportationId(
+                                            rs.getLong("id"))
+                                    .transportType(
+                                            rs.getString(
+                                                    "transport_type"))
+                                    .departureDate(
+                                            rs.getDate(
+                                                    "departure_date") != null
+                                                    ? rs.getDate(
+                                                            "departure_date")
+                                                    .toLocalDate()
+                                                    : null)
+                                    .departureTime(
+                                            rs.getTime(
+                                                    "departure_time") != null
+                                                    ? rs.getTime(
+                                                            "departure_time")
+                                                    .toLocalTime()
+                                                    : null)
+                                    .arrivalDate(
+                                            rs.getDate(
+                                                    "arrival_date") != null
+                                                    ? rs.getDate(
+                                                            "arrival_date")
+                                                    .toLocalDate()
+                                                    : null)
+                                    .arrivalTime(
+                                            rs.getTime(
+                                                    "arrival_time") != null
+                                                    ? rs.getTime(
+                                                            "arrival_time")
+                                                    .toLocalTime()
+                                                    : null)
+                                    .departureLocation(
+                                            rs.getString(
+                                                    "departure_location"))
+                                    .arrivalLocation(
+                                            rs.getString(
+                                                    "arrival_location"))
+                                    .carrierName(
+                                            rs.getString(
+                                                    "carrier_name"))
+                                    .referenceNumber(
+                                            rs.getString(
+                                                    "reference_number"))
+                                    .seatNumbers(
+                                            rs.getString(
+                                                    "seat_numbers"))
+                                    .vehicleNumber(
+                                            rs.getString(
+                                                    "registration_number"))
+                                    .build());
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching transportations. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch transportations");
+        }
+    }
+
+    @Override
+    public List<BookingAllDetailsResponse.ActivityInformation>
+    getActivitiesByBookingId(
+            Long bookingId) {
+
+        try {
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_ACTIVITIES_BY_BOOKING_ID,
+                    new Object[]{bookingId},
+                    (rs, rowNum) ->
+                            BookingAllDetailsResponse
+                                    .ActivityInformation
+                                    .builder()
+                                    .bookingActivityId(
+                                            rs.getLong("id"))
+                                    .activityId(
+                                            rs.getLong(
+                                                    "activity_id"))
+                                    .activityName(
+                                            rs.getString(
+                                                    "activity_name"))
+                                    .activityDate(
+                                            rs.getDate(
+                                                    "activity_date") != null
+                                                    ? rs.getDate(
+                                                            "activity_date")
+                                                    .toLocalDate()
+                                                    : null)
+                                    .startTime(
+                                            rs.getTime(
+                                                    "start_time") != null
+                                                    ? rs.getTime(
+                                                            "start_time")
+                                                    .toLocalTime()
+                                                    : null)
+                                    .endTime(
+                                            rs.getTime(
+                                                    "end_time") != null
+                                                    ? rs.getTime(
+                                                            "end_time")
+                                                    .toLocalTime()
+                                                    : null)
+                                    .numberOfParticipants(
+                                            rs.getObject(
+                                                    "number_of_participants",
+                                                    Integer.class))
+                                    .pricePerPerson(
+                                            rs.getBigDecimal(
+                                                    "price_per_person"))
+                                    .totalPrice(
+                                            rs.getBigDecimal(
+                                                    "total_price"))
+                                    .status(
+                                            rs.getString(
+                                                    "status_name"))
+                                    .build());
+
+        } catch (DataAccessException ex) {
+
+            LOGGER.error(
+                    "Error fetching activities. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new DataAccessErrorExceptionHandler(
+                    "Failed to fetch activities");
+        }
+    }
+
+    @Override
+    public Long createBooking(
+            InsertBookingRequest request,
+            String bookingReference,
+            Long userId) {
+
+        try {
+
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+
+            jdbcTemplate.update(connection -> {
+
+                PreparedStatement ps =
+                        connection.prepareStatement(
+                                BookingQueries.INSERT_BOOKING,
+                                Statement.RETURN_GENERATED_KEYS);
+
+                ps.setString(1, bookingReference);
+                ps.setObject(2, userId);
+                ps.setObject(3, request.getPackageScheduleId());
+                ps.setObject(4, request.getTotalPersons());
+                ps.setBigDecimal(5, request.getTotalAmount());
+                ps.setBigDecimal(6, request.getDiscountAmount());
+                ps.setBigDecimal(7, request.getTaxAmount());
+                ps.setBigDecimal(8, request.getInsuranceAmount());
+                ps.setBigDecimal(9, request.getFinalAmount());
+                ps.setObject(10, request.getBookingDate());
+                ps.setObject(11, request.getTravelStartDate());
+                ps.setObject(12, request.getTravelEndDate());
+                ps.setObject(13, request.getBookingStatusId());
+                ps.setString(14, request.getSpecialRequirements());
+                ps.setString(15, request.getDietaryRestrictions());
+                ps.setBoolean(
+                        16,
+                        Boolean.TRUE.equals(
+                                request.getInsuranceRequired()));
+                ps.setObject(17, userId);
+                ps.setObject(18, request.getTourId());
+                ps.setObject(19, request.getPackageId());
+                ps.setObject(20, request.getAssignTo());
+                ps.setString(21, request.getAssignMessage());
+
+                return ps;
+            }, keyHolder);
+
+            if (keyHolder.getKey() == null) {
+                throw new InsertFailedErrorExceptionHandler(
+                        "Failed to create booking");
+            }
+
+            return keyHolder.getKey().longValue();
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Error creating booking",
+                    ex);
+
+            throw new InsertFailedErrorExceptionHandler(
+                    "Failed to create booking");
+        }
+    }
+
+    @Override
+    public void addParticipantsToBooking(
+            Long bookingId,
+            List<InsertBookingRequest.Participant> participants,
+            Long userId) {
+
+        if (participants == null || participants.isEmpty()) {
+            return;
+        }
+
+        try {
+
+            for (InsertBookingRequest.Participant p : participants) {
+
+                jdbcTemplate.update(
+                        BookingQueries.ADD_BOOKING_PARTICIPANT,
+                        bookingId,
+                        p.getFirstName(),
+                        p.getLastName(),
+                        p.getDateOfBirth(),
+                        p.getGenderId(),
+                        p.getPassportNumber(),
+                        p.getNationalityCountryId(),
+                        p.getEmail(),
+                        p.getMobileNumber(),
+                        p.getEmergencyContactName(),
+                        p.getEmergencyContactPhone(),
+                        p.getEmergencyContactRelationship(),
+                        p.getMedicalConditions(),
+                        p.getAllergies(),
+                        p.getSpecialAssistanceRequired(),
+                        p.getAssistanceDetails(),
+                        p.getRoomSharingWith(),
+                        userId
+                );
+            }
+
+        } catch (Exception ex) {
+
+            LOGGER.error(
+                    "Error adding participants. BookingId: {}",
+                    bookingId,
+                    ex);
+
+            throw new InsertFailedErrorExceptionHandler(
+                    "Failed to save booking participants");
+        }
+    }
+
+    @Override
+    public void addAccommodationsToBooking(
+            Long bookingId,
+            List<InsertBookingRequest.Accommodation> accommodations,
+            Long userId) {
+
+        if (accommodations == null || accommodations.isEmpty()) {
+            return;
+        }
+
+        try {
+
+            for (InsertBookingRequest.Accommodation a : accommodations) {
+
+                jdbcTemplate.update(
+                        BookingQueries.ADD_BOOKING_ACCOMMODATION,
+                        bookingId,
+                        a.getCheckInDate(),
+                        a.getCheckOutDate(),
+                        a.getHotelId(),
+                        a.getRoomType(),
+                        a.getRoomNumber(),
+                        a.getConfirmationNumber(),
+                        userId
+                );
+            }
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error adding accommodations. BookingId: {}", bookingId, ex);
+
+            throw new InsertFailedErrorExceptionHandler(
+                    "Failed to save booking accommodations");
+        }
+    }
+
+    @Override
+    public void addTransportationsToBooking(
+            Long bookingId,
+            List<InsertBookingRequest.Transportation> transportations,
+            Long userId) {
+
+        if (transportations == null || transportations.isEmpty()) {
+            return;
+        }
+
+        try {
+
+            for (InsertBookingRequest.Transportation t : transportations) {
+
+                jdbcTemplate.update(
+                        BookingQueries.ADD_BOOKING_TRANSPORTATION,
+                        bookingId,
+                        t.getTransportType(),
+                        t.getDepartureDate(),
+                        t.getDepartureTime(),
+                        t.getArrivalDate(),
+                        t.getArrivalTime(),
+                        t.getDepartureLocation(),
+                        t.getArrivalLocation(),
+                        t.getCarrierName(),
+                        t.getReferenceNumber(),
+                        t.getSeatNumbers(),
+                        userId
+                );
+            }
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error adding transportations. BookingId: {}", bookingId, ex);
+
+            throw new InsertFailedErrorExceptionHandler(
+                    "Failed to save booking transportations");
+        }
+    }
+
+    @Override
+    public void addActivitiesToBooking(
+            Long bookingId,
+            List<InsertBookingRequest.Activity> activities,
+            Long userId) {
+
+        if (activities == null || activities.isEmpty()) {
+            return;
+        }
+
+        try {
+
+            for (InsertBookingRequest.Activity a : activities) {
+
+                jdbcTemplate.update(
+                        BookingQueries.ADD_BOOKING_ACTIVITY,
+                        bookingId,
+                        a.getActivityId(),
+                        a.getActivityScheduleId(),
+                        a.getActivityDate(),
+                        a.getStartTime(),
+                        a.getEndTime(),
+                        a.getNumberOfParticipants(),
+                        a.getPricePerPerson(),
+                        a.getTotalPrice(),
+                        a.getStatusId(),
+                        userId
+                );
+            }
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error adding activities. BookingId: {}", bookingId, ex);
+
+            throw new InsertFailedErrorExceptionHandler(
+                    "Failed to save booking activities");
+        }
+    }
+
+    @Override
+    public void addDocumentsToBooking(
+            Long bookingId,
+            List<InsertBookingRequest.BookingDocuments> documents,
+            Long userId) {
+
+        if (documents == null || documents.isEmpty()) {
+            return;
+        }
+
+        try {
+
+            for (InsertBookingRequest.BookingDocuments d : documents) {
+
+                jdbcTemplate.update(
+                        BookingQueries.ADD_BOOKING_DOCUMENT,
+                        bookingId,
+                        d.getDocumentType(),
+                        d.getDocumentName(),
+                        d.getDocumentUrl(),
+                        d.getFileSize() != null ? Integer.valueOf(d.getFileSize()) : null,
+                        d.getMimiType(),
+                        d.getStatus(),
+                        userId
+                );
+            }
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error adding documents. BookingId: {}", bookingId, ex);
+
+            throw new InsertFailedErrorExceptionHandler(
+                    "Failed to save booking documents");
+        }
+    }
+
+    @Override
+    public void addInsuranceToBooking(
+            Long bookingId,
+            InsertBookingRequest.BookingInsurance insurance,
+            Long userId) {
+
+        if (insurance == null) {
+            return;
+        }
+
+        try {
+
+            jdbcTemplate.update(
+                    BookingQueries.ADD_BOOKING_INSURANCE,
+                    bookingId,
+                    insurance.getInsuranceProvider(),
+                    insurance.getPolicyNumber(),
+                    insurance.getCoverageType(),
+                    insurance.getPremiumAmount(),
+                    insurance.getCoverageDetails(),
+                    insurance.getPolicyStartDate(),
+                    insurance.getPolicyEndDate(),
+                    userId
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error adding insurance. BookingId: {}", bookingId, ex);
+
+            throw new InsertFailedErrorExceptionHandler(
+                    "Failed to save booking insurance");
+        }
+    }
+
+    @Override
+    public void addNotesToBooking(
+            Long bookingId,
+            List<InsertBookingRequest.BookingNote> notes,
+            Long userId) {
+
+        if (notes == null || notes.isEmpty()) {
+            return;
+        }
+
+        try {
+
+            for (InsertBookingRequest.BookingNote n : notes) {
+
+                jdbcTemplate.update(
+                        BookingQueries.ADD_BOOKING_NOTE,
+                        bookingId,
+                        n.getNoteType(),
+                        n.getNoteText(),
+                        n.getIsImportant(),
+                        n.getFollowUpDate(),
+                        n.getFollowUpComplete(),
+                        userId
+                );
+            }
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error adding notes. BookingId: {}", bookingId, ex);
+
+            throw new InsertFailedErrorExceptionHandler(
+                    "Failed to save booking notes");
+        }
+    }
+
+    @Override
+    public void addPriceBreakdownToBooking(
+            Long bookingId,
+            List<InsertBookingRequest.BookingPriceBreakDown> priceBreakDowns,
+            Long userId) {
+
+        if (priceBreakDowns == null || priceBreakDowns.isEmpty()) {
+            return;
+        }
+
+        try {
+
+            for (InsertBookingRequest.BookingPriceBreakDown p : priceBreakDowns) {
+
+                jdbcTemplate.update(
+                        BookingQueries.ADD_BOOKING_PRICE_BREAKDOWN,
+                        bookingId,
+                        p.getItemType(),
+                        p.getItemName(),
+                        p.getItemDescription(),
+                        p.getQuantity(),
+                        p.getUnitPrice(),
+                        p.getTotalPrice(),
+                        userId
+                );
+            }
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error adding price breakdown. BookingId: {}", bookingId, ex);
+
+            throw new InsertFailedErrorExceptionHandler(
+                    "Failed to save price breakdown");
+        }
+    }
+
+    @Override
+    public void addBookingInvoiceToBooking(
+            Long bookingId,
+            InsertBookingRequest.BookingInvoice invoice,
+            Long userId) {
+
+        if (invoice == null) {
+            return;
+        }
+
+        try {
+
+            jdbcTemplate.update(
+                    BookingQueries.ADD_BOOKING_INVOICE,
+                    bookingId,
+                    invoice.getInvoiceNumber(),
+                    invoice.getInvoiceDate(),
+                    invoice.getDueDate(),
+                    invoice.getSubTotal(),
+                    invoice.getTaxAmount(),
+                    invoice.getDiscountAmount(),
+                    invoice.getTotalAmount(),
+                    invoice.getAmountPaid(),
+                    invoice.getBalanceDue(),
+                    invoice.getBillingFullName(),
+                    invoice.getBillingAddress(),
+                    invoice.getBillingEmail(),
+                    invoice.getBillingPhone(),
+                    invoice.getStatus(),
+                    invoice.getInsuranceAmount(),
+                    userId
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error adding invoice. BookingId: {}", bookingId, ex);
+
+            throw new InsertFailedErrorExceptionHandler(
+                    "Failed to save booking invoice");
+        }
+    }
+
+
+    private List<BookingsRequestParamsResponse.IdAndName>
+    getBookingParamStatuses() {
+
+        return jdbcTemplate.query(
+                BookingQueries.GET_BOOKING_PARAM_STATUSES,
+                (rs, rowNum) ->
+                        BookingsRequestParamsResponse.IdAndName
+                                .builder()
+                                .id(rs.getLong("id"))
+                                .name(rs.getString("name"))
+                                .build());
+    }
+
+    private List<BookingsRequestParamsResponse.IdAndName>
+    getBookingParamTours() {
+
+        return jdbcTemplate.query(
+                BookingQueries.GET_BOOKING_PARAM_TOURS,
+                (rs, rowNum) ->
+                        BookingsRequestParamsResponse.IdAndName
+                                .builder()
+                                .id(rs.getLong("id"))
+                                .name(rs.getString("name"))
+                                .build());
+    }
+
+    private List<BookingsRequestParamsResponse.IdAndName>
+    getBookingParamPackages() {
+
+        return jdbcTemplate.query(
+                BookingQueries.GET_BOOKING_PARAM_PACKAGES,
+                (rs, rowNum) ->
+                        BookingsRequestParamsResponse.IdAndName
+                                .builder()
+                                .id(rs.getLong("id"))
+                                .name(rs.getString("name"))
+                                .build());
+    }
+
+    private List<BookingsRequestParamsResponse.IdAndName>
+    getBookingParamAssignEmployees() {
+
+        return jdbcTemplate.query(
+                BookingQueries.GET_BOOKING_PARAM_ASSIGN_EMPLOYEES,
+                (rs, rowNum) ->
+                        BookingsRequestParamsResponse.IdAndName
+                                .builder()
+                                .id(rs.getLong("id"))
+                                .name(rs.getString("name"))
+                                .build());
     }
 
 

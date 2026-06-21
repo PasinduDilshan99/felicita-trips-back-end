@@ -3,6 +3,8 @@ package com.felicita.validation.impl;
 import com.felicita.model.request.BookingCancelledRequest;
 import com.felicita.model.request.BookingRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
+import com.felicita.model.request.bookings.BookingDataRequest;
+import com.felicita.model.request.bookings.InsertBookingRequest;
 import com.felicita.service.CommonService;
 import com.felicita.validation.BookingValidationService;
 import org.slf4j.Logger;
@@ -34,6 +36,16 @@ public class BookingValidationServiceImpl implements BookingValidationService {
 
     @Override
     public void validateBookingCancelledRequest(BookingCancelledRequest bookingCancelledRequest) {
+
+    }
+
+    @Override
+    public void validateBookingDataRequest(BookingDataRequest bookingDataRequest) {
+
+    }
+
+    @Override
+    public void validateInsertBookingRequest(InsertBookingRequest insertBookingRequest) {
 
     }
 }

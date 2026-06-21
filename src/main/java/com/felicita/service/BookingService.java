@@ -2,8 +2,14 @@ package com.felicita.service;
 
 import com.felicita.model.request.BookingCancelledRequest;
 import com.felicita.model.request.BookingRequest;
+import com.felicita.model.request.CommonIdRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
+import com.felicita.model.request.bookings.BookingDataRequest;
+import com.felicita.model.request.bookings.InsertBookingRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.bookings.BookingAllDetailsResponse;
+import com.felicita.model.response.bookings.BookingWithParamsResponse;
+import com.felicita.model.response.bookings.BookingsRequestParamsResponse;
 import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
 import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
 import com.felicita.model.response.statistics.BookingStatisticsResponse;
@@ -41,4 +47,12 @@ public interface BookingService {
     CommonResponse<BookingAssignStatisticsResponse> getBookingAssignStatistics();
 
     CommonResponse<BookingHistoryStatisticsResponse> getBookingHistoryStatistics();
+
+    CommonResponse<BookingWithParamsResponse> getBookingsWithParams(BookingDataRequest bookingDataRequest);
+
+    CommonResponse<BookingsRequestParamsResponse> getBookingsParamsData();
+
+    CommonResponse<BookingAllDetailsResponse> getBookingAllDetailsById(CommonIdRequest commonIdRequest);
+
+    CommonResponse<InsertResponse> createBooking(InsertBookingRequest insertBookingRequest);
 }

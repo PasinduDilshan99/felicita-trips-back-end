@@ -60,4 +60,6 @@ public interface CommonService {
     List<PackageIdAndNamesResponse> getPacakgeIdAndNameResponses();
 
     List<ActivityScheduleIdAndNameResponse> getActivityScheduleIdAndNames();
+
+    String createBooingReference();
 }

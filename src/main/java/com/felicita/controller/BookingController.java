@@ -1,9 +1,12 @@
 package com.felicita.controller;
 
-import com.felicita.model.request.BookingCancelledRequest;
-import com.felicita.model.request.BookingRequest;
-import com.felicita.model.request.TourBookingInquiryRequest;
+import com.felicita.model.request.*;
+import com.felicita.model.request.bookings.BookingDataRequest;
+import com.felicita.model.request.bookings.InsertBookingRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.bookings.BookingAllDetailsResponse;
+import com.felicita.model.response.bookings.BookingWithParamsResponse;
+import com.felicita.model.response.bookings.BookingsRequestParamsResponse;
 import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
 import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
 import com.felicita.model.response.statistics.BookingStatisticsResponse;
@@ -154,5 +157,36 @@ public class BookingController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PostMapping(path = "/bookings")
+    public ResponseEntity<CommonResponse<BookingWithParamsResponse>> getBookingsWithParams(@RequestBody BookingDataRequest bookingDataRequest) {
+        LOGGER.info("{} Start execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<BookingWithParamsResponse> response = bookingService.getBookingsWithParams(bookingDataRequest);
+        LOGGER.info("{} End execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/bookings-request-params")
+    public ResponseEntity<CommonResponse<BookingsRequestParamsResponse>> getBookingsParamsData() {
+        LOGGER.info("{} Start execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<BookingsRequestParamsResponse> response = bookingService.getBookingsParamsData();
+        LOGGER.info("{} End execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/booking-all-details")
+    public ResponseEntity<CommonResponse<BookingAllDetailsResponse>> getBookingAllDetailsById(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<BookingAllDetailsResponse> response = bookingService.getBookingAllDetailsById(commonIdRequest);
+        LOGGER.info("{} End execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/create-booking")
+    public ResponseEntity<CommonResponse<InsertResponse>> createBooking(@RequestBody InsertBookingRequest insertBookingRequest) {
+        LOGGER.info("{} Start execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = bookingService.createBooking(insertBookingRequest);
+        LOGGER.info("{} End execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 
 }

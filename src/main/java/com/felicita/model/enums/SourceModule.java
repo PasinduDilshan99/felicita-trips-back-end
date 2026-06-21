@@ -15,5 +15,6 @@ public enum SourceModule {
     PRIVILEGE,
     ROLE,
     EMPLOYEE,
-    SEASON
+    SEASON,
+    BOOKING
 }
