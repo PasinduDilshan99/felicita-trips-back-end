@@ -9,6 +9,7 @@ import com.felicita.model.request.bookings.BookingDataRequest;
 import com.felicita.model.request.bookings.InsertBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingStatusRequest;
+import com.felicita.model.request.bookings.history.*;
 import com.felicita.model.request.bookings.status.InsertBookingsStatusesRequest;
 import com.felicita.model.request.bookings.status.UpdateBookingsStatusesRequest;
 import com.felicita.model.request.bookings.unassign.AssignBookingRequest;
@@ -19,6 +20,8 @@ import com.felicita.model.response.bookings.BookingAllDetailsResponse;
 import com.felicita.model.response.bookings.BookingBillResponse;
 import com.felicita.model.response.bookings.BookingsBasicDetails;
 import com.felicita.model.response.bookings.BookingsRequestParamsResponse;
+import com.felicita.model.response.bookings.history.BookingHistoryBasicDetailsResponse;
+import com.felicita.model.response.bookings.history.BookingHistoryDetailsResponse;
 import com.felicita.model.response.bookings.status.BookingStatusBasicDetailsResponse;
 import com.felicita.model.response.bookings.status.BookingStatusDetailsResponse;
 import com.felicita.model.response.bookings.unassign.UnassignBookingBasicDetailsResponse;
@@ -44,7 +47,7 @@ public interface BookingRepository {
 
     void bookingTransportation(Long bookingId, VehicleBasicDetailsDto vehicleBasicDetailsDto, LocalDate date, Long userId);
 
-    void insertBookingPriceBreakdown(Long bookingId, PackageActivityPriceDto a, int totalParticipants,Long userId);
+    void insertBookingPriceBreakdown(Long bookingId, PackageActivityPriceDto a, int totalParticipants, Long userId);
 
     void insertBookingParticipant(Long bookingId, BookingRequest.Participant participant, Long userId);
 
@@ -54,7 +57,7 @@ public interface BookingRepository {
 
     void insertBookingActivities(Long bookingId, PackageActivityPriceDto a, int totalParticipants, Long userId);
 
-    void insertBookingInvoice(Long bookingId, String invoiceNumber, LocalDate invoiceDate, LocalDate invoiceDueDate, Double totalAmount, Double taxAmount, Double discountAmount, Double finalAmount,BookingRequest.BookingInvoice invoices, Long userId);
+    void insertBookingInvoice(Long bookingId, String invoiceNumber, LocalDate invoiceDate, LocalDate invoiceDueDate, Double totalAmount, Double taxAmount, Double discountAmount, Double finalAmount, BookingRequest.BookingInvoice invoices, Long userId);
 
     BookingBasicDetailsDto getBookingBasicDetailsByBookingId(Long bookingId);
 
@@ -176,7 +179,7 @@ public interface BookingRepository {
 
     void addPriceBreakdownToBooking(Long bookingId, List<InsertBookingRequest.BookingPriceBreakDown> priceBreakDowns, Long userId);
 
-    void addBookingInvoiceToBooking(Long bookingId,String invoiceReference, InsertBookingRequest.BookingInvoice bookingInvoice, Long userId);
+    void addBookingInvoiceToBooking(Long bookingId, String invoiceReference, InsertBookingRequest.BookingInvoice bookingInvoice, Long userId);
 
     void addItinerariesToBooking(Long bookingId, List<InsertBookingRequest.BookingItinerary> bookingItineraries, Long userId);
 
@@ -275,4 +278,26 @@ public interface BookingRepository {
     void updateUnassignBookingToAssign(AssignBookingRequest assignBookingRequest, Long userId);
 
     void updateUnassignBooking(UnassignBookingRequest unassignBookingRequest, Long userId);
+
+    List<BookingHistoryBasicDetailsResponse> getBookingHistoryBasicDetails(BookingHistoryDataRequest bookingHistoryDataRequest);
+
+    Integer getBookingHistoryBasicDetailsCount(BookingHistoryDataRequest bookingHistoryDataRequest);
+
+    List<BookingHistoryDetailsResponse.BookingActivityHistory> getBookingActivityHistory(Long id);
+
+    List<BookingHistoryDetailsResponse.BookingStatusHistory> getBookingStatusHistory(Long id);
+
+    List<BookingHistoryDetailsResponse.BookingAssignmentHistory> getBookingAssignmentHistory(Long id);
+
+    List<BookingHistoryDetailsResponse.BookingPaymentHistory> getBookingPaymentHistory(Long id);
+
+    void addRecordForBookingActivityHistory(BookingActivityHistoryInsertRequest bookingActivityHistoryInsertRequest, Long userId);
+
+    void addRecordForBookingAssignHistory(BookingAssignHistoryInsertRequest bookingAssignHistoryInsertRequest, Long userId);
+
+    void addRecordForBookingPaymentHistory(BookingPaymentHistoryInsertRequest bookingPaymentHistoryInsertRequest, Long userId);
+
+    void addRecordForBookingStatusHistory(BookingStatusHistoryInsertRequest bookingStatusHistoryInsertRequest, Long userId);
+
+
 }

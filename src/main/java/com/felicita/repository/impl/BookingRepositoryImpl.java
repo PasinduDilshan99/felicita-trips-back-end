@@ -14,6 +14,7 @@ import com.felicita.model.request.bookings.BookingDataRequest;
 import com.felicita.model.request.bookings.InsertBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingStatusRequest;
+import com.felicita.model.request.bookings.history.*;
 import com.felicita.model.request.bookings.status.InsertBookingsStatusesRequest;
 import com.felicita.model.request.bookings.status.UpdateBookingsStatusesRequest;
 import com.felicita.model.request.bookings.unassign.AssignBookingRequest;
@@ -24,6 +25,8 @@ import com.felicita.model.response.bookings.BookingAllDetailsResponse;
 import com.felicita.model.response.bookings.BookingBillResponse;
 import com.felicita.model.response.bookings.BookingsBasicDetails;
 import com.felicita.model.response.bookings.BookingsRequestParamsResponse;
+import com.felicita.model.response.bookings.history.BookingHistoryBasicDetailsResponse;
+import com.felicita.model.response.bookings.history.BookingHistoryDetailsResponse;
 import com.felicita.model.response.bookings.status.BookingStatusBasicDetailsResponse;
 import com.felicita.model.response.bookings.status.BookingStatusDetailsResponse;
 import com.felicita.model.response.bookings.unassign.UnassignBookingBasicDetailsResponse;
@@ -5125,17 +5128,17 @@ public class BookingRepositoryImpl implements BookingRepository {
         Long statusId = statusRepository.getStatusIdByName(request.getStatus());
 
         String sql = """
-            INSERT INTO booking_status (
-                name,
-                description,
-                status,
-                created_at,
-                created_by,
-                updated_at,
-                updated_by
-            )
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
-            """;
+                INSERT INTO booking_status (
+                    name,
+                    description,
+                    status,
+                    created_at,
+                    created_by,
+                    updated_at,
+                    updated_by
+                )
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+                """;
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
@@ -5189,14 +5192,14 @@ public class BookingRepositoryImpl implements BookingRepository {
     public void terminateBookingsStatuses(CommonIdRequest commonIdRequest, Long userId) {
 
         String sql = """
-        UPDATE booking_status
-        SET
-            status = ?,
-            terminated_at = CURRENT_TIMESTAMP,
-            terminated_by = ?
-        WHERE id = ?
-        AND terminated_at IS NULL
-    """;
+                    UPDATE booking_status
+                    SET
+                        status = ?,
+                        terminated_at = CURRENT_TIMESTAMP,
+                        terminated_by = ?
+                    WHERE id = ?
+                    AND terminated_at IS NULL
+                """;
         Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
 
         jdbcTemplate.update(
@@ -5211,13 +5214,13 @@ public class BookingRepositoryImpl implements BookingRepository {
     public BookingBillResponse.BookingBasicInfo getBookingBasicInfoForBill(Long id) {
 
         String sql = """
-            SELECT
-                booking_id,
-                booking_reference,
-                DATE(created_at) AS booking_date
-            FROM bookings
-            WHERE booking_id = ?
-            """;
+                SELECT
+                    booking_id,
+                    booking_reference,
+                    DATE(created_at) AS booking_date
+                FROM bookings
+                WHERE booking_id = ?
+                """;
 
         return jdbcTemplate.query(
                 sql,
@@ -5236,16 +5239,16 @@ public class BookingRepositoryImpl implements BookingRepository {
     public BookingBillResponse.Customer getCustomerForBill(Long id) {
 
         String sql = """
-            SELECT
-                u.user_id,
-                CONCAT(u.first_name,' ',u.last_name) AS full_name,
-                u.email,
-                u.mobile_number1
-            FROM bookings b
-            INNER JOIN user u
-                ON b.user_id = u.user_id
-            WHERE b.booking_id = ?
-            """;
+                SELECT
+                    u.user_id,
+                    CONCAT(u.first_name,' ',u.last_name) AS full_name,
+                    u.email,
+                    u.mobile_number1
+                FROM bookings b
+                INNER JOIN user u
+                    ON b.user_id = u.user_id
+                WHERE b.booking_id = ?
+                """;
 
         return jdbcTemplate.query(
                 sql,
@@ -5265,22 +5268,22 @@ public class BookingRepositoryImpl implements BookingRepository {
     public BookingBillResponse.TourDetails getTourDetailsForBill(Long id) {
 
         String sql = """
-        SELECT
-            t.tour_id,
-            t.name AS tour_name,
-            t.duration,
-            t.start_location,
-            t.end_location,
-            ps.assume_start_date,
-            ps.assume_end_date,
-            b.total_persons
-        FROM bookings b
-        LEFT JOIN tour t
-            ON b.tour_id = t.tour_id
-        LEFT JOIN package_schedule ps
-            ON b.package_schedule_id = ps.id
-        WHERE b.booking_id = ?
-        """;
+                SELECT
+                    t.tour_id,
+                    t.name AS tour_name,
+                    t.duration,
+                    t.start_location,
+                    t.end_location,
+                    ps.assume_start_date,
+                    ps.assume_end_date,
+                    b.total_persons
+                FROM bookings b
+                LEFT JOIN tour t
+                    ON b.tour_id = t.tour_id
+                LEFT JOIN package_schedule ps
+                    ON b.package_schedule_id = ps.id
+                WHERE b.booking_id = ?
+                """;
 
         return jdbcTemplate.query(
                 sql,
@@ -5312,17 +5315,17 @@ public class BookingRepositoryImpl implements BookingRepository {
     public BookingBillResponse.PackageDetails getPackageDetailsForBill(Long id) {
 
         String sql = """
-            SELECT
-                p.package_id,
-                p.name AS package_name,
-                ps.name AS schedule_name
-            FROM bookings b
-            LEFT JOIN package_schedule ps
-                ON b.package_schedule_id = ps.id
-            LEFT JOIN packages p
-                ON ps.package_id = p.package_id
-            WHERE b.booking_id = ?
-            """;
+                SELECT
+                    p.package_id,
+                    p.name AS package_name,
+                    ps.name AS schedule_name
+                FROM bookings b
+                LEFT JOIN package_schedule ps
+                    ON b.package_schedule_id = ps.id
+                LEFT JOIN packages p
+                    ON ps.package_id = p.package_id
+                WHERE b.booking_id = ?
+                """;
 
         return jdbcTemplate.query(
                 sql,
@@ -5341,15 +5344,15 @@ public class BookingRepositoryImpl implements BookingRepository {
     public List<BookingBillResponse.Participant> getParticipantsForBill(Long id) {
 
         String sql = """
-        SELECT
-            first_name,
-            last_name,
-            passport_number
-        FROM booking_participants
-        WHERE booking_id = ?
-          AND terminated_at IS NULL
-        ORDER BY id
-        """;
+                SELECT
+                    first_name,
+                    last_name,
+                    passport_number
+                FROM booking_participants
+                WHERE booking_id = ?
+                  AND terminated_at IS NULL
+                ORDER BY id
+                """;
 
         return jdbcTemplate.query(
                 sql,
@@ -5366,16 +5369,16 @@ public class BookingRepositoryImpl implements BookingRepository {
     public List<BookingBillResponse.PriceItem> getPriceBreakdownForBill(Long id) {
 
         String sql = """
-            SELECT
-                item_type,
-                item_name,
-                quantity,
-                unit_price,
-                total_price
-            FROM booking_price_breakdown
-            WHERE booking_id = ?
-            ORDER BY id
-            """;
+                SELECT
+                    item_type,
+                    item_name,
+                    quantity,
+                    unit_price,
+                    total_price
+                FROM booking_price_breakdown
+                WHERE booking_id = ?
+                ORDER BY id
+                """;
 
         return jdbcTemplate.query(
                 sql,
@@ -5395,17 +5398,17 @@ public class BookingRepositoryImpl implements BookingRepository {
     public BookingBillResponse.BillingSummary getBillingSummaryForBill(Long id) {
 
         String sql = """
-        SELECT
-            total_amount,
-            discount_amount,
-            tax_amount,
-            insurance_amount,
-            final_amount,
-            paid_amount,
-            due_amount
-        FROM bookings
-        WHERE booking_id = ?
-        """;
+                SELECT
+                    total_amount,
+                    discount_amount,
+                    tax_amount,
+                    insurance_amount,
+                    final_amount,
+                    paid_amount,
+                    due_amount
+                FROM bookings
+                WHERE booking_id = ?
+                """;
 
         return jdbcTemplate.query(
                 sql,
@@ -5428,12 +5431,12 @@ public class BookingRepositoryImpl implements BookingRepository {
     public List<BookingIdAndReferenceResponse> getBookingIdAndReferences(String assignStatus) {
 
         StringBuilder sql = new StringBuilder("""
-        SELECT
-            booking_id,
-            booking_reference
-        FROM bookings
-        WHERE 1=1
-    """);
+                    SELECT
+                        booking_id,
+                        booking_reference
+                    FROM bookings
+                    WHERE 1=1
+                """);
 
         if ("ASSIGNED".equalsIgnoreCase(assignStatus)) {
             sql.append(" AND assign_to IS NOT NULL ");
@@ -5604,15 +5607,15 @@ public class BookingRepositoryImpl implements BookingRepository {
     public void updateUnassignBookingToAssign(AssignBookingRequest assignBookingRequest, Long userId) {
 
         String sql = """
-        UPDATE bookings
-        SET
-            assign_to = ?,
-            assign_message = ?,
-            updated_by = ?,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE booking_id = ?
-          AND assign_to IS NULL
-    """;
+                    UPDATE bookings
+                    SET
+                        assign_to = ?,
+                        assign_message = ?,
+                        updated_by = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE booking_id = ?
+                      AND assign_to IS NULL
+                """;
 
         int updatedRows = jdbcTemplate.update(
                 sql,
@@ -5631,14 +5634,14 @@ public class BookingRepositoryImpl implements BookingRepository {
     public void updateUnassignBooking(UnassignBookingRequest unassignBookingRequest, Long userId) {
 
         String sql = """
-        UPDATE bookings
-        SET
-            assign_to = ?,
-            assign_message = ?,
-            updated_by = ?,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE booking_id = ?
-    """;
+                    UPDATE bookings
+                    SET
+                        assign_to = ?,
+                        assign_message = ?,
+                        updated_by = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE booking_id = ?
+                """;
 
         int updatedRows = jdbcTemplate.update(
                 sql,
@@ -5651,6 +5654,414 @@ public class BookingRepositoryImpl implements BookingRepository {
         if (updatedRows == 0) {
             throw new RuntimeException("Booking not found");
         }
+    }
+
+    @Override
+    public List<BookingHistoryBasicDetailsResponse> getBookingHistoryBasicDetails(
+            BookingHistoryDataRequest req) {
+
+        StringBuilder sql = new StringBuilder("""
+                    SELECT
+                        b.booking_id,
+                        b.booking_reference,
+                        b.total_persons,
+                        b.booking_date,
+                        b.travel_start_date,
+                        b.travel_end_date,
+                        b.final_amount,
+                        b.paid_amount,
+                        b.due_amount,
+                        b.refund_amount,
+                
+                        bs.id AS status_id,
+                        bs.name AS status_name,
+                
+                        t.tour_id,
+                        t.name AS tour_name,
+                
+                        p.package_id,
+                        p.name AS package_name,
+                
+                        u.user_id,
+                        CONCAT(u.first_name, ' ', u.last_name) AS customer_name,
+                
+                        eu.id AS employee_id,
+                        e_user.first_name AS employee_first_name,
+                        e_user.last_name AS employee_last_name
+                
+                    FROM bookings b
+                    LEFT JOIN booking_status bs ON b.booking_status_id = bs.id
+                    LEFT JOIN tour t ON b.tour_id = t.tour_id
+                    LEFT JOIN packages p ON b.package_id = p.package_id
+                    LEFT JOIN user u ON b.user_id = u.user_id
+                
+                    LEFT JOIN employees eu ON b.assign_to = eu.id
+                    LEFT JOIN user e_user ON eu.user_id = e_user.user_id
+                
+                    WHERE 1=1
+                """);
+
+        List<Object> params = new ArrayList<>();
+
+        // filters
+        if (req.getBookingReference() != null) {
+            sql.append(" AND b.booking_reference LIKE ? ");
+            params.add("%" + req.getBookingReference() + "%");
+        }
+
+        if (req.getTourId() != null) {
+            sql.append(" AND b.tour_id = ? ");
+            params.add(req.getTourId());
+        }
+
+        if (req.getPackageId() != null) {
+            sql.append(" AND b.package_id = ? ");
+            params.add(req.getPackageId());
+        }
+
+        if (req.getBookingStatusId() != null) {
+            sql.append(" AND b.booking_status_id = ? ");
+            params.add(req.getBookingStatusId());
+        }
+
+        if (req.getBookingFrom() != null && req.getBookingTo() != null) {
+            sql.append(" AND b.booking_date BETWEEN ? AND ? ");
+            params.add(req.getBookingFrom());
+            params.add(req.getBookingTo());
+        }
+
+        if (req.getTravelStartDate() != null && req.getTravelEndDate() != null) {
+            sql.append(" AND b.travel_start_date BETWEEN ? AND ? ");
+            params.add(req.getTravelStartDate());
+            params.add(req.getTravelEndDate());
+        }
+
+        if (req.getMinPrice() != null) {
+            sql.append(" AND b.final_amount >= ? ");
+            params.add(req.getMinPrice());
+        }
+
+        if (req.getMaxPrice() != null) {
+            sql.append(" AND b.final_amount <= ? ");
+            params.add(req.getMaxPrice());
+        }
+
+        // sorting
+        String sortBy = (req.getSortBy() != null) ? req.getSortBy() : "b.booking_id";
+        String sortDir = (req.getSortDirection() != null) ? req.getSortDirection() : "DESC";
+
+        sql.append(" ORDER BY ").append(sortBy).append(" ").append(sortDir);
+
+        // pagination
+        int pageSize = req.getPageSize() != null ? req.getPageSize() : 10;
+        int pageNumber = req.getPageNumber() != null ? req.getPageNumber() : 0;
+
+        int offset = pageNumber * pageSize;
+
+        sql.append(" LIMIT ? OFFSET ? ");
+        params.add(pageSize);
+        params.add(offset);
+
+        return jdbcTemplate.query(
+                sql.toString(),
+                params.toArray(),
+                (rs, rowNum) -> BookingHistoryBasicDetailsResponse.builder()
+                        .bookingId(rs.getLong("booking_id"))
+                        .bookingReference(rs.getString("booking_reference"))
+                        .customerName(rs.getString("customer_name"))
+                        .tourName(rs.getString("tour_name"))
+                        .packageName(rs.getString("package_name"))
+                        .totalPersons(rs.getInt("total_persons"))
+                        .bookingDate(rs.getDate("booking_date").toLocalDate())
+                        .travelStartDate(rs.getDate("travel_start_date").toLocalDate())
+                        .travelEndDate(rs.getDate("travel_end_date").toLocalDate())
+                        .finalAmount(rs.getBigDecimal("final_amount"))
+                        .paidAmount(rs.getBigDecimal("paid_amount"))
+                        .dueAmount(rs.getBigDecimal("due_amount"))
+                        .refundAmount(rs.getBigDecimal("refund_amount"))
+                        .bookingStatus(rs.getString("status_name"))
+                        .assignedEmployee(
+                                rs.getString("employee_first_name") + " " + rs.getString("employee_last_name")
+                        )
+                        .build()
+        );
+    }
+
+    @Override
+    public Integer getBookingHistoryBasicDetailsCount(
+            BookingHistoryDataRequest req) {
+
+        StringBuilder sql = new StringBuilder("""
+                    SELECT COUNT(*)
+                    FROM bookings b
+                    WHERE 1=1
+                """);
+
+        List<Object> params = new ArrayList<>();
+
+        if (req.getBookingReference() != null) {
+            sql.append(" AND b.booking_reference LIKE ? ");
+            params.add("%" + req.getBookingReference() + "%");
+        }
+
+        if (req.getTourId() != null) {
+            sql.append(" AND b.tour_id = ? ");
+            params.add(req.getTourId());
+        }
+
+        if (req.getPackageId() != null) {
+            sql.append(" AND b.package_id = ? ");
+            params.add(req.getPackageId());
+        }
+
+        if (req.getBookingStatusId() != null) {
+            sql.append(" AND b.booking_status_id = ? ");
+            params.add(req.getBookingStatusId());
+        }
+
+        if (req.getBookingFrom() != null && req.getBookingTo() != null) {
+            sql.append(" AND b.booking_date BETWEEN ? AND ? ");
+            params.add(req.getBookingFrom());
+            params.add(req.getBookingTo());
+        }
+
+        if (req.getTravelStartDate() != null && req.getTravelEndDate() != null) {
+            sql.append(" AND b.travel_start_date BETWEEN ? AND ? ");
+            params.add(req.getTravelStartDate());
+            params.add(req.getTravelEndDate());
+        }
+
+        if (req.getMinPrice() != null) {
+            sql.append(" AND b.final_amount >= ? ");
+            params.add(req.getMinPrice());
+        }
+
+        if (req.getMaxPrice() != null) {
+            sql.append(" AND b.final_amount <= ? ");
+            params.add(req.getMaxPrice());
+        }
+
+        return jdbcTemplate.queryForObject(
+                sql.toString(),
+                params.toArray(),
+                Integer.class
+        );
+    }
+
+    @Override
+    public List<BookingHistoryDetailsResponse.BookingActivityHistory> getBookingActivityHistory(Long id) {
+
+        String sql = """
+                    SELECT
+                        bah.activity_type,
+                        bah.description,
+                        bah.updated_at,
+                        u.username AS updated_by
+                    FROM booking_activity_history bah
+                    LEFT JOIN user u ON bah.updated_by = u.user_id
+                    WHERE bah.booking_id = ?
+                    ORDER BY bah.updated_at DESC
+                """;
+
+        return jdbcTemplate.query(sql, new Object[]{id},
+                (rs, rowNum) -> BookingHistoryDetailsResponse.BookingActivityHistory.builder()
+                        .activityType(rs.getString("activity_type"))
+                        .description(rs.getString("description"))
+                        .updatedBy(rs.getString("updated_by"))
+                        .updatedAt(rs.getTimestamp("updated_at").toLocalDateTime())
+                        .build()
+        );
+    }
+
+    @Override
+    public List<BookingHistoryDetailsResponse.BookingStatusHistory> getBookingStatusHistory(Long id) {
+
+        String sql = """
+                    SELECT
+                        bsh.previous_status_id,
+                        ps.name AS previous_status,
+                        bsh.new_status_id,
+                        ns.name AS new_status,
+                        bsh.updated_at,
+                        u.username AS updated_by
+                    FROM booking_status_history bsh
+                    LEFT JOIN booking_status ps ON bsh.previous_status_id = ps.id
+                    LEFT JOIN booking_status ns ON bsh.new_status_id = ns.id
+                    LEFT JOIN user u ON bsh.updated_by = u.user_id
+                    WHERE bsh.booking_id = ?
+                    ORDER BY bsh.updated_at DESC
+                """;
+
+        return jdbcTemplate.query(sql, new Object[]{id},
+                (rs, rowNum) -> BookingHistoryDetailsResponse.BookingStatusHistory.builder()
+                        .previousStatus(rs.getString("previous_status"))
+                        .newStatus(rs.getString("new_status"))
+                        .updatedBy(rs.getString("updated_by"))
+                        .updatedAt(rs.getTimestamp("updated_at").toLocalDateTime())
+                        .build()
+        );
+    }
+
+    @Override
+    public List<BookingHistoryDetailsResponse.BookingAssignmentHistory> getBookingAssignmentHistory(Long id) {
+
+        String sql = """
+                    SELECT
+                        bah.previous_assign_employee,
+                        pu.username AS previous_employee,
+                        bah.new_assign_employee,
+                        nu.username AS new_employee,
+                        bah.updated_at,
+                        u.username AS updated_by
+                    FROM booking_assign_history bah
+                    LEFT JOIN user pu ON bah.previous_assign_employee = pu.user_id
+                    LEFT JOIN user nu ON bah.new_assign_employee = nu.user_id
+                    LEFT JOIN user u ON bah.updated_by = u.user_id
+                    WHERE bah.booking_id = ?
+                    ORDER BY bah.updated_at DESC
+                """;
+
+        return jdbcTemplate.query(sql, new Object[]{id},
+                (rs, rowNum) -> BookingHistoryDetailsResponse.BookingAssignmentHistory.builder()
+                        .previousEmployee(rs.getString("previous_employee"))
+                        .newEmployee(rs.getString("new_employee"))
+                        .updatedBy(rs.getString("updated_by"))
+                        .updatedAt(rs.getTimestamp("updated_at").toLocalDateTime())
+                        .build()
+        );
+    }
+
+    @Override
+    public List<BookingHistoryDetailsResponse.BookingPaymentHistory> getBookingPaymentHistory(Long id) {
+
+        String sql = """
+                    SELECT
+                        bph.previous_paid_amount,
+                        bph.new_paid_amount,
+                        bph.previous_due_amount,
+                        bph.new_due_amount,
+                        bph.previous_refund_amount,
+                        bph.new_refund_amount,
+                        bph.payment_reference,
+                        bph.remarks,
+                        bph.updated_at,
+                        u.username AS updated_by
+                    FROM booking_payment_history bph
+                    LEFT JOIN user u ON bph.updated_by = u.user_id
+                    WHERE bph.booking_id = ?
+                    ORDER BY bph.updated_at DESC
+                """;
+
+        return jdbcTemplate.query(sql, new Object[]{id},
+                (rs, rowNum) -> BookingHistoryDetailsResponse.BookingPaymentHistory.builder()
+                        .previousPaidAmount(rs.getBigDecimal("previous_paid_amount"))
+                        .newPaidAmount(rs.getBigDecimal("new_paid_amount"))
+                        .previousDueAmount(rs.getBigDecimal("previous_due_amount"))
+                        .newDueAmount(rs.getBigDecimal("new_due_amount"))
+                        .previousRefundAmount(rs.getBigDecimal("previous_refund_amount"))
+                        .newRefundAmount(rs.getBigDecimal("new_refund_amount"))
+                        .paymentReference(rs.getString("payment_reference"))
+                        .remarks(rs.getString("remarks"))
+                        .updatedBy(rs.getString("updated_by"))
+                        .updatedAt(rs.getTimestamp("updated_at").toLocalDateTime())
+                        .build()
+        );
+    }
+
+    @Override
+    public void addRecordForBookingActivityHistory(
+            BookingActivityHistoryInsertRequest req,
+            Long userId) {
+
+        String sql = """
+        INSERT INTO booking_activity_history
+        (booking_id, activity_type, description, updated_at, updated_by)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+    """;
+
+        jdbcTemplate.update(
+                sql,
+                req.getBookingId(),
+                req.getActivityType(),
+                req.getDescription(),
+                userId
+        );
+    }
+
+    @Override
+    public void addRecordForBookingAssignHistory(
+            BookingAssignHistoryInsertRequest req,
+            Long userId) {
+
+        String sql = """
+        INSERT INTO booking_assign_history
+        (booking_id, previous_assign_employee, new_assign_employee, updated_at, updated_by)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+    """;
+
+        jdbcTemplate.update(
+                sql,
+                req.getBookingId(),
+                req.getPreviousAssignEmployee(),
+                req.getNewAssignEmployee(),
+                userId
+        );
+    }
+
+    @Override
+    public void addRecordForBookingPaymentHistory(
+            BookingPaymentHistoryInsertRequest req,
+            Long userId) {
+
+        String sql = """
+        INSERT INTO booking_payment_history
+        (booking_id,
+         previous_paid_amount,
+         new_paid_amount,
+         previous_due_amount,
+         new_due_amount,
+         previous_refund_amount,
+         new_refund_amount,
+         payment_reference,
+         remarks,
+         updated_at,
+         updated_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+    """;
+
+        jdbcTemplate.update(
+                sql,
+                req.getBookingId(),
+                req.getPreviousPaidAmount(),
+                req.getNewPaidAmount(),
+                req.getPreviousDueAmount(),
+                req.getNewDueAmount(),
+                req.getPreviousRefundAmount(),
+                req.getNewRefundAmount(),
+                req.getPaymentReference(),
+                req.getRemarks(),
+                userId
+        );
+    }
+
+    @Override
+    public void addRecordForBookingStatusHistory(
+            BookingStatusHistoryInsertRequest req,
+            Long userId) {
+
+        String sql = """
+        INSERT INTO booking_status_history
+        (booking_id, previous_status_id, new_status_id, updated_at, updated_by)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+    """;
+
+        jdbcTemplate.update(
+                sql,
+                req.getBookingId(),
+                req.getPreviousStatus(),
+                req.getNewStatus(),
+                userId
+        );
     }
 
     private LocalDate getLocalDate(ResultSet rs, String column) throws SQLException {
@@ -5669,11 +6080,11 @@ public class BookingRepositoryImpl implements BookingRepository {
 
         if (StringUtils.hasText(request.getCustomerName())) {
             sql.append("""
-            AND CONCAT(
-                COALESCE(u.first_name,''),' ',
-                COALESCE(u.last_name,'')
-            ) LIKE ?
-        """);
+                        AND CONCAT(
+                            COALESCE(u.first_name,''),' ',
+                            COALESCE(u.last_name,'')
+                        ) LIKE ?
+                    """);
             params.add("%" + request.getCustomerName() + "%");
         }
 

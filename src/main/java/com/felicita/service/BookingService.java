@@ -8,6 +8,7 @@ import com.felicita.model.request.bookings.BookingDataRequest;
 import com.felicita.model.request.bookings.InsertBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingStatusRequest;
+import com.felicita.model.request.bookings.history.BookingHistoryDataRequest;
 import com.felicita.model.request.bookings.status.InsertBookingsStatusesRequest;
 import com.felicita.model.request.bookings.status.UpdateBookingsStatusesRequest;
 import com.felicita.model.request.bookings.unassign.AssignBookingRequest;
@@ -15,6 +16,9 @@ import com.felicita.model.request.bookings.unassign.UnassignBookingDataRequest;
 import com.felicita.model.request.bookings.unassign.UnassignBookingRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.bookings.*;
+import com.felicita.model.response.bookings.history.BookingHisotryWithParamsResponse;
+import com.felicita.model.response.bookings.history.BookingHistoryDetailsResponse;
+import com.felicita.model.response.bookings.history.BookingsHistoryRequestParamsResponse;
 import com.felicita.model.response.bookings.status.BookingStatusBasicDetailsResponse;
 import com.felicita.model.response.bookings.status.BookingStatusDetailsResponse;
 import com.felicita.model.response.bookings.unassign.UnassignBookingWithParamsResponse;
@@ -101,4 +105,10 @@ public interface BookingService {
     CommonResponse<UpdateResponse> updateUnassignBookingToAssign(AssignBookingRequest assignBookingRequest);
 
     CommonResponse<UpdateResponse> updateUnassignBooking(UnassignBookingRequest unassignBookingRequest);
+
+    CommonResponse<BookingHisotryWithParamsResponse> getBookingHistoryByRequestParam(BookingHistoryDataRequest bookingHistoryDataRequest);
+
+    CommonResponse<BookingsHistoryRequestParamsResponse> getBookingsHistoryParamsData();
+
+    CommonResponse<BookingHistoryDetailsResponse> getBookingHistoryDetailsById(CommonIdRequest bookingId);
 }

@@ -14,6 +14,7 @@ import com.felicita.model.request.bookings.BookingDataRequest;
 import com.felicita.model.request.bookings.InsertBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingStatusRequest;
+import com.felicita.model.request.bookings.history.BookingHistoryDataRequest;
 import com.felicita.model.request.bookings.status.InsertBookingsStatusesRequest;
 import com.felicita.model.request.bookings.status.UpdateBookingsStatusesRequest;
 import com.felicita.model.request.bookings.unassign.AssignBookingRequest;
@@ -21,6 +22,10 @@ import com.felicita.model.request.bookings.unassign.UnassignBookingDataRequest;
 import com.felicita.model.request.bookings.unassign.UnassignBookingRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.bookings.*;
+import com.felicita.model.response.bookings.history.BookingHisotryWithParamsResponse;
+import com.felicita.model.response.bookings.history.BookingHistoryBasicDetailsResponse;
+import com.felicita.model.response.bookings.history.BookingHistoryDetailsResponse;
+import com.felicita.model.response.bookings.history.BookingsHistoryRequestParamsResponse;
 import com.felicita.model.response.bookings.status.BookingStatusBasicDetailsResponse;
 import com.felicita.model.response.bookings.status.BookingStatusDetailsResponse;
 import com.felicita.model.response.bookings.unassign.UnassignBookingBasicDetailsResponse;
@@ -2084,6 +2089,101 @@ public class BookingServiceImpl implements BookingService {
             throw new InternalServerErrorExceptionHandler("Failed to unassign booking in database");
         } finally {
             LOGGER.info("End unassigning booking from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<BookingHisotryWithParamsResponse> getBookingHistoryByRequestParam(BookingHistoryDataRequest bookingHistoryDataRequest) {
+        LOGGER.info("Start fetching booking history with params from repository");
+        try {
+            BookingHisotryWithParamsResponse bookingHistoryWithParams = new BookingHisotryWithParamsResponse();
+
+            List<BookingHistoryBasicDetailsResponse> bookingHistoryBasicDetailsResponses = bookingRepository.getBookingHistoryBasicDetails(bookingHistoryDataRequest);
+            Integer count = bookingRepository.getBookingHistoryBasicDetailsCount(bookingHistoryDataRequest);
+            bookingHistoryWithParams.setBookingHistoryBasicDetailsResponses(bookingHistoryBasicDetailsResponses);
+            bookingHistoryWithParams.setBookingHistoryCount(count);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    bookingHistoryWithParams,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching booking history with params: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch booking history with params from database");
+        } finally {
+            LOGGER.info("End fetching booking history with params from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<BookingsHistoryRequestParamsResponse> getBookingsHistoryParamsData() {
+        LOGGER.info("Start fetching booking history params data from repository");
+        try {
+            BookingsHistoryRequestParamsResponse bookingsHistoryParamsData = new BookingsHistoryRequestParamsResponse();
+
+            bookingsHistoryParamsData.setBookingRefences(bookingRepository.getUnassignBookingReferences());
+            bookingsHistoryParamsData.setBookingStatuses(commonService.getBookingStatusesIdAndNameResponses());
+            bookingsHistoryParamsData.setTours(commonService.getTourIdAndNameResponses());
+            bookingsHistoryParamsData.setPackages(commonService.getPacakgeIdAndNameResponses());
+            bookingsHistoryParamsData.setAssignedEmployees(commonService.getTourAssignUserIdAndNameResponses());
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    bookingsHistoryParamsData,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching booking history params data: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch booking history params data from database");
+        } finally {
+            LOGGER.info("End fetching booking history params data from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<BookingHistoryDetailsResponse> getBookingHistoryDetailsById(CommonIdRequest bookingId) {
+        LOGGER.info("Start fetching booking history details by id from repository");
+        try {
+            BookingHistoryDetailsResponse bookingHistoryDetails = new BookingHistoryDetailsResponse();
+
+            BookingsBasicDetails bookingsBasicDetails = getBookingBasicDetails(new CommonIdRequest(bookingId.getId())).getData();
+            bookingHistoryDetails.setBookingsBasicDetails(bookingsBasicDetails);
+
+            List<BookingHistoryDetailsResponse.BookingActivityHistory> bookingActivityHistories = bookingRepository.getBookingActivityHistory(bookingId.getId());
+            bookingHistoryDetails.setBookingActivityHistories(bookingActivityHistories);
+
+            List<BookingHistoryDetailsResponse.BookingStatusHistory> bookingStatusHistories = bookingRepository.getBookingStatusHistory(bookingId.getId());
+            bookingHistoryDetails.setBookingStatusHistories(bookingStatusHistories);
+
+            List<BookingHistoryDetailsResponse.BookingAssignmentHistory> bookingAssignmentHistories = bookingRepository.getBookingAssignmentHistory(bookingId.getId());
+            bookingHistoryDetails.setBookingAssignmentHistories(bookingAssignmentHistories);
+
+            List<BookingHistoryDetailsResponse.BookingPaymentHistory> bookingPaymentHistories = bookingRepository.getBookingPaymentHistory(bookingId.getId());
+            bookingHistoryDetails.setBookingPaymentHistories(bookingPaymentHistories);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    bookingHistoryDetails,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching booking history details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch booking history details from database");
+        } finally {
+            LOGGER.info("End fetching booking history details from repository");
         }
     }
 

@@ -5,6 +5,7 @@ import com.felicita.model.request.bookings.BookingDataRequest;
 import com.felicita.model.request.bookings.InsertBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingStatusRequest;
+import com.felicita.model.request.bookings.history.BookingHistoryDataRequest;
 import com.felicita.model.request.bookings.status.InsertBookingsStatusesRequest;
 import com.felicita.model.request.bookings.status.UpdateBookingsStatusesRequest;
 import com.felicita.model.request.bookings.unassign.AssignBookingRequest;
@@ -12,6 +13,9 @@ import com.felicita.model.request.bookings.unassign.UnassignBookingRequest;
 import com.felicita.model.request.bookings.unassign.UnassignBookingDataRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.bookings.*;
+import com.felicita.model.response.bookings.history.BookingHisotryWithParamsResponse;
+import com.felicita.model.response.bookings.history.BookingHistoryDetailsResponse;
+import com.felicita.model.response.bookings.history.BookingsHistoryRequestParamsResponse;
 import com.felicita.model.response.bookings.status.BookingStatusBasicDetailsResponse;
 import com.felicita.model.response.bookings.status.BookingStatusDetailsResponse;
 import com.felicita.model.response.bookings.unassign.UnassignBookingWithParamsResponse;
@@ -342,6 +346,31 @@ public class BookingController {
     public ResponseEntity<CommonResponse<BookingBillResponse>> getBookingBillingDetails(@RequestBody CommonIdRequest bookingId) {
         LOGGER.info("{} Start execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<BookingBillResponse> response = bookingService.getBookingBillingDetails(bookingId);
+        LOGGER.info("{} End execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    // booking history
+    @PostMapping(path = "/bookings-history")
+    public ResponseEntity<CommonResponse<BookingHisotryWithParamsResponse>> getBookingHistoryByRequestParam(@RequestBody BookingHistoryDataRequest bookingHistoryDataRequest) {
+        LOGGER.info("{} Start execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<BookingHisotryWithParamsResponse> response = bookingService.getBookingHistoryByRequestParam(bookingHistoryDataRequest);
+        LOGGER.info("{} End execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/bookings-history-request-params")
+    public ResponseEntity<CommonResponse<BookingsHistoryRequestParamsResponse>> getBookingsHistoryParamsData() {
+        LOGGER.info("{} Start execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<BookingsHistoryRequestParamsResponse> response = bookingService.getBookingsHistoryParamsData();
+        LOGGER.info("{} End execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/bookings-history-details")
+    public ResponseEntity<CommonResponse<BookingHistoryDetailsResponse>> getBookingHistoryDetailsById(@RequestBody CommonIdRequest bookingId) {
+        LOGGER.info("{} Start execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<BookingHistoryDetailsResponse> response = bookingService.getBookingHistoryDetailsById(bookingId);
         LOGGER.info("{} End execute get active activities for request {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
