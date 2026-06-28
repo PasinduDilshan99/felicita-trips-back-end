@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -16,6 +17,7 @@ import java.util.List;
 @Builder
 public class InsertBookingRequest {
 
+    private Long customerId;
     private Long tourId;
     private Long packageId;
     private Long packageScheduleId;
@@ -51,6 +53,7 @@ public class InsertBookingRequest {
     private List<Activity> activities;
     private List<BookingDocuments> documents;
     private BookingInsurance bookingInsurance;
+    private List<BookingItinerary> bookingItineraries;
     private List<BookingNote> bookingNotes;
     private List<BookingPriceBreakDown> priceBreakDowns;
     private BookingInvoice bookingInvoice;
@@ -62,7 +65,7 @@ public class InsertBookingRequest {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    @Builder
+    @SuperBuilder
     public static class Participant {
 
         private String firstName;
@@ -87,6 +90,7 @@ public class InsertBookingRequest {
         private String assistanceDetails;
 
         private Integer roomSharingWith;
+        private Long status;
     }
 
     // ======================================================
@@ -96,7 +100,7 @@ public class InsertBookingRequest {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    @Builder
+    @SuperBuilder
     public static class Accommodation {
 
         private LocalDate checkInDate;
@@ -106,6 +110,7 @@ public class InsertBookingRequest {
         private String roomType;
         private String roomNumber;
         private String confirmationNumber;
+        private Long status;
     }
 
     // ======================================================
@@ -115,11 +120,11 @@ public class InsertBookingRequest {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    @Builder
+    @SuperBuilder
     public static class Transportation {
 
         private String transportType;
-
+        private Long vehicleId;
         private LocalDate departureDate;
         private LocalTime departureTime;
 
@@ -132,6 +137,7 @@ public class InsertBookingRequest {
         private String carrierName;
         private String referenceNumber;
         private String seatNumbers;
+        private Long status;
     }
 
     // ======================================================
@@ -141,7 +147,7 @@ public class InsertBookingRequest {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    @Builder
+    @SuperBuilder
     public static class Activity {
 
         private Long activityId;
@@ -156,26 +162,26 @@ public class InsertBookingRequest {
         private BigDecimal pricePerPerson;
         private BigDecimal totalPrice;
 
-        private Long statusId;
+        private Long status;
     }
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    @Builder
+    @SuperBuilder
     public static class BookingDocuments {
         private String documentName;
         private String documentType;
         private String documentUrl;
-        private String fileSize;
+        private Double fileSize;
         private String mimiType;
-        private String status;
+        private Long status;
     }
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    @Builder
+    @SuperBuilder
     public static class BookingInsurance{
         private String insuranceProvider;
         private String policyNumber;
@@ -184,26 +190,43 @@ public class InsertBookingRequest {
         private Double premiumAmount;
         private LocalDate policyStartDate;
         private LocalDate policyEndDate;
+        private Long status;
     }
 
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @SuperBuilder
+    public static class BookingItinerary{
+        private Integer dayNumber;
+        private LocalDate itineraryDate;
+        private String title;
+        private String description;
+        private LocalTime startTime;
+        private LocalTime endTime;
+        private String location;
+        private String includedMeals;
+        private Long status;
+    }
 
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    @Builder
+    @SuperBuilder
     public static class BookingNote{
         private String noteType;
         private String noteText;
         private Boolean isImportant;
         private LocalDate followUpDate;
         private Boolean followUpComplete;
+        private Long status;
     }
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    @Builder
+    @SuperBuilder
     public static class BookingPriceBreakDown{
         private String itemType;
         private String itemName;
@@ -211,15 +234,14 @@ public class InsertBookingRequest {
         private Integer quantity;
         private Double unitPrice;
         private Double totalPrice;
+        private Long status;
     }
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    @Builder
+    @SuperBuilder
     public static class BookingInvoice{
-        private String invoiceNumber;
-        private LocalDate invoiceDate;
         private LocalDate dueDate;
         private Double subTotal;
         private Double taxAmount;
@@ -232,7 +254,7 @@ public class InsertBookingRequest {
         private String billingAddress;
         private String billingEmail;
         private String billingPhone;
-        private String status;
+        private Long status;
     }
 
 }

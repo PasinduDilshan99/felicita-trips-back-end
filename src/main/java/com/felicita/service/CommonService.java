@@ -61,5 +61,11 @@ public interface CommonService {
 
     List<ActivityScheduleIdAndNameResponse> getActivityScheduleIdAndNames();
 
-    String createBooingReference();
+    String createBooingReference(Long userId);
+
+    String createBookingInvoiceReference(Long bookingId,Long userId);
+
+    List<BookingStatusIdAndNameResponse> getBookingStatusesIdAndNameResponses();
+
+    List<EmployeeIdAndNameResponse> getTourAssignUserIdAndNameResponses();
 }

@@ -1,5 +1,6 @@
 package com.felicita.model.response.bookings;
 
+import com.felicita.model.request.bookings.InsertBookingRequest;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -37,6 +38,13 @@ public class BookingAllDetailsResponse {
     private List<TransportationInformation> transportations;
 
     private List<ActivityInformation> activities;
+
+    private List<BookingDocuments> documents;
+    private BookingInsurance bookingInsurance;
+    private List<BookingItinerary> bookingItineraries;
+    private List<BookingNote> bookingNotes;
+    private List<BookingPriceBreakDown> priceBreakDowns;
+    private BookingInvoice bookingInvoice;
 
     @Data
     @AllArgsConstructor
@@ -297,6 +305,104 @@ public class BookingAllDetailsResponse {
 
         private BigDecimal totalPrice;
 
+        private String status;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class BookingDocuments {
+        private Long documentId;
+        private String documentName;
+        private String documentType;
+        private String documentUrl;
+        private Double fileSize;
+        private String mimiType;
+        private String status;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class BookingInsurance{
+        private Long insuranceId;
+        private String insuranceProvider;
+        private String policyNumber;
+        private String coverageType;
+        private String coverageDetails;
+        private Double premiumAmount;
+        private LocalDate policyStartDate;
+        private LocalDate policyEndDate;
+        private String status;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class BookingItinerary{
+        private Long itineraryId;
+        private Integer dayNumber;
+        private LocalDate itineraryDate;
+        private String title;
+        private String description;
+        private LocalTime startTime;
+        private LocalTime endTime;
+        private String location;
+        private String includedMeals;
+        private String status;
+    }
+
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class BookingNote{
+        private Long noteId;
+        private String noteType;
+        private String noteText;
+        private Boolean isImportant;
+        private LocalDate followUpDate;
+        private Boolean followUpComplete;
+        private String status;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class BookingPriceBreakDown{
+        private Long priceBreakDownId;
+        private String itemType;
+        private String itemName;
+        private String itemDescription;
+        private Integer quantity;
+        private Double unitPrice;
+        private Double totalPrice;
+        private String status;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class BookingInvoice{
+        private Long invoiceId;
+        private LocalDate dueDate;
+        private Double subTotal;
+        private Double taxAmount;
+        private Double totalAmount;
+        private Double discountAmount;
+        private Double insuranceAmount;
+        private Double amountPaid;
+        private Double balanceDue;
+        private String billingFullName;
+        private String billingAddress;
+        private String billingEmail;
+        private String billingPhone;
         private String status;
     }
 }

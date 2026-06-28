@@ -298,8 +298,65 @@ public class CommonServiceImpl implements CommonService {
     }
 
     @Override
-    public String createBooingReference() {
-        return "";
+    public String createBooingReference(Long userId) {
+        String dateTime = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+
+        return "BK" + userId + dateTime;
+    }
+
+    @Override
+    public String createBookingInvoiceReference(Long bookingId, Long userId) {
+        String dateTime = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+
+        return "BKINV" + userId + bookingId + dateTime;
+    }
+
+    @Override
+    public List<BookingStatusIdAndNameResponse> getBookingStatusesIdAndNameResponses() {
+        LOGGER.info("Start fetching booking status id and name responses");
+        try {
+            List<BookingStatusIdAndNameResponse> responses = commonRepository.getBookingStatusesIdAndNameResponses();
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching booking status id and name responses");
+        }
+    }
+
+    @Override
+    public List<EmployeeIdAndNameResponse> getTourAssignUserIdAndNameResponses() {
+        LOGGER.info("Start fetching tour assign user id and name responses");
+        try {
+            List<EmployeeIdAndNameResponse> responses = commonRepository.getTourAssignUserIdAndNameResponses();
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching tour assign user id and name responses");
+        }
     }
 
     @Override
@@ -406,7 +463,7 @@ public class CommonServiceImpl implements CommonService {
     public void createNotificationRecipients(Long notificationId, List<Long> supervisorUserIds) {
         LOGGER.info("Start create notification recipients");
         try {
-            commonRepository.createNotificationRecipients(notificationId,supervisorUserIds);
+            commonRepository.createNotificationRecipients(notificationId, supervisorUserIds);
 
         } catch (Exception e) {
             LOGGER.error("error when create notification recipients");
@@ -632,7 +689,7 @@ public class CommonServiceImpl implements CommonService {
         LOGGER.info("Start update notifications read from repository");
         try {
             Long userId = getUserIdBySecurityContext();
-            commonRepository.readNotification(notificationInsertRequest,userId);
+            commonRepository.readNotification(notificationInsertRequest, userId);
             return new CommonResponse<>(
                     CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
                     CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
@@ -700,7 +757,7 @@ public class CommonServiceImpl implements CommonService {
     public List<String> getSupervisorEmailsWhichEnableNotificationForGiven(String name, List<Long> supervisorUserIds) {
         LOGGER.info("Start fetch supervisor email which allow the notification for given notification type");
         try {
-            return commonRepository.getSupervisorEmailsWhichEnableNotificationForGiven(name,supervisorUserIds);
+            return commonRepository.getSupervisorEmailsWhichEnableNotificationForGiven(name, supervisorUserIds);
 
         } catch (Exception e) {
             return List.of();

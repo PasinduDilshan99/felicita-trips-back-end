@@ -1,18 +1,33 @@
 package com.felicita.repository.impl;
 
 import com.felicita.exception.DataAccessErrorExceptionHandler;
+import com.felicita.exception.DataNotFoundErrorExceptionHandler;
 import com.felicita.exception.InsertFailedErrorExceptionHandler;
 import com.felicita.exception.InternalServerErrorExceptionHandler;
 import com.felicita.model.dto.*;
+import com.felicita.model.enums.CommonStatus;
 import com.felicita.model.request.BookingCancelledRequest;
 import com.felicita.model.request.BookingRequest;
+import com.felicita.model.request.CommonIdRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
 import com.felicita.model.request.bookings.BookingDataRequest;
 import com.felicita.model.request.bookings.InsertBookingRequest;
+import com.felicita.model.request.bookings.UpdateBookingRequest;
+import com.felicita.model.request.bookings.UpdateBookingStatusRequest;
+import com.felicita.model.request.bookings.status.InsertBookingsStatusesRequest;
+import com.felicita.model.request.bookings.status.UpdateBookingsStatusesRequest;
+import com.felicita.model.request.bookings.unassign.AssignBookingRequest;
+import com.felicita.model.request.bookings.unassign.UnassignBookingDataRequest;
+import com.felicita.model.request.bookings.unassign.UnassignBookingRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.bookings.BookingAllDetailsResponse;
+import com.felicita.model.response.bookings.BookingBillResponse;
 import com.felicita.model.response.bookings.BookingsBasicDetails;
 import com.felicita.model.response.bookings.BookingsRequestParamsResponse;
+import com.felicita.model.response.bookings.status.BookingStatusBasicDetailsResponse;
+import com.felicita.model.response.bookings.status.BookingStatusDetailsResponse;
+import com.felicita.model.response.bookings.unassign.UnassignBookingBasicDetailsResponse;
+import com.felicita.model.response.common.BookingIdAndReferenceResponse;
 import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
 import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
 import com.felicita.model.response.statistics.BookingStatisticsResponse;
@@ -21,6 +36,7 @@ import com.felicita.queries.ActivitiesQueries;
 import com.felicita.queries.BookingQueries;
 import com.felicita.queries.TourQueries;
 import com.felicita.repository.BookingRepository;
+import com.felicita.repository.StatusRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,11 +46,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
-import java.sql.Date;
-import java.sql.PreparedStatement;
-import java.sql.Statement;
-import java.sql.Types;
+import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -47,11 +62,15 @@ public class BookingRepositoryImpl implements BookingRepository {
     private static final Logger LOGGER = LoggerFactory.getLogger(BookingRepositoryImpl.class);
 
     private final JdbcTemplate jdbcTemplate;
+    private final StatusRepository statusRepository;
 
     @Autowired
-    public BookingRepositoryImpl(JdbcTemplate jdbcTemplate) {
+    public BookingRepositoryImpl(JdbcTemplate jdbcTemplate, StatusRepository statusRepository) {
         this.jdbcTemplate = jdbcTemplate;
+        this.statusRepository = statusRepository;
     }
+
+    private static final Long TERMINATED_STATUS = 3L;
 
     @Override
     public List<CompleteToursResponse> getCompletedBookingToursDetailsById(Long userId) {
@@ -1850,6 +1869,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                     "Failed to fetch popular activities statistics");
         }
     }
+
     @Override
     public BookingStatusStatisticsResponse.Summary
     getBookingStatusSummaryStatistics() {
@@ -2335,6 +2355,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                     "Failed to fetch assignment status distributions");
         }
     }
+
     @Override
     public BookingHistoryStatisticsResponse.Summary
     getBookingHistorySummaryStatistics() {
@@ -2643,15 +2664,15 @@ public class BookingRepositoryImpl implements BookingRepository {
                     && !request.getName().isBlank()) {
 
                 sql.append("""
-                    AND (
-                        LOWER(t.name) LIKE ?
-                        OR LOWER(CONCAT(
-                                COALESCE(u.first_name,''),
-                                ' ',
-                                COALESCE(u.last_name,'')
-                            )) LIKE ?
-                    )
-                    """);
+                        AND (
+                            LOWER(t.name) LIKE ?
+                            OR LOWER(CONCAT(
+                                    COALESCE(u.first_name,''),
+                                    ' ',
+                                    COALESCE(u.last_name,'')
+                                )) LIKE ?
+                        )
+                        """);
 
                 String search =
                         "%" + request.getName().toLowerCase() + "%";
@@ -2664,9 +2685,9 @@ public class BookingRepositoryImpl implements BookingRepository {
                     && !request.getBookingReference().isBlank()) {
 
                 sql.append("""
-                    AND LOWER(b.booking_reference)
-                    LIKE ?
-                    """);
+                        AND LOWER(b.booking_reference)
+                        LIKE ?
+                        """);
 
                 params.add(
                         "%" +
@@ -2676,88 +2697,88 @@ public class BookingRepositoryImpl implements BookingRepository {
 
             if (request.getMinPrice() != null) {
                 sql.append("""
-                    AND b.final_amount >= ?
-                    """);
+                        AND b.final_amount >= ?
+                        """);
 
                 params.add(request.getMinPrice());
             }
 
             if (request.getMaxPrice() != null) {
                 sql.append("""
-                    AND b.final_amount <= ?
-                    """);
+                        AND b.final_amount <= ?
+                        """);
 
                 params.add(request.getMaxPrice());
             }
 
             if (request.getDiscountAmount() != null) {
                 sql.append("""
-                    AND b.discount_amount >= ?
-                    """);
+                        AND b.discount_amount >= ?
+                        """);
 
                 params.add(request.getDiscountAmount());
             }
 
             if (request.getTravelStartDate() != null) {
                 sql.append("""
-                    AND b.travel_start_date >= ?
-                    """);
+                        AND b.travel_start_date >= ?
+                        """);
 
                 params.add(request.getTravelStartDate());
             }
 
             if (request.getTravelEndDate() != null) {
                 sql.append("""
-                    AND b.travel_end_date <= ?
-                    """);
+                        AND b.travel_end_date <= ?
+                        """);
 
                 params.add(request.getTravelEndDate());
             }
 
             if (request.getBookingFrom() != null) {
                 sql.append("""
-                    AND b.booking_date >= ?
-                    """);
+                        AND b.booking_date >= ?
+                        """);
 
                 params.add(request.getBookingFrom());
             }
 
             if (request.getBookingTo() != null) {
                 sql.append("""
-                    AND b.booking_date <= ?
-                    """);
+                        AND b.booking_date <= ?
+                        """);
 
                 params.add(request.getBookingTo());
             }
 
             if (request.getBookingStatusId() != null) {
                 sql.append("""
-                    AND b.booking_status_id = ?
-                    """);
+                        AND b.booking_status_id = ?
+                        """);
 
                 params.add(request.getBookingStatusId());
             }
 
             if (request.getTourId() != null) {
                 sql.append("""
-                    AND b.tour_id = ?
-                    """);
+                        AND b.tour_id = ?
+                        """);
 
                 params.add(request.getTourId());
             }
 
             if (request.getPackageId() != null) {
                 sql.append("""
-                    AND b.package_id = ?
-                    """);
+                        AND b.package_id = ?
+                        """);
 
                 params.add(request.getPackageId());
             }
 
             if (request.getAssignTo() != null) {
                 sql.append("""
-                    AND b.assign_to = ?
-                    """);
+                        AND b.assign_to = ?
+                        """);
 
                 params.add(request.getAssignTo());
             }
@@ -2774,8 +2795,8 @@ public class BookingRepositoryImpl implements BookingRepository {
                             : "DESC";
 
             sql.append("""
-                ORDER BY
-                """)
+                            ORDER BY
+                            """)
                     .append(sortBy)
                     .append(" ")
                     .append(sortDirection);
@@ -2784,9 +2805,9 @@ public class BookingRepositoryImpl implements BookingRepository {
                     && request.getPageNumber() != null) {
 
                 sql.append("""
-                    LIMIT ?
-                    OFFSET ?
-                    """);
+                        LIMIT ?
+                        OFFSET ?
+                        """);
 
                 params.add(request.getPageSize());
 
@@ -2937,15 +2958,15 @@ public class BookingRepositoryImpl implements BookingRepository {
                     && !request.getName().isBlank()) {
 
                 sql.append("""
-                    AND (
-                        LOWER(t.name) LIKE ?
-                        OR LOWER(CONCAT(
-                                COALESCE(u.first_name,''),
-                                ' ',
-                                COALESCE(u.last_name,'')
-                            )) LIKE ?
-                    )
-                    """);
+                        AND (
+                            LOWER(t.name) LIKE ?
+                            OR LOWER(CONCAT(
+                                    COALESCE(u.first_name,''),
+                                    ' ',
+                                    COALESCE(u.last_name,'')
+                                )) LIKE ?
+                        )
+                        """);
 
                 String search =
                         "%" + request.getName().toLowerCase() + "%";
@@ -2958,9 +2979,9 @@ public class BookingRepositoryImpl implements BookingRepository {
                     && !request.getBookingReference().isBlank()) {
 
                 sql.append("""
-                    AND LOWER(b.booking_reference)
-                    LIKE ?
-                    """);
+                        AND LOWER(b.booking_reference)
+                        LIKE ?
+                        """);
 
                 params.add(
                         "%" +
@@ -3734,7 +3755,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                                 Statement.RETURN_GENERATED_KEYS);
 
                 ps.setString(1, bookingReference);
-                ps.setObject(2, userId);
+                ps.setObject(2, request.getCustomerId());
                 ps.setObject(3, request.getPackageScheduleId());
                 ps.setObject(4, request.getTotalPersons());
                 ps.setBigDecimal(5, request.getTotalAmount());
@@ -3812,6 +3833,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                         p.getSpecialAssistanceRequired(),
                         p.getAssistanceDetails(),
                         p.getRoomSharingWith(),
+                        p.getStatus(),
                         userId
                 );
             }
@@ -3851,6 +3873,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                         a.getRoomType(),
                         a.getRoomNumber(),
                         a.getConfirmationNumber(),
+                        a.getStatus(),
                         userId
                 );
             }
@@ -3882,6 +3905,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                         BookingQueries.ADD_BOOKING_TRANSPORTATION,
                         bookingId,
                         t.getTransportType(),
+                        t.getVehicleId(),
                         t.getDepartureDate(),
                         t.getDepartureTime(),
                         t.getArrivalDate(),
@@ -3891,6 +3915,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                         t.getCarrierName(),
                         t.getReferenceNumber(),
                         t.getSeatNumbers(),
+                        t.getStatus(),
                         userId
                 );
             }
@@ -3929,7 +3954,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                         a.getNumberOfParticipants(),
                         a.getPricePerPerson(),
                         a.getTotalPrice(),
-                        a.getStatusId(),
+                        a.getStatus(),
                         userId
                 );
             }
@@ -3963,7 +3988,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                         d.getDocumentType(),
                         d.getDocumentName(),
                         d.getDocumentUrl(),
-                        d.getFileSize() != null ? Integer.valueOf(d.getFileSize()) : null,
+                        d.getFileSize(),
                         d.getMimiType(),
                         d.getStatus(),
                         userId
@@ -4001,6 +4026,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                     insurance.getCoverageDetails(),
                     insurance.getPolicyStartDate(),
                     insurance.getPolicyEndDate(),
+                    insurance.getStatus(),
                     userId
             );
 
@@ -4035,6 +4061,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                         n.getIsImportant(),
                         n.getFollowUpDate(),
                         n.getFollowUpComplete(),
+                        n.getStatus(),
                         userId
                 );
             }
@@ -4071,6 +4098,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                         p.getQuantity(),
                         p.getUnitPrice(),
                         p.getTotalPrice(),
+                        p.getStatus(),
                         userId
                 );
             }
@@ -4087,6 +4115,7 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     public void addBookingInvoiceToBooking(
             Long bookingId,
+            String invoiceReference,
             InsertBookingRequest.BookingInvoice invoice,
             Long userId) {
 
@@ -4099,8 +4128,8 @@ public class BookingRepositoryImpl implements BookingRepository {
             jdbcTemplate.update(
                     BookingQueries.ADD_BOOKING_INVOICE,
                     bookingId,
-                    invoice.getInvoiceNumber(),
-                    invoice.getInvoiceDate(),
+                    invoiceReference,
+                    LocalDate.now(),
                     invoice.getDueDate(),
                     invoice.getSubTotal(),
                     invoice.getTaxAmount(),
@@ -4126,6 +4155,1583 @@ public class BookingRepositoryImpl implements BookingRepository {
         }
     }
 
+    @Override
+    public void addItinerariesToBooking(
+            Long bookingId,
+            List<InsertBookingRequest.BookingItinerary> bookingItineraries,
+            Long userId) {
+
+        if (bookingItineraries == null || bookingItineraries.isEmpty()) {
+            return;
+        }
+
+        String sql = BookingQueries.ADD_BOOKING_ITINERARY;
+
+        try {
+
+            for (InsertBookingRequest.BookingItinerary i : bookingItineraries) {
+
+                jdbcTemplate.update(
+                        sql,
+                        bookingId,
+                        i.getDayNumber(),
+                        i.getItineraryDate(),
+                        i.getTitle(),
+                        i.getDescription(),
+                        i.getStartTime(),
+                        i.getEndTime(),
+                        i.getLocation(),
+                        i.getIncludedMeals(),
+                        i.getStatus() != null ? i.getStatus() : 1,
+                        userId,
+                        userId
+                );
+            }
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error adding itineraries for bookingId: {}", bookingId, ex);
+
+            throw new InsertFailedErrorExceptionHandler(
+                    "Failed to save booking itineraries");
+        }
+    }
+
+    @Override
+    public List<BookingAllDetailsResponse.BookingDocuments> getBookingDocumentsByBookingId(Long bookingId) {
+
+        String sql = """
+                    SELECT bd.document_name, bd.document_type, bd.document_url,
+                           bd.file_size, bd.mime_type, cs.name AS status
+                    FROM booking_documents bd
+                    LEFT JOIN common_status cs ON bd.status = cs.id
+                    WHERE bd.booking_id = ?
+                """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+                        BookingAllDetailsResponse.BookingDocuments.builder()
+                                .documentName(rs.getString("document_name"))
+                                .documentType(rs.getString("document_type"))
+                                .documentUrl(rs.getString("document_url"))
+                                .fileSize(rs.getDouble("file_size"))
+                                .mimiType(rs.getString("mime_type"))
+                                .status(rs.getString("status"))
+                                .build(),
+                bookingId
+        );
+    }
+
+    @Override
+    public BookingAllDetailsResponse.BookingInsurance getBookingInsuranceByBookingId(Long bookingId) {
+
+        String sql = """
+                    SELECT bi.insurance_provider, bi.policy_number, bi.coverage_type,
+                           bi.coverage_details, bi.premium_amount,
+                           bi.policy_start_date, bi.policy_end_date,
+                           cs.name AS status
+                    FROM booking_insurance bi
+                    LEFT JOIN common_status cs ON bi.status_id = cs.id
+                    WHERE bi.booking_id = ?
+                    LIMIT 1
+                """;
+
+        return jdbcTemplate.query(sql, rs -> {
+            if (!rs.next()) return null;
+
+            return BookingAllDetailsResponse.BookingInsurance.builder()
+                    .insuranceProvider(rs.getString("insurance_provider"))
+                    .policyNumber(rs.getString("policy_number"))
+                    .coverageType(rs.getString("coverage_type"))
+                    .coverageDetails(rs.getString("coverage_details"))
+                    .premiumAmount(rs.getDouble("premium_amount"))
+                    .policyStartDate(rs.getDate("policy_start_date") != null ?
+                            rs.getDate("policy_start_date").toLocalDate() : null)
+                    .policyEndDate(rs.getDate("policy_end_date") != null ?
+                            rs.getDate("policy_end_date").toLocalDate() : null)
+                    .status(rs.getString("status"))
+                    .build();
+        }, bookingId);
+    }
+
+    @Override
+    public List<BookingAllDetailsResponse.BookingItinerary> getBookingItineraryByBookingId(Long bookingId) {
+
+        String sql = """
+                    SELECT bi.day_number, bi.itinerary_date, bi.title, bi.description,
+                           bi.start_time, bi.end_time, bi.location, bi.included_meals,
+                           cs.name AS status
+                    FROM booking_itinerary bi
+                    LEFT JOIN common_status cs ON bi.status_id = cs.id
+                    WHERE bi.booking_id = ?
+                    ORDER BY bi.day_number ASC
+                """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+                        BookingAllDetailsResponse.BookingItinerary.builder()
+                                .dayNumber(rs.getInt("day_number"))
+                                .itineraryDate(rs.getDate("itinerary_date").toLocalDate())
+                                .title(rs.getString("title"))
+                                .description(rs.getString("description"))
+                                .startTime(rs.getTime("start_time") != null ?
+                                        rs.getTime("start_time").toLocalTime() : null)
+                                .endTime(rs.getTime("end_time") != null ?
+                                        rs.getTime("end_time").toLocalTime() : null)
+                                .location(rs.getString("location"))
+                                .includedMeals(rs.getString("included_meals"))
+                                .status(rs.getString("status"))
+                                .build(),
+                bookingId
+        );
+    }
+
+    @Override
+    public List<BookingAllDetailsResponse.BookingNote> getBookingNoteByBookingId(Long bookingId) {
+
+        String sql = """
+                    SELECT note_type, note_text, is_important,
+                           follow_up_date, follow_up_completed,
+                           cs.name AS status
+                    FROM booking_notes bn
+                    LEFT JOIN common_status cs ON bn.status_id = cs.id
+                    WHERE bn.booking_id = ?
+                """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+                        BookingAllDetailsResponse.BookingNote.builder()
+                                .noteType(rs.getString("note_type"))
+                                .noteText(rs.getString("note_text"))
+                                .isImportant(rs.getBoolean("is_important"))
+                                .followUpDate(rs.getDate("follow_up_date") != null ?
+                                        rs.getDate("follow_up_date").toLocalDate() : null)
+                                .followUpComplete(rs.getBoolean("follow_up_completed"))
+                                .status(rs.getString("status"))
+                                .build(),
+                bookingId
+        );
+    }
+
+    @Override
+    public List<BookingAllDetailsResponse.BookingPriceBreakDown> getBookingPriceBreakDownByBookingId(Long bookingId) {
+
+        String sql = """
+                    SELECT item_type, item_name, item_description,
+                           quantity, unit_price, total_price,
+                           cs.name AS status
+                    FROM booking_price_breakdown bp
+                    LEFT JOIN common_status cs ON bp.status_id = cs.id
+                    WHERE bp.booking_id = ?
+                """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+                        BookingAllDetailsResponse.BookingPriceBreakDown.builder()
+                                .itemType(rs.getString("item_type"))
+                                .itemName(rs.getString("item_name"))
+                                .itemDescription(rs.getString("item_description"))
+                                .quantity(rs.getInt("quantity"))
+                                .unitPrice(rs.getDouble("unit_price"))
+                                .totalPrice(rs.getDouble("total_price"))
+                                .status(rs.getString("status"))
+                                .build(),
+                bookingId
+        );
+    }
+
+    @Override
+    public BookingAllDetailsResponse.BookingInvoice getBookingInvoiceByBookingId(Long bookingId) {
+
+        String sql = """
+                    SELECT due_date, subtotal, tax_amount, total_amount,
+                           discount_amount, insurance_amount, amount_paid,
+                           balance_due, billing_full_name, billing_address,
+                           billing_email, billing_phone,
+                           cs.name AS status
+                    FROM booking_invoices bi
+                    LEFT JOIN common_status cs ON bi.status = cs.id
+                    WHERE bi.booking_id = ?
+                    LIMIT 1
+                """;
+
+        return jdbcTemplate.query(sql, rs -> {
+            if (!rs.next()) return null;
+
+            return BookingAllDetailsResponse.BookingInvoice.builder()
+                    .dueDate(rs.getDate("due_date").toLocalDate())
+                    .subTotal(rs.getDouble("subtotal"))
+                    .taxAmount(rs.getDouble("tax_amount"))
+                    .totalAmount(rs.getDouble("total_amount"))
+                    .discountAmount(rs.getDouble("discount_amount"))
+                    .insuranceAmount(rs.getDouble("insurance_amount"))
+                    .amountPaid(rs.getDouble("amount_paid"))
+                    .balanceDue(rs.getDouble("balance_due"))
+                    .billingFullName(rs.getString("billing_full_name"))
+                    .billingAddress(rs.getString("billing_address"))
+                    .billingEmail(rs.getString("billing_email"))
+                    .billingPhone(rs.getString("billing_phone"))
+                    .status(rs.getString("status"))
+                    .build();
+        }, bookingId);
+    }
+
+    @Override
+    public void updateBookingBasicInformation(UpdateBookingRequest request, Long userId) {
+
+        jdbcTemplate.update(
+                BookingQueries.UPDATE_BOOKING_BASIC_INFORMATION,
+                request.getCustomerId(),
+                request.getTourId(),
+                request.getPackageId(),
+                request.getPackageScheduleId(),
+                request.getBookingDate(),
+                request.getTravelStartDate(),
+                request.getTravelEndDate(),
+                request.getTotalPersons(),
+                request.getTotalAmount(),
+                request.getDiscountAmount(),
+                request.getTaxAmount(),
+                request.getInsuranceAmount(),
+                request.getFinalAmount(),
+                request.getInsuranceRequired(),
+                request.getBookingStatusId(),
+                request.getSpecialRequirements(),
+                request.getDietaryRestrictions(),
+                request.getAssignTo(),
+                request.getAssignMessage(),
+                userId,
+                request.getBookingId()
+        );
+    }
+
+    @Override
+    public void removeParticipantsFromBooking(Long bookingId,
+                                              List<Long> removeParticipants,
+                                              Long userId) {
+
+        if (CollectionUtils.isEmpty(removeParticipants)) {
+            return;
+        }
+
+        for (Long participantId : removeParticipants) {
+            jdbcTemplate.update(
+                    BookingQueries.TERMINATE_BOOKING_PARTICIPANT,
+                    TERMINATED_STATUS,
+                    userId,
+                    participantId,
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void updateParticipantsOfBooking(
+            Long bookingId,
+            List<UpdateBookingRequest.UpdateParticipant> participants,
+            Long userId) {
+
+        if (CollectionUtils.isEmpty(participants)) {
+            return;
+        }
+
+        for (UpdateBookingRequest.UpdateParticipant participant : participants) {
+
+            jdbcTemplate.update(
+                    BookingQueries.UPDATE_BOOKING_PARTICIPANT,
+                    participant.getFirstName(),
+                    participant.getLastName(),
+                    participant.getDateOfBirth(),
+                    participant.getGenderId(),
+                    participant.getPassportNumber(),
+                    participant.getNationalityCountryId(),
+                    participant.getEmail(),
+                    participant.getMobileNumber(),
+                    participant.getEmergencyContactName(),
+                    participant.getEmergencyContactPhone(),
+                    participant.getEmergencyContactRelationship(),
+                    participant.getMedicalConditions(),
+                    participant.getAllergies(),
+                    participant.getSpecialAssistanceRequired(),
+                    participant.getAssistanceDetails(),
+                    participant.getRoomSharingWith(),
+                    participant.getStatus(),
+                    userId,
+                    participant.getParticipantId(),
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void removeAccommodationsFromBooking(
+            Long bookingId,
+            List<Long> removeAccommodations,
+            Long userId) {
+
+        if (CollectionUtils.isEmpty(removeAccommodations)) {
+            return;
+        }
+
+        for (Long accommodationId : removeAccommodations) {
+
+            jdbcTemplate.update(
+                    BookingQueries.TERMINATE_BOOKING_ACCOMMODATION,
+                    TERMINATED_STATUS,
+                    userId,
+                    accommodationId,
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void updateAccommodationsOfBooking(
+            Long bookingId,
+            List<UpdateBookingRequest.UpdateAccommodation> accommodations,
+            Long userId) {
+
+        if (CollectionUtils.isEmpty(accommodations)) {
+            return;
+        }
+
+        for (UpdateBookingRequest.UpdateAccommodation accommodation : accommodations) {
+
+            jdbcTemplate.update(
+                    BookingQueries.UPDATE_BOOKING_ACCOMMODATION,
+                    accommodation.getCheckInDate(),
+                    accommodation.getCheckOutDate(),
+                    accommodation.getHotelId(),
+                    accommodation.getRoomType(),
+                    accommodation.getRoomNumber(),
+                    accommodation.getConfirmationNumber(),
+                    accommodation.getStatus(),
+                    userId,
+                    accommodation.getAccommodationId(),
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void removeTransportationsFromBooking(
+            Long bookingId,
+            List<Long> removeTransportations,
+            Long userId) {
+
+        if (CollectionUtils.isEmpty(removeTransportations)) {
+            return;
+        }
+
+        for (Long transportationId : removeTransportations) {
+
+            jdbcTemplate.update(
+                    BookingQueries.TERMINATE_BOOKING_TRANSPORTATION,
+                    TERMINATED_STATUS,
+                    userId,
+                    transportationId,
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void updateTransportationsOfBooking(
+            Long bookingId,
+            List<UpdateBookingRequest.UpdateTransportation> transportations,
+            Long userId) {
+
+        if (CollectionUtils.isEmpty(transportations)) {
+            return;
+        }
+
+        for (UpdateBookingRequest.UpdateTransportation transportation : transportations) {
+
+            jdbcTemplate.update(
+                    BookingQueries.UPDATE_BOOKING_TRANSPORTATION,
+                    transportation.getTransportType(),
+                    transportation.getVehicleId(),
+                    transportation.getDepartureDate(),
+                    transportation.getDepartureTime(),
+                    transportation.getArrivalDate(),
+                    transportation.getArrivalTime(),
+                    transportation.getDepartureLocation(),
+                    transportation.getArrivalLocation(),
+                    transportation.getCarrierName(),
+                    transportation.getReferenceNumber(),
+                    transportation.getSeatNumbers(),
+                    transportation.getStatus(),
+                    userId,
+                    transportation.getTransportationId(),
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void removeActivitiesFromBooking(Long bookingId,
+                                            List<Long> removeActivities,
+                                            Long userId) {
+
+        if (CollectionUtils.isEmpty(removeActivities)) {
+            return;
+        }
+
+        for (Long activityId : removeActivities) {
+
+            jdbcTemplate.update(
+                    BookingQueries.TERMINATE_BOOKING_ACTIVITY,
+                    TERMINATED_STATUS,
+                    userId,
+                    activityId,
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void updateActivitiesOfBooking(
+            Long bookingId,
+            List<UpdateBookingRequest.UpdateActivity> updateActivities,
+            Long userId) {
+
+        if (CollectionUtils.isEmpty(updateActivities)) {
+            return;
+        }
+
+        for (UpdateBookingRequest.UpdateActivity activity : updateActivities) {
+
+            jdbcTemplate.update(
+                    BookingQueries.UPDATE_BOOKING_ACTIVITY,
+                    activity.getActivityId(),
+                    activity.getActivityScheduleId(),
+                    activity.getActivityDate(),
+                    activity.getStartTime(),
+                    activity.getEndTime(),
+                    activity.getNumberOfParticipants(),
+                    activity.getPricePerPerson(),
+                    activity.getTotalPrice(),
+                    activity.getStatus(),
+                    userId,
+                    activity.getBookingActivityId(),
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void removeDocumentsFromBooking(Long bookingId,
+                                           List<Long> removeDocuments,
+                                           Long userId) {
+
+        if (CollectionUtils.isEmpty(removeDocuments)) {
+            return;
+        }
+
+        for (Long documentId : removeDocuments) {
+
+            jdbcTemplate.update(
+                    BookingQueries.TERMINATE_BOOKING_DOCUMENT,
+                    TERMINATED_STATUS,
+                    userId,
+                    documentId,
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void updateDocumentsOfBooking(
+            Long bookingId,
+            List<UpdateBookingRequest.UpdateBookingDocuments> updateDocuments,
+            Long userId) {
+
+        if (CollectionUtils.isEmpty(updateDocuments)) {
+            return;
+        }
+
+        for (UpdateBookingRequest.UpdateBookingDocuments document : updateDocuments) {
+
+            jdbcTemplate.update(
+                    BookingQueries.UPDATE_BOOKING_DOCUMENT,
+                    document.getDocumentName(),
+                    document.getDocumentType(),
+                    document.getDocumentUrl(),
+                    document.getFileSize(),
+                    document.getMimiType(),
+                    document.getStatus(),
+                    userId,
+                    document.getDocumentId(),
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void updateInsuranceOfBooking(
+            Long bookingId,
+            UpdateBookingRequest.UpdateBookingInsurance insurance,
+            Long userId) {
+
+        if (insurance == null) {
+            return;
+        }
+
+        jdbcTemplate.update(
+                BookingQueries.UPDATE_BOOKING_INSURANCE,
+                insurance.getInsuranceProvider(),
+                insurance.getPolicyNumber(),
+                insurance.getCoverageType(),
+                insurance.getPremiumAmount(),
+                insurance.getCoverageDetails(),
+                insurance.getPolicyStartDate(),
+                insurance.getPolicyEndDate(),
+                insurance.getStatus(),
+                userId,
+                insurance.getInsuranceId(),
+                bookingId
+        );
+    }
+
+    @Override
+    public void removeInsuranceFromBooking(Long bookingId,
+                                           Long removeBookingInsurance,
+                                           Long userId) {
+
+        if (removeBookingInsurance == null) {
+            return;
+        }
+
+        jdbcTemplate.update(
+                BookingQueries.TERMINATE_BOOKING_INSURANCE,
+                TERMINATED_STATUS,
+                userId,
+                removeBookingInsurance,
+                bookingId
+        );
+    }
+
+    @Override
+    public void removeItinerariesFromBooking(Long bookingId,
+                                             List<Long> removeBookingItineraries,
+                                             Long userId) {
+
+        if (CollectionUtils.isEmpty(removeBookingItineraries)) {
+            return;
+        }
+
+        for (Long itineraryId : removeBookingItineraries) {
+
+            jdbcTemplate.update(
+                    BookingQueries.TERMINATE_BOOKING_ITINERARY,
+                    TERMINATED_STATUS,
+                    userId,
+                    itineraryId,
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void updateItinerariesOfBooking(
+            Long bookingId,
+            List<UpdateBookingRequest.UpdateBookingItinerary> updateBookingItineraries,
+            Long userId) {
+
+        if (CollectionUtils.isEmpty(updateBookingItineraries)) {
+            return;
+        }
+
+        for (UpdateBookingRequest.UpdateBookingItinerary itinerary : updateBookingItineraries) {
+
+            jdbcTemplate.update(
+                    BookingQueries.UPDATE_BOOKING_ITINERARY,
+                    itinerary.getDayNumber(),
+                    itinerary.getItineraryDate(),
+                    itinerary.getTitle(),
+                    itinerary.getDescription(),
+                    itinerary.getStartTime(),
+                    itinerary.getEndTime(),
+                    itinerary.getLocation(),
+                    itinerary.getIncludedMeals(),
+                    itinerary.getStatus(),
+                    userId,
+                    itinerary.getItineraryId(),
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void removeNotesFromBooking(Long bookingId,
+                                       List<Long> removeBookingNotes,
+                                       Long userId) {
+
+        if (CollectionUtils.isEmpty(removeBookingNotes)) {
+            return;
+        }
+
+        for (Long noteId : removeBookingNotes) {
+
+            jdbcTemplate.update(
+                    BookingQueries.TERMINATE_BOOKING_NOTE,
+                    TERMINATED_STATUS,
+                    userId,
+                    noteId,
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void updateNotesOfBooking(
+            Long bookingId,
+            List<UpdateBookingRequest.UpdateBookingNote> updateBookingNotes,
+            Long userId) {
+
+        if (CollectionUtils.isEmpty(updateBookingNotes)) {
+            return;
+        }
+
+        for (UpdateBookingRequest.UpdateBookingNote note : updateBookingNotes) {
+
+            jdbcTemplate.update(
+                    BookingQueries.UPDATE_BOOKING_NOTE,
+                    note.getNoteType(),
+                    note.getNoteText(),
+                    note.getIsImportant(),
+                    note.getFollowUpDate(),
+                    note.getFollowUpComplete(),
+                    note.getStatus(),
+                    userId,
+                    note.getNoteId(),
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void removePriceBreakdownFromBooking(Long bookingId,
+                                                List<Long> removePriceBreakDowns,
+                                                Long userId) {
+
+        if (CollectionUtils.isEmpty(removePriceBreakDowns)) {
+            return;
+        }
+
+        for (Long priceBreakDownId : removePriceBreakDowns) {
+
+            jdbcTemplate.update(
+                    BookingQueries.TERMINATE_BOOKING_PRICE_BREAKDOWN,
+                    TERMINATED_STATUS,
+                    userId,
+                    priceBreakDownId,
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void updatePriceBreakdownOfBooking(
+            Long bookingId,
+            List<UpdateBookingRequest.UpdateBookingPriceBreakDown> updatePriceBreakDowns,
+            Long userId) {
+
+        if (CollectionUtils.isEmpty(updatePriceBreakDowns)) {
+            return;
+        }
+
+        for (UpdateBookingRequest.UpdateBookingPriceBreakDown breakdown : updatePriceBreakDowns) {
+
+            jdbcTemplate.update(
+                    BookingQueries.UPDATE_BOOKING_PRICE_BREAKDOWN,
+                    breakdown.getItemType(),
+                    breakdown.getItemName(),
+                    breakdown.getItemDescription(),
+                    breakdown.getQuantity(),
+                    breakdown.getUnitPrice(),
+                    breakdown.getTotalPrice(),
+                    breakdown.getStatus(),
+                    userId,
+                    breakdown.getPriceBreakDownId(),
+                    bookingId
+            );
+        }
+    }
+
+    @Override
+    public void updateBookingInvoiceOfBooking(
+            Long bookingId,
+            UpdateBookingRequest.UpdateBookingInvoice invoice,
+            Long userId) {
+
+        if (invoice == null) {
+            return;
+        }
+
+        jdbcTemplate.update(
+                BookingQueries.UPDATE_BOOKING_INVOICE,
+                invoice.getDueDate(),
+                invoice.getSubTotal(),
+                invoice.getTaxAmount(),
+                invoice.getTotalAmount(),
+                invoice.getDiscountAmount(),
+                invoice.getInsuranceAmount(),
+                invoice.getAmountPaid(),
+                invoice.getBalanceDue(),
+                invoice.getBillingFullName(),
+                invoice.getBillingAddress(),
+                invoice.getBillingEmail(),
+                invoice.getBillingPhone(),
+                invoice.getStatus(),
+                userId,
+                invoice.getInvoiceId(),
+                bookingId
+        );
+    }
+
+    @Override
+    public void removeBookingInvoiceFromBooking(Long bookingId,
+                                                Long removeBookingInvoice,
+                                                Long userId) {
+
+        if (removeBookingInvoice == null) {
+            return;
+        }
+
+        jdbcTemplate.update(
+                BookingQueries.TERMINATE_BOOKING_INVOICE,
+                TERMINATED_STATUS,
+                userId,
+                removeBookingInvoice,
+                bookingId
+        );
+    }
+
+    @Override
+    public BookingsBasicDetails getBookingBasicDetails(CommonIdRequest bookingId) {
+        try {
+
+            String sql = BookingQueries.GET_BOOKING_BASIC_DETAILS_FOR_BOOKING_ID;
+
+            List<Object> params = new ArrayList<>();
+            params.add(bookingId.getId());
+            List<BookingsBasicDetails> result = jdbcTemplate.query(
+                    sql,
+                    params.toArray(),
+                    (rs, rowNum) ->
+                            BookingsBasicDetails.builder()
+                                    .bookingId(rs.getLong("booking_id"))
+                                    .bookingReference(rs.getString("booking_reference"))
+                                    .bookingDate(
+                                            rs.getDate("booking_date") != null
+                                                    ? rs.getDate("booking_date").toLocalDate()
+                                                    : null)
+                                    .travelStartDate(
+                                            rs.getDate("travel_start_date") != null
+                                                    ? rs.getDate("travel_start_date").toLocalDate()
+                                                    : null)
+                                    .travelEndDate(
+                                            rs.getDate("travel_end_date") != null
+                                                    ? rs.getDate("travel_end_date").toLocalDate()
+                                                    : null)
+
+                                    .userId(rs.getLong("user_id"))
+                                    .username(rs.getString("username"))
+                                    .customerName(rs.getString("customer_name"))
+                                    .email(rs.getString("email"))
+                                    .mobileNumber(rs.getString("mobile_number1"))
+
+                                    .tourId(rs.getLong("tour_id"))
+                                    .tourName(rs.getString("tour_name"))
+                                    .tourDuration(rs.getInt("tour_duration"))
+                                    .startLocation(rs.getString("start_location"))
+                                    .endLocation(rs.getString("end_location"))
+
+                                    .packageId(rs.getLong("package_id"))
+                                    .packageName(rs.getString("package_name"))
+
+                                    .totalPersons(rs.getInt("total_persons"))
+                                    .totalAmount(rs.getBigDecimal("total_amount"))
+                                    .discountAmount(rs.getBigDecimal("discount_amount"))
+                                    .taxAmount(rs.getBigDecimal("tax_amount"))
+                                    .insuranceAmount(rs.getBigDecimal("insurance_amount"))
+                                    .finalAmount(rs.getBigDecimal("final_amount"))
+
+                                    .insuranceRequired(rs.getObject("insurance_required", Boolean.class))
+                                    .bookingStatusId(rs.getObject("booking_status_id", Long.class))
+                                    .bookingStatusName(rs.getString("booking_status_name"))
+
+                                    .assignedEmployeeId(rs.getObject("assigned_employee_id", Long.class))
+                                    .assignedEmployeeName(rs.getString("assigned_employee_name"))
+                                    .assignMessage(rs.getString("assign_message"))
+
+                                    .cancellationDate(
+                                            rs.getDate("cancellation_date") != null
+                                                    ? rs.getDate("cancellation_date").toLocalDate()
+                                                    : null)
+
+                                    .refundAmount(rs.getBigDecimal("refund_amount"))
+                                    .specialRequirements(rs.getString("special_requirements"))
+                                    .dietaryRestrictions(rs.getString("dietary_restrictions"))
+
+                                    .build()
+            );
+
+            return result.isEmpty() ? null : result.get(0);
+
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching booking details", ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch booking details");
+        }
+    }
+
+    @Override
+    public void updateBookingStatus(UpdateBookingStatusRequest request, Long userId) {
+
+        Long statusId = jdbcTemplate.queryForObject(
+                "SELECT id FROM booking_status WHERE name = ?",
+                Long.class,
+                request.getBookingStatus()
+        );
+
+        if (statusId == null) {
+            throw new IllegalArgumentException("Invalid booking status: " + request.getBookingStatus());
+        }
+
+        jdbcTemplate.update(
+                BookingQueries.UPDATE_BOOKING_STATUS,
+                statusId,
+                userId,
+                request.getBookingId()
+        );
+    }
+
+    @Override
+    public List<BookingStatusBasicDetailsResponse> getBookingsStatuses() {
+
+        String sql = """
+                    SELECT 
+                        bs.id AS status_id,
+                        bs.name AS status_name,
+                        bs.description,
+                        cs.name AS status
+                    FROM booking_status bs
+                    LEFT JOIN common_status cs
+                    ON cs.id = bs.status
+                    ORDER BY bs.id
+                """;
+
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+                BookingStatusBasicDetailsResponse.builder()
+                        .statusId(rs.getLong("status_id"))
+                        .statusName(rs.getString("status_name"))
+                        .description(rs.getString("description"))
+                        .status(rs.getString("status"))
+                        .build()
+        );
+    }
+
+    @Override
+    public BookingStatusBasicDetailsResponse getBookingsStatusesBasicDetailsById(CommonIdRequest request) {
+
+        String sql = """
+                    SELECT 
+                        bs.id AS status_id,
+                        bs.name AS status_name,
+                        bs.description,
+                        cs.name AS status
+                    FROM booking_status bs
+                    LEFT JOIN common_status cs
+                    ON cs.id = bs.status
+                    WHERE bs.id = ?
+                """;
+
+        return jdbcTemplate.queryForObject(
+                sql,
+                new Object[]{request.getId()},
+                (rs, rowNum) ->
+                        BookingStatusBasicDetailsResponse.builder()
+                                .statusId(rs.getLong("status_id"))
+                                .statusName(rs.getString("status_name"))
+                                .description(rs.getString("description"))
+                                .status(rs.getString("status"))
+                                .build()
+        );
+    }
+
+    @Override
+    public BookingStatusDetailsResponse getBookingsStatusesAllDetailsById(CommonIdRequest request) {
+
+        String sql = """
+                    SELECT 
+                        bs.id AS status_id,
+                        bs.name AS status_name,
+                        bs.description,
+                        cs.name AS status,
+                
+                        bs.created_at,
+                        bs.created_by,
+                        bs.updated_at,
+                        bs.updated_by,
+                        bs.terminated_at,
+                        bs.terminated_by,
+                
+                        COUNT(b.booking_id) AS total_bookings,
+                
+                        SUM(CASE WHEN b.booking_status_id = bs.id THEN 1 ELSE 0 END) AS active_bookings_count
+                
+                    FROM booking_status bs
+                    LEFT JOIN bookings b ON b.booking_status_id = bs.id
+                    LEFT JOIN common_status cs ON cs.id = bs.status
+                    WHERE bs.id = ?
+                    GROUP BY bs.id
+                """;
+
+        return jdbcTemplate.queryForObject(
+                sql,
+                new Object[]{request.getId()},
+                (rs, rowNum) ->
+                        BookingStatusDetailsResponse.builder()
+                                .statusId(rs.getLong("status_id"))
+                                .statusName(rs.getString("status_name"))
+                                .description(rs.getString("description"))
+                                .status(rs.getString("status"))
+
+                                .createdAt(rs.getTimestamp("created_at").toLocalDateTime())
+                                .createdBy(rs.getLong("created_by"))
+
+                                .updatedAt(rs.getTimestamp("updated_at") != null
+                                        ? rs.getTimestamp("updated_at").toLocalDateTime()
+                                        : null)
+
+                                .updatedBy(rs.getObject("updated_by") != null
+                                        ? rs.getLong("updated_by")
+                                        : null)
+
+                                .terminatedAt(rs.getTimestamp("terminated_at") != null
+                                        ? rs.getTimestamp("terminated_at").toLocalDateTime()
+                                        : null)
+
+                                .terminatedBy(rs.getObject("terminated_by") != null
+                                        ? rs.getLong("terminated_by")
+                                        : null)
+
+                                .totalBookingsUsingThisStatus(rs.getInt("total_bookings"))
+                                .activeBookingsCount(rs.getInt("active_bookings_count"))
+                                .build()
+        );
+    }
+
+    @Override
+    public Long createBookingsStatuses(InsertBookingsStatusesRequest request, Long userId) {
+
+        Long statusId = statusRepository.getStatusIdByName(request.getStatus());
+
+        String sql = """
+            INSERT INTO booking_status (
+                name,
+                description,
+                status,
+                created_at,
+                created_by,
+                updated_at,
+                updated_by
+            )
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
+            """;
+
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps =
+                    connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+            ps.setString(1, request.getStatusName());
+            ps.setString(2, request.getDescription());
+            ps.setLong(3, statusId);
+            ps.setLong(4, userId);
+            ps.setLong(5, userId);
+
+            return ps;
+        }, keyHolder);
+
+        return keyHolder.getKey() != null
+                ? keyHolder.getKey().longValue()
+                : 0L;
+    }
+
+    @Override
+    public void updateBookingsStatuses(UpdateBookingsStatusesRequest request, Long userId) {
+
+        Long statusId = statusRepository.getStatusIdByName(request.getStatus());
+
+        String sql = """
+                    UPDATE booking_status
+                    SET
+                        name = ?,
+                        description = ?,
+                        status = ?,
+                        updated_at = CURRENT_TIMESTAMP,
+                        updated_by = ?
+                    WHERE id = ?
+                    AND terminated_at IS NULL
+                """;
+
+
+        jdbcTemplate.update(
+                sql,
+                request.getStatusName(),
+                request.getDescription(),
+                statusId,
+                userId,
+                request.getStatusId()
+        );
+    }
+
+    @Override
+    public void terminateBookingsStatuses(CommonIdRequest commonIdRequest, Long userId) {
+
+        String sql = """
+        UPDATE booking_status
+        SET
+            status = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+        AND terminated_at IS NULL
+    """;
+        Long statusId = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.name());
+
+        jdbcTemplate.update(
+                sql,
+                statusId,
+                userId,
+                commonIdRequest.getId()
+        );
+    }
+
+    @Override
+    public BookingBillResponse.BookingBasicInfo getBookingBasicInfoForBill(Long id) {
+
+        String sql = """
+            SELECT
+                booking_id,
+                booking_reference,
+                DATE(created_at) AS booking_date
+            FROM bookings
+            WHERE booking_id = ?
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                ps -> ps.setLong(1, id),
+                rs -> rs.next()
+                        ? BookingBillResponse.BookingBasicInfo.builder()
+                        .bookingId(rs.getInt("booking_id"))
+                        .bookingReference(rs.getString("booking_reference"))
+                        .bookingDate(rs.getDate("booking_date").toLocalDate())
+                        .build()
+                        : null
+        );
+    }
+
+    @Override
+    public BookingBillResponse.Customer getCustomerForBill(Long id) {
+
+        String sql = """
+            SELECT
+                u.user_id,
+                CONCAT(u.first_name,' ',u.last_name) AS full_name,
+                u.email,
+                u.mobile_number1
+            FROM bookings b
+            INNER JOIN user u
+                ON b.user_id = u.user_id
+            WHERE b.booking_id = ?
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                ps -> ps.setLong(1, id),
+                rs -> rs.next()
+                        ? BookingBillResponse.Customer.builder()
+                        .userId(rs.getInt("user_id"))
+                        .fullName(rs.getString("full_name"))
+                        .email(rs.getString("email"))
+                        .mobileNumber(rs.getString("mobile_number1"))
+                        .build()
+                        : null
+        );
+    }
+
+    @Override
+    public BookingBillResponse.TourDetails getTourDetailsForBill(Long id) {
+
+        String sql = """
+        SELECT
+            t.tour_id,
+            t.name AS tour_name,
+            t.duration,
+            t.start_location,
+            t.end_location,
+            ps.assume_start_date,
+            ps.assume_end_date,
+            b.total_persons
+        FROM bookings b
+        LEFT JOIN tour t
+            ON b.tour_id = t.tour_id
+        LEFT JOIN package_schedule ps
+            ON b.package_schedule_id = ps.id
+        WHERE b.booking_id = ?
+        """;
+
+        return jdbcTemplate.query(
+                sql,
+                ps -> ps.setLong(1, id),
+                rs -> rs.next()
+                        ? BookingBillResponse.TourDetails.builder()
+                        .tourId(rs.getInt("tour_id"))
+                        .tourName(rs.getString("tour_name"))
+                        .duration(rs.getInt("duration"))
+                        .startLocation(rs.getString("start_location"))
+                        .endLocation(rs.getString("end_location"))
+                        .travelStartDate(
+                                rs.getDate("assume_start_date") != null
+                                        ? rs.getDate("assume_start_date").toLocalDate()
+                                        : null
+                        )
+                        .travelEndDate(
+                                rs.getDate("assume_end_date") != null
+                                        ? rs.getDate("assume_end_date").toLocalDate()
+                                        : null
+                        )
+                        .totalPersons(rs.getInt("total_persons"))
+                        .build()
+                        : null
+        );
+    }
+
+    @Override
+    public BookingBillResponse.PackageDetails getPackageDetailsForBill(Long id) {
+
+        String sql = """
+            SELECT
+                p.package_id,
+                p.name AS package_name,
+                ps.name AS schedule_name
+            FROM bookings b
+            LEFT JOIN package_schedule ps
+                ON b.package_schedule_id = ps.id
+            LEFT JOIN packages p
+                ON ps.package_id = p.package_id
+            WHERE b.booking_id = ?
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                ps -> ps.setLong(1, id),
+                rs -> rs.next()
+                        ? BookingBillResponse.PackageDetails.builder()
+                        .packageId(rs.getInt("package_id"))
+                        .packageName(rs.getString("package_name"))
+                        .scheduleName(rs.getString("schedule_name"))
+                        .build()
+                        : null
+        );
+    }
+
+    @Override
+    public List<BookingBillResponse.Participant> getParticipantsForBill(Long id) {
+
+        String sql = """
+        SELECT
+            first_name,
+            last_name,
+            passport_number
+        FROM booking_participants
+        WHERE booking_id = ?
+          AND terminated_at IS NULL
+        ORDER BY id
+        """;
+
+        return jdbcTemplate.query(
+                sql,
+                ps -> ps.setLong(1, id),
+                (rs, rowNum) -> BookingBillResponse.Participant.builder()
+                        .firstName(rs.getString("first_name"))
+                        .lastName(rs.getString("last_name"))
+                        .passportNumber(rs.getString("passport_number"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<BookingBillResponse.PriceItem> getPriceBreakdownForBill(Long id) {
+
+        String sql = """
+            SELECT
+                item_type,
+                item_name,
+                quantity,
+                unit_price,
+                total_price
+            FROM booking_price_breakdown
+            WHERE booking_id = ?
+            ORDER BY id
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                ps -> ps.setLong(1, id),
+                (rs, rowNum) ->
+                        BookingBillResponse.PriceItem.builder()
+                                .itemType(rs.getString("item_type"))
+                                .itemName(rs.getString("item_name"))
+                                .quantity(rs.getInt("quantity"))
+                                .unitPrice(rs.getBigDecimal("unit_price"))
+                                .totalPrice(rs.getBigDecimal("total_price"))
+                                .build()
+        );
+    }
+
+    @Override
+    public BookingBillResponse.BillingSummary getBillingSummaryForBill(Long id) {
+
+        String sql = """
+        SELECT
+            total_amount,
+            discount_amount,
+            tax_amount,
+            insurance_amount,
+            final_amount,
+            paid_amount,
+            due_amount
+        FROM bookings
+        WHERE booking_id = ?
+        """;
+
+        return jdbcTemplate.query(
+                sql,
+                ps -> ps.setLong(1, id),
+                rs -> rs.next()
+                        ? BookingBillResponse.BillingSummary.builder()
+                        .subtotal(rs.getBigDecimal("total_amount"))
+                        .discountAmount(rs.getBigDecimal("discount_amount"))
+                        .taxAmount(rs.getBigDecimal("tax_amount"))
+                        .insuranceAmount(rs.getBigDecimal("insurance_amount"))
+                        .finalAmount(rs.getBigDecimal("final_amount"))
+                        .paidAmount(rs.getBigDecimal("paid_amount"))
+                        .dueAmount(rs.getBigDecimal("due_amount"))
+                        .build()
+                        : null
+        );
+    }
+
+    @Override
+    public List<BookingIdAndReferenceResponse> getBookingIdAndReferences(String assignStatus) {
+
+        StringBuilder sql = new StringBuilder("""
+        SELECT
+            booking_id,
+            booking_reference
+        FROM bookings
+        WHERE 1=1
+    """);
+
+        if ("ASSIGNED".equalsIgnoreCase(assignStatus)) {
+            sql.append(" AND assign_to IS NOT NULL ");
+        } else if ("UNASSIGNED".equalsIgnoreCase(assignStatus)) {
+            sql.append(" AND assign_to IS NULL ");
+        }
+        // ALL -> no extra condition
+
+        sql.append(" ORDER BY booking_id DESC ");
+
+        return jdbcTemplate.query(
+                sql.toString(),
+                (rs, rowNum) -> BookingIdAndReferenceResponse.builder()
+                        .bookingId(rs.getLong("booking_id"))
+                        .bookingReference(rs.getString("booking_reference"))
+                        .build()
+        );
+    }
+
+    @Override
+    public List<UnassignBookingBasicDetailsResponse> getUnassignBookingBasicDetails(
+            UnassignBookingDataRequest request) {
+
+        try {
+
+            StringBuilder sql = new StringBuilder(
+                    BookingQueries.GET_UNASSIGN_BOOKING_BASIC_DETAILS);
+
+            List<Object> params = new ArrayList<>();
+
+            appendFilters(sql, params, request);
+
+            sql.append(" ORDER BY ")
+                    .append(request.getSortBy() == null ? "b.booking_id" : request.getSortBy())
+                    .append(" ")
+                    .append(request.getSortDirection() == null ? "DESC" : request.getSortDirection());
+
+            sql.append(" LIMIT ? OFFSET ?");
+
+            params.add(request.getPageSize());
+            params.add(request.getPageNumber() * request.getPageSize());
+
+            return jdbcTemplate.query(sql.toString(), params.toArray(), (rs, rowNum) ->
+
+                    UnassignBookingBasicDetailsResponse.builder()
+
+                            .booking(UnassignBookingBasicDetailsResponse.Booking.builder()
+                                    .bookingId(rs.getLong("booking_id"))
+                                    .bookingReference(rs.getString("booking_reference"))
+                                    .bookingDate(getLocalDate(rs, "booking_date"))
+                                    .travelStartDate(getLocalDate(rs, "travel_start_date"))
+                                    .travelEndDate(getLocalDate(rs, "travel_end_date"))
+                                    .totalPersons(rs.getInt("total_persons"))
+                                    .build())
+
+                            .customer(UnassignBookingBasicDetailsResponse.Customer.builder()
+                                    .userId(rs.getLong("user_id"))
+                                    .firstName(rs.getString("first_name"))
+                                    .lastName(rs.getString("last_name"))
+                                    .email(rs.getString("email"))
+                                    .mobileNumber(rs.getString("mobile_number1"))
+                                    .nic(rs.getString("nic"))
+                                    .passportNumber(rs.getString("passport_number"))
+                                    .build())
+
+                            .tour(UnassignBookingBasicDetailsResponse.Tour.builder()
+                                    .tourId(rs.getLong("tour_id"))
+                                    .tourName(rs.getString("tour_name"))
+                                    .description(rs.getString("description"))
+                                    .duration(rs.getInt("duration"))
+                                    .startLocation(rs.getString("start_location"))
+                                    .endLocation(rs.getString("end_location"))
+                                    .build())
+
+                            .packageDetails(UnassignBookingBasicDetailsResponse.PackageDetails.builder()
+                                    .packageId(rs.getLong("package_id"))
+                                    .packageName(rs.getString("package_name"))
+                                    .totalPrice(rs.getBigDecimal("total_price"))
+                                    .pricePerPerson(rs.getBigDecimal("price_per_person"))
+                                    .minPersonCount(rs.getInt("min_person_count"))
+                                    .maxPersonCount(rs.getInt("max_person_count"))
+                                    .build())
+
+                            .schedule(UnassignBookingBasicDetailsResponse.Schedule.builder()
+                                    .packageScheduleId(rs.getLong("package_schedule_id"))
+                                    .scheduleName(rs.getString("schedule_name"))
+                                    .assumeStartDate(getLocalDate(rs, "assume_start_date"))
+                                    .assumeEndDate(getLocalDate(rs, "assume_end_date"))
+                                    .build())
+
+                            .financial(UnassignBookingBasicDetailsResponse.Financial.builder()
+                                    .totalAmount(rs.getBigDecimal("total_amount"))
+                                    .discountAmount(rs.getBigDecimal("discount_amount"))
+                                    .taxAmount(rs.getBigDecimal("tax_amount"))
+                                    .insuranceAmount(rs.getBigDecimal("insurance_amount"))
+                                    .finalAmount(rs.getBigDecimal("final_amount"))
+                                    .paidAmount(rs.getBigDecimal("paid_amount"))
+                                    .dueAmount(rs.getBigDecimal("due_amount"))
+                                    .build())
+
+                            .assignment(UnassignBookingBasicDetailsResponse.Assignment.builder()
+                                    .assignedTo(rs.getLong("assign_to"))
+                                    .assignedUser(rs.getString("assigned_user"))
+                                    .assignMessage(rs.getString("assign_message"))
+                                    .build())
+
+                            .status(UnassignBookingBasicDetailsResponse.Status.builder()
+                                    .bookingStatusId(rs.getInt("booking_status_id"))
+                                    .bookingStatus(rs.getString("booking_status"))
+                                    .build())
+
+                            .build());
+        } catch (Exception ex) {
+
+            LOGGER.error("Error getting unassign bookings.", ex);
+
+            throw new DataNotFoundErrorExceptionHandler("Failed to retrieve unassign bookings.");
+        }
+    }
+
+    @Override
+    public Integer getUnassignBookingBasicDetailsCount(
+            UnassignBookingDataRequest request) {
+
+        try {
+
+            StringBuilder sql = new StringBuilder(
+                    BookingQueries.COUNT_UNASSIGN_BOOKING_BASIC_DETAILS);
+
+            List<Object> params = new ArrayList<>();
+
+            appendFilters(sql, params, request);
+
+            return jdbcTemplate.queryForObject(
+                    sql.toString(),
+                    params.toArray(),
+                    Integer.class);
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error counting unassign bookings.", ex);
+
+            throw new DataNotFoundErrorExceptionHandler(
+                    "Failed to retrieve booking count.");
+        }
+    }
+
+    @Override
+    public List<String> getUnassignBookingReferences() {
+
+        try {
+
+            return jdbcTemplate.query(
+                    BookingQueries.GET_UNASSIGN_BOOKING_REFERENCES,
+                    (rs, rowNum) -> rs.getString("booking_reference")
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching booking references.", ex);
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Failed to retrieve booking references.");
+        }
+    }
+
+    @Override
+    public void updateUnassignBookingToAssign(AssignBookingRequest assignBookingRequest, Long userId) {
+
+        String sql = """
+        UPDATE bookings
+        SET
+            assign_to = ?,
+            assign_message = ?,
+            updated_by = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE booking_id = ?
+          AND assign_to IS NULL
+    """;
+
+        int updatedRows = jdbcTemplate.update(
+                sql,
+                assignBookingRequest.getAssignTo(),
+                assignBookingRequest.getAssignMessage(),
+                userId,
+                assignBookingRequest.getBookingId()
+        );
+
+        if (updatedRows == 0) {
+            throw new RuntimeException("Booking is already assigned or does not exist");
+        }
+    }
+
+    @Override
+    public void updateUnassignBooking(UnassignBookingRequest unassignBookingRequest, Long userId) {
+
+        String sql = """
+        UPDATE bookings
+        SET
+            assign_to = ?,
+            assign_message = ?,
+            updated_by = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE booking_id = ?
+    """;
+
+        int updatedRows = jdbcTemplate.update(
+                sql,
+                unassignBookingRequest.getAssignTo(),
+                unassignBookingRequest.getAssignMessage(),
+                userId,
+                unassignBookingRequest.getBookingId()
+        );
+
+        if (updatedRows == 0) {
+            throw new RuntimeException("Booking not found");
+        }
+    }
+
+    private LocalDate getLocalDate(ResultSet rs, String column) throws SQLException {
+        Date date = rs.getDate(column);
+        return date != null ? date.toLocalDate() : null;
+    }
+
+    private void appendFilters(StringBuilder sql,
+                               List<Object> params,
+                               UnassignBookingDataRequest request) {
+
+        if (StringUtils.hasText(request.getBookingReference())) {
+            sql.append(" AND b.booking_reference LIKE ?");
+            params.add("%" + request.getBookingReference() + "%");
+        }
+
+        if (StringUtils.hasText(request.getCustomerName())) {
+            sql.append("""
+            AND CONCAT(
+                COALESCE(u.first_name,''),' ',
+                COALESCE(u.last_name,'')
+            ) LIKE ?
+        """);
+            params.add("%" + request.getCustomerName() + "%");
+        }
+
+        if (request.getBookingStatusId() != null) {
+            sql.append(" AND b.booking_status_id = ?");
+            params.add(request.getBookingStatusId());
+        }
+
+        if (request.getTourId() != null) {
+            sql.append(" AND b.tour_id = ?");
+            params.add(request.getTourId());
+        }
+
+        if (request.getPackageId() != null) {
+            sql.append(" AND b.package_id = ?");
+            params.add(request.getPackageId());
+        }
+
+        if (request.getPackageScheduleId() != null) {
+            sql.append(" AND b.package_schedule_id = ?");
+            params.add(request.getPackageScheduleId());
+        }
+
+        if (request.getAssignTo() != null) {
+            sql.append(" AND b.assign_to = ?");
+            params.add(request.getAssignTo());
+        }
+
+        if (StringUtils.hasText(request.getEmail())) {
+            sql.append(" AND u.email LIKE ?");
+            params.add("%" + request.getEmail() + "%");
+        }
+
+        if (StringUtils.hasText(request.getMobileNumber())) {
+            sql.append(" AND u.mobile_number1 LIKE ?");
+            params.add("%" + request.getMobileNumber() + "%");
+        }
+
+        if (request.getBookingDateFrom() != null) {
+            sql.append(" AND b.booking_date >= ?");
+            params.add(request.getBookingDateFrom());
+        }
+
+        if (request.getBookingDateTo() != null) {
+            sql.append(" AND b.booking_date <= ?");
+            params.add(request.getBookingDateTo());
+        }
+
+        if (request.getTravelStartDateFrom() != null) {
+            sql.append(" AND b.travel_start_date >= ?");
+            params.add(request.getTravelStartDateFrom());
+        }
+
+        if (request.getTravelStartDateTo() != null) {
+            sql.append(" AND b.travel_start_date <= ?");
+            params.add(request.getTravelStartDateTo());
+        }
+    }
 
     private List<BookingsRequestParamsResponse.IdAndName>
     getBookingParamStatuses() {

@@ -738,6 +738,50 @@ public class CommonRepositoryImpl implements CommonRepository {
     }
 
     @Override
+    public List<BookingStatusIdAndNameResponse> getBookingStatusesIdAndNameResponses() {
+
+        try {
+
+            return jdbcTemplate.query(
+                    CommonQueries.GET_BOOKING_STATUS_ID_AND_NAME,
+                    (rs, rowNum) -> BookingStatusIdAndNameResponse.builder()
+                            .bookingStatusId(rs.getLong("id"))
+                            .bookingStatusName(rs.getString("name"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching booking statuses.", ex);
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Failed to retrieve booking statuses.");
+        }
+    }
+
+    @Override
+    public List<EmployeeIdAndNameResponse> getTourAssignUserIdAndNameResponses() {
+
+        try {
+
+            return jdbcTemplate.query(
+                    CommonQueries.GET_TOUR_ASSIGN_USER_ID_AND_NAME,
+                    (rs, rowNum) -> EmployeeIdAndNameResponse.builder()
+                            .employeeId(rs.getLong("id"))
+                            .employeeName(rs.getString("name"))
+                            .build()
+            );
+
+        } catch (Exception ex) {
+
+            LOGGER.error("Error fetching assigned users.", ex);
+
+            throw new InternalServerErrorExceptionHandler(
+                    "Failed to retrieve assigned users.");
+        }
+    }
+
+    @Override
     public List<DestinationIdAndNameResponse> getDestinationIdAndNameResponses() {
 
         try {

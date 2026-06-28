@@ -3,13 +3,26 @@ package com.felicita.repository;
 import com.felicita.model.dto.*;
 import com.felicita.model.request.BookingCancelledRequest;
 import com.felicita.model.request.BookingRequest;
+import com.felicita.model.request.CommonIdRequest;
 import com.felicita.model.request.TourBookingInquiryRequest;
 import com.felicita.model.request.bookings.BookingDataRequest;
 import com.felicita.model.request.bookings.InsertBookingRequest;
+import com.felicita.model.request.bookings.UpdateBookingRequest;
+import com.felicita.model.request.bookings.UpdateBookingStatusRequest;
+import com.felicita.model.request.bookings.status.InsertBookingsStatusesRequest;
+import com.felicita.model.request.bookings.status.UpdateBookingsStatusesRequest;
+import com.felicita.model.request.bookings.unassign.AssignBookingRequest;
+import com.felicita.model.request.bookings.unassign.UnassignBookingDataRequest;
+import com.felicita.model.request.bookings.unassign.UnassignBookingRequest;
 import com.felicita.model.response.*;
 import com.felicita.model.response.bookings.BookingAllDetailsResponse;
+import com.felicita.model.response.bookings.BookingBillResponse;
 import com.felicita.model.response.bookings.BookingsBasicDetails;
 import com.felicita.model.response.bookings.BookingsRequestParamsResponse;
+import com.felicita.model.response.bookings.status.BookingStatusBasicDetailsResponse;
+import com.felicita.model.response.bookings.status.BookingStatusDetailsResponse;
+import com.felicita.model.response.bookings.unassign.UnassignBookingBasicDetailsResponse;
+import com.felicita.model.response.common.BookingIdAndReferenceResponse;
 import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
 import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
 import com.felicita.model.response.statistics.BookingStatisticsResponse;
@@ -117,7 +130,6 @@ public interface BookingRepository {
 
     List<BookingHistoryStatisticsResponse.PeakBookingPeriod> getPeakBookingPeriodsStatistics();
 
-
     List<BookingsBasicDetails> getBookingBasicDetailsForParams(BookingDataRequest bookingDataRequest);
 
     Integer getBookingCountForParams(BookingDataRequest bookingDataRequest);
@@ -164,5 +176,103 @@ public interface BookingRepository {
 
     void addPriceBreakdownToBooking(Long bookingId, List<InsertBookingRequest.BookingPriceBreakDown> priceBreakDowns, Long userId);
 
-    void addBookingInvoiceToBooking(Long bookingId, InsertBookingRequest.BookingInvoice bookingInvoice, Long userId);
+    void addBookingInvoiceToBooking(Long bookingId,String invoiceReference, InsertBookingRequest.BookingInvoice bookingInvoice, Long userId);
+
+    void addItinerariesToBooking(Long bookingId, List<InsertBookingRequest.BookingItinerary> bookingItineraries, Long userId);
+
+    List<BookingAllDetailsResponse.BookingDocuments> getBookingDocumentsByBookingId(Long bookingId);
+
+    BookingAllDetailsResponse.BookingInsurance getBookingInsuranceByBookingId(Long bookingId);
+
+    List<BookingAllDetailsResponse.BookingItinerary> getBookingItineraryByBookingId(Long bookingId);
+
+    List<BookingAllDetailsResponse.BookingNote> getBookingNoteByBookingId(Long bookingId);
+
+    List<BookingAllDetailsResponse.BookingPriceBreakDown> getBookingPriceBreakDownByBookingId(Long bookingId);
+
+    BookingAllDetailsResponse.BookingInvoice getBookingInvoiceByBookingId(Long bookingId);
+
+    void updateBookingBasicInformation(UpdateBookingRequest updateBookingRequest, Long userId);
+
+    void removeParticipantsFromBooking(Long bookingId, List<Long> removeParticipants, Long userId);
+
+    void updateParticipantsOfBooking(Long bookingId, List<UpdateBookingRequest.UpdateParticipant> updateParticipants, Long userId);
+
+    void removeAccommodationsFromBooking(Long bookingId, List<Long> removeAccommodations, Long userId);
+
+    void updateAccommodationsOfBooking(Long bookingId, List<UpdateBookingRequest.UpdateAccommodation> updateAccommodations, Long userId);
+
+    void removeTransportationsFromBooking(Long bookingId, List<Long> removeTransportations, Long userId);
+
+    void updateTransportationsOfBooking(Long bookingId, List<UpdateBookingRequest.UpdateTransportation> updateTransportations, Long userId);
+
+    void removeActivitiesFromBooking(Long bookingId, List<Long> removeActivities, Long userId);
+
+    void updateActivitiesOfBooking(Long bookingId, List<UpdateBookingRequest.UpdateActivity> updateActivities, Long userId);
+
+    void removeDocumentsFromBooking(Long bookingId, List<Long> removeDocuments, Long userId);
+
+    void updateDocumentsOfBooking(Long bookingId, List<UpdateBookingRequest.UpdateBookingDocuments> updateDocuments, Long userId);
+
+    void updateInsuranceOfBooking(Long bookingId, UpdateBookingRequest.UpdateBookingInsurance updateBookingInsurance, Long userId);
+
+    void removeInsuranceFromBooking(Long bookingId, Long removeBookingInsurance, Long userId);
+
+    void removeItinerariesFromBooking(Long bookingId, List<Long> removeBookingItineraries, Long userId);
+
+    void updateItinerariesOfBooking(Long bookingId, List<UpdateBookingRequest.UpdateBookingItinerary> updateBookingItineraries, Long userId);
+
+    void removeNotesFromBooking(Long bookingId, List<Long> removeBookingNotes, Long userId);
+
+    void updateNotesOfBooking(Long bookingId, List<UpdateBookingRequest.UpdateBookingNote> updateBookingNotes, Long userId);
+
+    void removePriceBreakdownFromBooking(Long bookingId, List<Long> removePriceBreakDowns, Long userId);
+
+    void updatePriceBreakdownOfBooking(Long bookingId, List<UpdateBookingRequest.UpdateBookingPriceBreakDown> updatePriceBreakDowns, Long userId);
+
+    void updateBookingInvoiceOfBooking(Long bookingId, UpdateBookingRequest.UpdateBookingInvoice updateBookingInvoice, Long userId);
+
+    void removeBookingInvoiceFromBooking(Long bookingId, Long removeBookingInvoice, Long userId);
+
+    BookingsBasicDetails getBookingBasicDetails(CommonIdRequest bookingId);
+
+    void updateBookingStatus(UpdateBookingStatusRequest updateBookingStatusRequest, Long userId);
+
+    List<BookingStatusBasicDetailsResponse> getBookingsStatuses();
+
+    BookingStatusBasicDetailsResponse getBookingsStatusesBasicDetailsById(CommonIdRequest bookingId);
+
+    BookingStatusDetailsResponse getBookingsStatusesAllDetailsById(CommonIdRequest bookingId);
+
+    Long createBookingsStatuses(InsertBookingsStatusesRequest insertBookingsStatusesRequest, Long userId);
+
+    void updateBookingsStatuses(UpdateBookingsStatusesRequest updateBookingsStatusesRequest, Long userId);
+
+    void terminateBookingsStatuses(CommonIdRequest commonIdRequest, Long userId);
+
+    BookingBillResponse.BookingBasicInfo getBookingBasicInfoForBill(Long id);
+
+    BookingBillResponse.Customer getCustomerForBill(Long id);
+
+    BookingBillResponse.TourDetails getTourDetailsForBill(Long id);
+
+    BookingBillResponse.PackageDetails getPackageDetailsForBill(Long id);
+
+    List<BookingBillResponse.Participant> getParticipantsForBill(Long id);
+
+    List<BookingBillResponse.PriceItem> getPriceBreakdownForBill(Long id);
+
+    BookingBillResponse.BillingSummary getBillingSummaryForBill(Long id);
+
+    List<BookingIdAndReferenceResponse> getBookingIdAndReferences(String assignStatus);
+
+    List<UnassignBookingBasicDetailsResponse> getUnassignBookingBasicDetails(UnassignBookingDataRequest unassignBookingDataRequest);
+
+    Integer getUnassignBookingBasicDetailsCount(UnassignBookingDataRequest unassignBookingDataRequest);
+
+    List<String> getUnassignBookingReferences();
+
+    void updateUnassignBookingToAssign(AssignBookingRequest assignBookingRequest, Long userId);
+
+    void updateUnassignBooking(UnassignBookingRequest unassignBookingRequest, Long userId);
 }

@@ -210,4 +210,22 @@ public class CommonQueries {
         FROM seasons
         ORDER BY name ASC
         """;
+
+    public static final String GET_BOOKING_STATUS_ID_AND_NAME = """
+    SELECT
+        id,
+        name
+    FROM booking_status
+    ORDER BY name
+    """;
+
+    public static final String GET_TOUR_ASSIGN_USER_ID_AND_NAME = """
+    SELECT
+        e.id AS id,
+        u.username AS name
+    FROM employees e
+    INNER JOIN user u ON e.user_id = u.user_id
+    """;
+
+
 }

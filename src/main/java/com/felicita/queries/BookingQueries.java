@@ -2325,10 +2325,11 @@ public class BookingQueries {
         special_assistance_required,
         assistance_details,
         room_sharing_with,
+        status_id,
         created_by
     )
     VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
     )
     """;
 
@@ -2341,15 +2342,17 @@ public class BookingQueries {
         room_type,
         room_number,
         confirmation_number,
+        status_id,
         created_by
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """;
 
     public static final String ADD_BOOKING_TRANSPORTATION = """
     INSERT INTO booking_transportation (
         booking_id,
         transport_type,
+        vehicle_id,
         departure_date,
         departure_time,
         arrival_date,
@@ -2359,9 +2362,10 @@ public class BookingQueries {
         carrier_name,
         reference_number,
         seat_numbers,
+        status_id,
         created_by
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """;
 
     public static final String ADD_BOOKING_ACTIVITY = """
@@ -2405,9 +2409,10 @@ public class BookingQueries {
         coverage_details,
         policy_start_date,
         policy_end_date,
+        status_id,
         created_by
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """;
 
     public static final String ADD_BOOKING_NOTE = """
@@ -2418,9 +2423,10 @@ public class BookingQueries {
         is_important,
         follow_up_date,
         follow_up_completed,
+        status_id,
         created_by
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """;
 
     public static final String ADD_BOOKING_PRICE_BREAKDOWN = """
@@ -2432,9 +2438,10 @@ public class BookingQueries {
         quantity,
         unit_price,
         total_price,
+        status_id,
         created_by
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """;
 
     public static final String ADD_BOOKING_INVOICE = """
@@ -2460,6 +2467,508 @@ public class BookingQueries {
     VALUES (
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
     )
+    """;
+
+    public static final String ADD_BOOKING_ITINERARY = """
+    INSERT INTO booking_itinerary (
+        booking_id,
+        day_number,
+        itinerary_date,
+        title,
+        description,
+        start_time,
+        end_time,
+        location,
+        included_meals,
+        status_id,
+        created_by,
+        updated_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+// ======================================================
+// BOOKINGS
+// ======================================================
+
+    public static final String UPDATE_BOOKING_BASIC_INFORMATION = """
+        UPDATE bookings
+        SET user_id = ?,
+            tour_id = ?,
+            package_id = ?,
+            package_schedule_id = ?,
+            booking_date = ?,
+            travel_start_date = ?,
+            travel_end_date = ?,
+            total_persons = ?,
+            total_amount = ?,
+            discount_amount = ?,
+            tax_amount = ?,
+            insurance_amount = ?,
+            final_amount = ?,
+            insurance_required = ?,
+            booking_status_id = ?,
+            special_requirements = ?,
+            dietary_restrictions = ?,
+            assign_to = ?,
+            assign_message = ?,
+            updated_by = ?
+        WHERE booking_id = ?
+        """;
+
+
+// ======================================================
+// PARTICIPANTS
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_PARTICIPANT = """
+        UPDATE booking_participants
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_PARTICIPANT = """
+        UPDATE booking_participants
+        SET first_name = ?,
+            last_name = ?,
+            date_of_birth = ?,
+            gender_id = ?,
+            passport_number = ?,
+            nationality_country_id = ?,
+            email = ?,
+            mobile_number = ?,
+            emergency_contact_name = ?,
+            emergency_contact_phone = ?,
+            emergency_contact_relationship = ?,
+            medical_conditions = ?,
+            allergies = ?,
+            special_assistance_required = ?,
+            assistance_details = ?,
+            room_sharing_with = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// ACCOMMODATIONS
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_ACCOMMODATION = """
+        UPDATE booking_accommodation
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_ACCOMMODATION = """
+        UPDATE booking_accommodation
+        SET check_in_date = ?,
+            check_out_date = ?,
+            hotel_id = ?,
+            room_type = ?,
+            room_number = ?,
+            confirmation_number = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// TRANSPORTATIONS
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_TRANSPORTATION = """
+        UPDATE booking_transportation
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_TRANSPORTATION = """
+        UPDATE booking_transportation
+        SET transport_type = ?,
+            vehicle_id = ?,
+            departure_date = ?,
+            departure_time = ?,
+            arrival_date = ?,
+            arrival_time = ?,
+            departure_location = ?,
+            arrival_location = ?,
+            carrier_name = ?,
+            reference_number = ?,
+            seat_numbers = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// ACTIVITIES
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_ACTIVITY = """
+        UPDATE booking_activities
+        SET status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_ACTIVITY = """
+        UPDATE booking_activities
+        SET activity_id = ?,
+            activity_schedule_id = ?,
+            activity_date = ?,
+            start_time = ?,
+            end_time = ?,
+            number_of_participants = ?,
+            price_per_person = ?,
+            total_price = ?,
+            status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// DOCUMENTS
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_DOCUMENT = """
+        UPDATE booking_documents
+        SET status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_DOCUMENT = """
+        UPDATE booking_documents
+        SET document_name = ?,
+            document_type = ?,
+            document_url = ?,
+            file_size = ?,
+            mime_type = ?,
+            status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// INSURANCE
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_INSURANCE = """
+        UPDATE booking_insurance
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_INSURANCE = """
+        UPDATE booking_insurance
+        SET insurance_provider = ?,
+            policy_number = ?,
+            coverage_type = ?,
+            premium_amount = ?,
+            coverage_details = ?,
+            policy_start_date = ?,
+            policy_end_date = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// ITINERARY
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_ITINERARY = """
+        UPDATE booking_itinerary
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_ITINERARY = """
+        UPDATE booking_itinerary
+        SET day_number = ?,
+            itinerary_date = ?,
+            title = ?,
+            description = ?,
+            start_time = ?,
+            end_time = ?,
+            location = ?,
+            included_meals = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// NOTES
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_NOTE = """
+        UPDATE booking_notes
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_NOTE = """
+        UPDATE booking_notes
+        SET note_type = ?,
+            note_text = ?,
+            is_important = ?,
+            follow_up_date = ?,
+            follow_up_completed = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// PRICE BREAKDOWN
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_PRICE_BREAKDOWN = """
+        UPDATE booking_price_breakdown
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_PRICE_BREAKDOWN = """
+        UPDATE booking_price_breakdown
+        SET item_type = ?,
+            item_name = ?,
+            item_description = ?,
+            quantity = ?,
+            unit_price = ?,
+            total_price = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// INVOICE
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_INVOICE = """
+        UPDATE booking_invoices
+        SET status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_INVOICE = """
+        UPDATE booking_invoices
+        SET due_date = ?,
+            subtotal = ?,
+            tax_amount = ?,
+            total_amount = ?,
+            discount_amount = ?,
+            insurance_amount = ?,
+            amount_paid = ?,
+            balance_due = ?,
+            billing_full_name = ?,
+            billing_address = ?,
+            billing_email = ?,
+            billing_phone = ?,
+            status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String GET_BOOKING_BASIC_DETAILS_FOR_BOOKING_ID = """
+        SELECT
+            b.booking_id,
+            b.booking_reference,
+            b.booking_date,
+            b.travel_start_date,
+            b.travel_end_date,
+            b.total_persons,
+            b.total_amount,
+            b.discount_amount,
+            b.tax_amount,
+            b.insurance_amount,
+            b.final_amount,
+            b.insurance_required,
+            b.assign_to,
+            b.assign_message,
+            DATE(b.cancellation_date) AS cancellation_date,
+            b.refund_amount,
+            b.special_requirements,
+            b.dietary_restrictions,
+
+            u.user_id,
+            u.username,
+            CONCAT(
+                COALESCE(u.first_name, ''),
+                ' ',
+                COALESCE(u.last_name, '')
+            ) AS customer_name,
+            u.email,
+            u.mobile_number1,
+
+            t.tour_id,
+            t.name AS tour_name,
+            t.duration AS tour_duration,
+            t.start_location,
+            t.end_location,
+
+            p.package_id,
+            p.name AS package_name,
+
+            bs.id AS booking_status_id,
+            bs.name AS booking_status_name,
+
+            au.user_id AS assigned_employee_id,
+            CONCAT(
+                COALESCE(au.first_name, ''),
+                ' ',
+                COALESCE(au.last_name, '')
+            ) AS assigned_employee_name
+
+        FROM bookings b
+        LEFT JOIN user u
+            ON b.user_id = u.user_id
+        LEFT JOIN tour t
+            ON b.tour_id = t.tour_id
+        LEFT JOIN packages p
+            ON b.package_id = p.package_id
+        LEFT JOIN booking_status bs
+            ON b.booking_status_id = bs.id
+        LEFT JOIN employees e
+            ON b.assign_to = e.id
+        LEFT JOIN user au
+            ON e.user_id = au.user_id
+        WHERE b.booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_STATUS = """
+        UPDATE bookings
+        SET booking_status_id = ?,
+            updated_by = ?
+        WHERE booking_id = ?
+        """;
+
+    public static final String GET_UNASSIGN_BOOKING_BASIC_DETAILS =
+            """
+            SELECT
+                b.booking_id,
+                b.booking_reference,
+                b.booking_date,
+                b.travel_start_date,
+                b.travel_end_date,
+                b.total_persons,
+    
+                u.user_id,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.mobile_number1,
+                u.nic,
+                u.passport_number,
+    
+                t.tour_id,
+                t.name AS tour_name,
+                t.description,
+                t.duration,
+                t.start_location,
+                t.end_location,
+    
+                p.package_id,
+                p.name AS package_name,
+                p.total_price,
+                p.price_per_person,
+                p.min_person_count,
+                p.max_person_count,
+    
+                ps.id AS package_schedule_id,
+                ps.name AS schedule_name,
+                ps.assume_start_date,
+                ps.assume_end_date,
+    
+                b.total_amount,
+                b.discount_amount,
+                b.tax_amount,
+                b.insurance_amount,
+                b.final_amount,
+                b.paid_amount,
+                b.due_amount,
+    
+                e.id AS assign_to,
+                u2.username AS assigned_user,
+                b.assign_message,
+    
+                bs.id AS booking_status_id,
+                bs.name AS booking_status
+    
+            FROM bookings b
+            LEFT JOIN user u ON u.user_id = b.user_id
+            LEFT JOIN tour t ON t.tour_id = b.tour_id
+            LEFT JOIN packages p ON p.package_id = b.package_id
+            LEFT JOIN package_schedule ps ON ps.id = b.package_schedule_id
+            LEFT JOIN booking_status bs ON bs.id = b.booking_status_id
+            LEFT JOIN employees e ON e.id = b.assign_to
+            LEFT JOIN user u2 ON e.user_id = u2.user_id
+            WHERE 1=1
+            """;
+
+    public static final String COUNT_UNASSIGN_BOOKING_BASIC_DETAILS =
+            """
+            SELECT COUNT(*)
+            FROM bookings b
+            LEFT JOIN user u ON u.user_id = b.user_id
+            LEFT JOIN tour t ON t.tour_id = b.tour_id
+            LEFT JOIN packages p ON p.package_id = b.package_id
+            LEFT JOIN package_schedule ps ON ps.id = b.package_schedule_id
+            LEFT JOIN booking_status bs ON bs.id = b.booking_status_id
+            WHERE 1=1
+            """;
+
+    public static final String GET_UNASSIGN_BOOKING_REFERENCES = """
+    SELECT DISTINCT
+        booking_reference
+    FROM bookings
+    ORDER BY booking_reference
     """;
 
 }

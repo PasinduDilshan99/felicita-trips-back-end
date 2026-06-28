@@ -23,4 +23,5 @@ public class FrontEndUrls {
     public static final String VIEW_EMPLOYEE_DETAILS = "/employee-management/employees/view";
 
     public static final String VIEW_BOOKING_DETAILS = "/booking-management/bookings/view";
+    public static final String VIEW_BOOKING_STATUS_DETAILS = "/booking-management/booking-status/view";
 }
