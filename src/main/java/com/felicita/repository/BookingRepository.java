@@ -300,4 +300,5 @@ public interface BookingRepository {
     void addRecordForBookingStatusHistory(BookingStatusHistoryInsertRequest bookingStatusHistoryInsertRequest, Long userId);
 
 
+    Long getBookingStatusIdByBookingStatusName(String bookingStatus);
 }

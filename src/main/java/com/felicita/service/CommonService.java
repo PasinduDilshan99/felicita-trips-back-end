@@ -68,4 +68,24 @@ public interface CommonService {
     List<BookingStatusIdAndNameResponse> getBookingStatusesIdAndNameResponses();
 
     List<EmployeeIdAndNameResponse> getTourAssignUserIdAndNameResponses();
+
+    List<IdAndNameResponse> getCustomerIdAndNameResponses();
+
+    List<IdAndNameResponse> getPacakgeIdAndNameResponsesByTourId(Long id);
+
+    List<PackageIdScheduleIdAndScheduleNameResponse> getPacakgeScheduleIdAndNameResponsesByTourId(Long id);
+
+    List<IdAndNameResponse> getGenderIdAndNameResponses();
+
+    List<IdAndNameResponse> getCountryIdAndNameResponses();
+
+    List<IdAndNameResponse> getStatusIdAndNameResponses();
+
+    List<IdAndNameResponse> getHotelIdAndNameResponses();
+
+    List<IdAndNameResponse> getVehicleIdAndRegisterNumberResponses();
+
+    List<IdAndNameResponse> getActivityIdAndNameResponsesByTourId(Long id);
+
+    List<ActivityIdScheduleIdAndScheduleNameResponse> getActivityScheduleIdAndNameResponsesByTourId(Long id);
 }

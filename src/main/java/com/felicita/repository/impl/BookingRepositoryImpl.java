@@ -2802,7 +2802,8 @@ public class BookingRepositoryImpl implements BookingRepository {
                             """)
                     .append(sortBy)
                     .append(" ")
-                    .append(sortDirection);
+                    .append(sortDirection)
+                    .append(" ");
 
             if (request.getPageSize() != null
                     && request.getPageNumber() != null) {
@@ -5689,7 +5690,8 @@ public class BookingRepositoryImpl implements BookingRepository {
                         e_user.first_name AS employee_first_name,
                         e_user.last_name AS employee_last_name
                 
-                    FROM bookings b
+                    FROM booking_activity_history bah
+                    LEFT JOIN bookings b ON bah.booking_id = b.booking_id
                     LEFT JOIN booking_status bs ON b.booking_status_id = bs.id
                     LEFT JOIN tour t ON b.tour_id = t.tour_id
                     LEFT JOIN packages p ON b.package_id = p.package_id
@@ -5754,7 +5756,7 @@ public class BookingRepositoryImpl implements BookingRepository {
 
         // pagination
         int pageSize = req.getPageSize() != null ? req.getPageSize() : 10;
-        int pageNumber = req.getPageNumber() != null ? req.getPageNumber() : 0;
+        int pageNumber = req.getPageNumber() != null ? req.getPageNumber() - 1 : 0;
 
         int offset = pageNumber * pageSize;
 
@@ -5772,9 +5774,9 @@ public class BookingRepositoryImpl implements BookingRepository {
                         .tourName(rs.getString("tour_name"))
                         .packageName(rs.getString("package_name"))
                         .totalPersons(rs.getInt("total_persons"))
-                        .bookingDate(rs.getDate("booking_date").toLocalDate())
-                        .travelStartDate(rs.getDate("travel_start_date").toLocalDate())
-                        .travelEndDate(rs.getDate("travel_end_date").toLocalDate())
+                        .bookingDate(getLocalDate(rs, "booking_date"))
+                        .travelStartDate(getLocalDate(rs, "travel_start_date"))
+                        .travelEndDate(getLocalDate(rs, "travel_end_date"))
                         .finalAmount(rs.getBigDecimal("final_amount"))
                         .paidAmount(rs.getBigDecimal("paid_amount"))
                         .dueAmount(rs.getBigDecimal("due_amount"))
@@ -5793,7 +5795,8 @@ public class BookingRepositoryImpl implements BookingRepository {
 
         StringBuilder sql = new StringBuilder("""
                     SELECT COUNT(*)
-                    FROM bookings b
+                    FROM booking_activity_history bah
+                    LEFT JOIN bookings b ON bah.booking_id = b.booking_id
                     WHERE 1=1
                 """);
 
@@ -5974,10 +5977,10 @@ public class BookingRepositoryImpl implements BookingRepository {
             Long userId) {
 
         String sql = """
-        INSERT INTO booking_activity_history
-        (booking_id, activity_type, description, updated_at, updated_by)
-        VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
-    """;
+                    INSERT INTO booking_activity_history
+                    (booking_id, activity_type, description, updated_at, updated_by)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+                """;
 
         jdbcTemplate.update(
                 sql,
@@ -5994,10 +5997,10 @@ public class BookingRepositoryImpl implements BookingRepository {
             Long userId) {
 
         String sql = """
-        INSERT INTO booking_assign_history
-        (booking_id, previous_assign_employee, new_assign_employee, updated_at, updated_by)
-        VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
-    """;
+                    INSERT INTO booking_assign_history
+                    (booking_id, previous_assign_employee, new_assign_employee, updated_at, updated_by)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+                """;
 
         jdbcTemplate.update(
                 sql,
@@ -6014,20 +6017,20 @@ public class BookingRepositoryImpl implements BookingRepository {
             Long userId) {
 
         String sql = """
-        INSERT INTO booking_payment_history
-        (booking_id,
-         previous_paid_amount,
-         new_paid_amount,
-         previous_due_amount,
-         new_due_amount,
-         previous_refund_amount,
-         new_refund_amount,
-         payment_reference,
-         remarks,
-         updated_at,
-         updated_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
-    """;
+                    INSERT INTO booking_payment_history
+                    (booking_id,
+                     previous_paid_amount,
+                     new_paid_amount,
+                     previous_due_amount,
+                     new_due_amount,
+                     previous_refund_amount,
+                     new_refund_amount,
+                     payment_reference,
+                     remarks,
+                     updated_at,
+                     updated_by)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
+                """;
 
         jdbcTemplate.update(
                 sql,
@@ -6050,10 +6053,10 @@ public class BookingRepositoryImpl implements BookingRepository {
             Long userId) {
 
         String sql = """
-        INSERT INTO booking_status_history
-        (booking_id, previous_status_id, new_status_id, updated_at, updated_by)
-        VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
-    """;
+                    INSERT INTO booking_status_history
+                    (booking_id, previous_status_id, new_status_id, updated_at, updated_by)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+                """;
 
         jdbcTemplate.update(
                 sql,
@@ -6062,6 +6065,23 @@ public class BookingRepositoryImpl implements BookingRepository {
                 req.getNewStatus(),
                 userId
         );
+    }
+
+    @Override
+    public Long getBookingStatusIdByBookingStatusName(String bookingStatus) {
+
+        String sql = """
+                    SELECT id
+                    FROM booking_status
+                    WHERE name = ?
+                    LIMIT 1
+                """;
+
+        try {
+            return jdbcTemplate.queryForObject(sql, Long.class, bookingStatus);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private LocalDate getLocalDate(ResultSet rs, String column) throws SQLException {

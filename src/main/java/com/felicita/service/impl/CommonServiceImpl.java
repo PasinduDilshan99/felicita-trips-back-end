@@ -360,6 +360,236 @@ public class CommonServiceImpl implements CommonService {
     }
 
     @Override
+    public List<IdAndNameResponse> getCustomerIdAndNameResponses() {
+        LOGGER.info("Start fetching customer id and name responses");
+        try {
+            List<IdAndNameResponse> responses = commonRepository.getCustomerIdAndNameResponses();
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching customer id and name responses");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getPacakgeIdAndNameResponsesByTourId(Long id) {
+        LOGGER.info("Start fetching package id and name responses by tour id");
+        try {
+            List<IdAndNameResponse> responses = commonRepository.getPacakgeIdAndNameResponsesByTourId(id);
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching package id and name responses by tour id");
+        }
+    }
+
+    @Override
+    public List<PackageIdScheduleIdAndScheduleNameResponse> getPacakgeScheduleIdAndNameResponsesByTourId(Long id) {
+        LOGGER.info("Start fetching package schedule id and name responses by tour id");
+        try {
+            List<PackageIdScheduleIdAndScheduleNameResponse> responses = commonRepository.getPacakgeScheduleIdAndNameResponsesByTourId(id);
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching package schedule id and name responses by tour id");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getGenderIdAndNameResponses() {
+        LOGGER.info("Start fetching gender id and name responses");
+        try {
+            List<IdAndNameResponse> responses = commonRepository.getGenderIdAndNameResponses();
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching gender id and name responses");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getCountryIdAndNameResponses() {
+        LOGGER.info("Start fetching country id and name responses");
+        try {
+            List<IdAndNameResponse> responses = commonRepository.getCountryIdAndNameResponses();
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching country id and name responses");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getStatusIdAndNameResponses() {
+        LOGGER.info("Start fetching status id and name responses");
+        try {
+            List<IdAndNameResponse> responses = commonRepository.getStatusIdAndNameResponses();
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching status id and name responses");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getHotelIdAndNameResponses() {
+        LOGGER.info("Start fetching hotel id and name responses");
+        try {
+            List<IdAndNameResponse> responses = commonRepository.getHotelIdAndNameResponses();
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching hotel id and name responses");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getVehicleIdAndRegisterNumberResponses() {
+        LOGGER.info("Start fetching vehicle id and register number responses");
+        try {
+            List<IdAndNameResponse> responses = commonRepository.getVehicleIdAndRegisterNumberResponses();
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching vehicle id and register number responses");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getActivityIdAndNameResponsesByTourId(Long id) {
+        LOGGER.info("Start fetching activity id and name responses by tour id");
+        try {
+            List<IdAndNameResponse> responses = commonRepository.getActivityIdAndNameResponsesByTourId(id);
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching activity id and name responses by tour id");
+        }
+    }
+
+    @Override
+    public List<ActivityIdScheduleIdAndScheduleNameResponse> getActivityScheduleIdAndNameResponsesByTourId(Long id) {
+        LOGGER.info("Start fetching activity schedule id and name responses by tour id");
+        try {
+            List<ActivityIdScheduleIdAndScheduleNameResponse> responses = commonRepository.getActivityScheduleIdAndNameResponsesByTourId(id);
+
+            if (responses == null || responses.isEmpty()) {
+                return List.of();
+            }
+
+            return responses;
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } catch (Exception e) {
+            LOGGER.error(e.toString());
+            return List.of();
+        } finally {
+            LOGGER.info("End fetching activity schedule id and name responses by tour id");
+        }
+    }
+
+    @Override
     public String generateRandomOtp() {
         SecureRandom secureRandom = new SecureRandom();
         StringBuilder otp = new StringBuilder();

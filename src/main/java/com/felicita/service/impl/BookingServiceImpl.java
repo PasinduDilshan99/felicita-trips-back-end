@@ -14,7 +14,7 @@ import com.felicita.model.request.bookings.BookingDataRequest;
 import com.felicita.model.request.bookings.InsertBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingRequest;
 import com.felicita.model.request.bookings.UpdateBookingStatusRequest;
-import com.felicita.model.request.bookings.history.BookingHistoryDataRequest;
+import com.felicita.model.request.bookings.history.*;
 import com.felicita.model.request.bookings.status.InsertBookingsStatusesRequest;
 import com.felicita.model.request.bookings.status.UpdateBookingsStatusesRequest;
 import com.felicita.model.request.bookings.unassign.AssignBookingRequest;
@@ -32,6 +32,7 @@ import com.felicita.model.response.bookings.unassign.UnassignBookingBasicDetails
 import com.felicita.model.response.bookings.unassign.UnassignBookingWithParamsResponse;
 import com.felicita.model.response.bookings.unassign.UnassignBookingsRequestParamsResponse;
 import com.felicita.model.response.common.BookingIdAndReferenceResponse;
+import com.felicita.model.response.common.BookingStatusIdAndNameResponse;
 import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
 import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
 import com.felicita.model.response.statistics.BookingStatisticsResponse;
@@ -932,15 +933,18 @@ public class BookingServiceImpl implements BookingService {
             String invoiceReference = commonService.createBookingInvoiceReference(bookingId, userId);
             bookingRepository.addBookingInvoiceToBooking(bookingId, invoiceReference, insertBookingRequest.getBookingInvoice(), userId);
 
+            BookingActivityHistoryInsertRequest bookingActivityHistoryInsertRequest = new BookingActivityHistoryInsertRequest(
+                    bookingId,
+                    BookingHistoryManageActivityTypes.CREATE_BOOKING.name(),
+                    "Booking created successfully"
+            );
+            bookingRepository.addRecordForBookingActivityHistory(bookingActivityHistoryInsertRequest, userId);
+
             List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
-            LOGGER.info("Supervisor Details: {}", supervisorDetails);
             List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
-            LOGGER.info("AAA");
             if (!supervisorUserIds.isEmpty()) {
                 supervisorUserIds.add(userId);
             }
-            LOGGER.info("BBB");
-
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("bookingId", bookingId);
             metadata.put("bookingReference", bookingReference);
@@ -1058,6 +1062,29 @@ public class BookingServiceImpl implements BookingService {
             List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
             supervisorUserIds.add(userId);
 
+            if (updateBookingRequest.getAssignTo() != null && !previousBookingDetails.getAssignmentInformation().getEmployeeId().equals(updateBookingRequest.getAssignTo() )){
+                BookingAssignHistoryInsertRequest bookingAssignHistoryInsertRequest = new BookingAssignHistoryInsertRequest(
+                        bookingId,
+                        previousBookingDetails.getAssignmentInformation().getEmployeeId(),
+                        updateBookingRequest.getAssignTo()
+                );
+                bookingRepository.addRecordForBookingAssignHistory(bookingAssignHistoryInsertRequest, userId);
+            }
+            if (updateBookingRequest.getBookingStatusId() != null && !previousBookingDetails.getBookingStatusInformation().getBookingStatusId().equals(updateBookingRequest.getBookingStatusId())){
+                BookingStatusHistoryInsertRequest bookingStatusHistoryInsertRequest = new BookingStatusHistoryInsertRequest(
+                        bookingId,
+                        previousBookingDetails.getBookingStatusInformation().getBookingStatusId(),
+                        updateBookingRequest.getBookingStatusId()
+                );
+                bookingRepository.addRecordForBookingStatusHistory(bookingStatusHistoryInsertRequest, userId);
+            }
+            BookingActivityHistoryInsertRequest bookingActivityHistoryInsertRequest = new BookingActivityHistoryInsertRequest(
+                    bookingId,
+                    BookingHistoryManageActivityTypes.UPDATE_BOOKING.name(),
+                    "Booking Updated successfully"
+            );
+            bookingRepository.addRecordForBookingActivityHistory(bookingActivityHistoryInsertRequest, userId);
+
             NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
                     .notificationType(NotificationType.BOOKING_UPDATED.name())
                     .priority(Priority.MEDIUM.name())
@@ -1124,6 +1151,20 @@ public class BookingServiceImpl implements BookingService {
             BookingAllDetailsResponse bookingDetails = getBookingAllDetailsById(commonIdRequest).getData();
 
             bookingRepository.updateBookingStatus(new UpdateBookingStatusRequest(bookingId, BookingStatus.CANCELLED.name()), userId);
+
+            BookingStatusHistoryInsertRequest bookingStatusHistoryInsertRequest = new BookingStatusHistoryInsertRequest(
+                    bookingId,
+                    bookingDetails.getBookingStatusInformation().getBookingStatusId(),
+                    bookingRepository.getBookingStatusIdByBookingStatusName(BookingStatus.CANCELLED.name())
+            );
+            bookingRepository.addRecordForBookingStatusHistory(bookingStatusHistoryInsertRequest, userId);
+
+            BookingActivityHistoryInsertRequest bookingActivityHistoryInsertRequest = new BookingActivityHistoryInsertRequest(
+                    bookingId,
+                    BookingHistoryManageActivityTypes.CANCELLED_BOOKING.name(),
+                    "Booking Cancelled successfully"
+            );
+            bookingRepository.addRecordForBookingActivityHistory(bookingActivityHistoryInsertRequest, userId);
 
             List<Long> participants = Optional.ofNullable(bookingDetails.getParticipants())
                     .orElse(Collections.emptyList())
@@ -1260,6 +1301,15 @@ public class BookingServiceImpl implements BookingService {
             BookingsBasicDetails bookingsBasicDetails = getBookingBasicDetails(new CommonIdRequest(updateBookingStatusRequest.getBookingId())).getData();
 
             bookingRepository.updateBookingStatus(updateBookingStatusRequest, userId);
+
+            Long bookingStatusId = bookingRepository.getBookingStatusIdByBookingStatusName(updateBookingStatusRequest.getBookingStatus());
+
+            BookingStatusHistoryInsertRequest bookingStatusHistoryInsertRequest = new BookingStatusHistoryInsertRequest(
+                    updateBookingStatusRequest.getBookingId(),
+                    bookingsBasicDetails.getBookingStatusId(),
+                    bookingStatusId
+            );
+            bookingRepository.addRecordForBookingStatusHistory(bookingStatusHistoryInsertRequest, userId);
 
             List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
             List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
@@ -1959,6 +2009,13 @@ public class BookingServiceImpl implements BookingService {
 
             bookingRepository.updateUnassignBookingToAssign(assignBookingRequest, userId);
 
+            BookingActivityHistoryInsertRequest bookingActivityHistoryInsertRequest = new BookingActivityHistoryInsertRequest(
+                    assignBookingRequest.getBookingId(),
+                    BookingHistoryManageActivityTypes.UPDATE_BOOKING.name(),
+                    "Assign Employee To Booking"
+            );
+            bookingRepository.addRecordForBookingActivityHistory(bookingActivityHistoryInsertRequest, userId);
+
             List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
             List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
             supervisorUserIds.add(userId);
@@ -2030,6 +2087,13 @@ public class BookingServiceImpl implements BookingService {
             BookingsBasicDetails bookingsBasicDetails = getBookingBasicDetails(new CommonIdRequest(unassignBookingRequest.getBookingId())).getData();
 
             bookingRepository.updateUnassignBooking(unassignBookingRequest, userId);
+
+            BookingAssignHistoryInsertRequest bookingAssignHistoryInsertRequest = new BookingAssignHistoryInsertRequest(
+                    unassignBookingRequest.getBookingId(),
+                    bookingsBasicDetails.getAssignedEmployeeId(),
+                    unassignBookingRequest.getAssignTo()
+            );
+            bookingRepository.addRecordForBookingAssignHistory(bookingAssignHistoryInsertRequest, userId);
 
             List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
             List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
@@ -2184,6 +2248,120 @@ public class BookingServiceImpl implements BookingService {
             throw new InternalServerErrorExceptionHandler("Failed to fetch booking history details from database");
         } finally {
             LOGGER.info("End fetching booking history details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<BookingCreatingRequestParamsResponse> getCreateBookingParams(CommonIdRequest tourId) {
+        LOGGER.info("Start fetching create booking params from repository");
+        try {
+            BookingCreatingRequestParamsResponse createBookingParams = new BookingCreatingRequestParamsResponse();
+            createBookingParams.setCustomerList(commonService.getCustomerIdAndNameResponses());
+            createBookingParams.setTourList(commonService.getTourIdAndNameResponses());
+            createBookingParams.setPackageList(commonService.getPacakgeIdAndNameResponsesByTourId(tourId.getId()));
+            createBookingParams.setPackageScheduleList(commonService.getPacakgeScheduleIdAndNameResponsesByTourId(tourId.getId()));
+            createBookingParams.setBookingStatuses(commonService.getBookingStatusesIdAndNameResponses());
+            createBookingParams.setAssignEmployeeList(commonService.getTourAssignUserIdAndNameResponses());
+            createBookingParams.setGenders(commonService.getGenderIdAndNameResponses());
+            createBookingParams.setCountries(commonService.getCountryIdAndNameResponses());
+            createBookingParams.setStatusList(commonService.getStatusIdAndNameResponses());
+            createBookingParams.setHotelList(commonService.getHotelIdAndNameResponses());
+            createBookingParams.setRoomTypes(
+                    Arrays.stream(RoomTypes.values())
+                            .map(Enum::name)
+                            .toList()
+            );
+            createBookingParams.setVehicleList(commonService.getVehicleIdAndRegisterNumberResponses());
+            createBookingParams.setTransportTypes(
+                    Arrays.stream(TransportTypes.values())
+                            .map(Enum::name)
+                            .toList()
+            );
+            createBookingParams.setActivityList(commonService.getActivityIdAndNameResponsesByTourId(tourId.getId()));
+            createBookingParams.setActivityScheduleList(commonService.getActivityScheduleIdAndNameResponsesByTourId(tourId.getId()));
+            createBookingParams.setDocumentTypes(
+                    Arrays.stream(DocumentTypes.values())
+                            .map(Enum::name)
+                            .toList()
+            );
+            createBookingParams.setMimeTypes(
+                    Arrays.stream(MimeTypes.values())
+                            .map(Enum::name)
+                            .toList()
+            );
+            createBookingParams.setInsuranceProviders(
+                    Arrays.stream(InsuranceProviders.values())
+                            .map(Enum::name)
+                            .toList()
+            );
+            createBookingParams.setCoverageType(
+                    Arrays.stream(InsuranceCoverageTypes.values())
+                            .map(Enum::name)
+                            .toList()
+            );
+            createBookingParams.setIncludedMeals(
+                    Arrays.stream(MealsTypes.values())
+                            .map(Enum::name)
+                            .toList()
+            );
+            createBookingParams.setNoteTypes(
+                    Arrays.stream(NoteTypes.values())
+                            .map(Enum::name)
+                            .toList()
+            );
+            createBookingParams.setPriceBreakDownType(
+                    Arrays.stream(PriceBreakDownTypes.values())
+                            .map(Enum::name)
+                            .toList()
+            );
+
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    createBookingParams,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching create booking params: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch create booking params from database");
+        } finally {
+            LOGGER.info("End fetching create booking params from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<List<BookingStatusIdAndNameResponse>> getBookingsStatusesIdAndNames() {
+        LOGGER.info("Start fetching booking statuses id and names from repository");
+        try {
+            List<BookingStatusIdAndNameResponse> bookingStatuses = commonService.getBookingStatusesIdAndNameResponses();
+
+            if (bookingStatuses == null || bookingStatuses.isEmpty()) {
+                return new CommonResponse<>(
+                        CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                        CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                        "No booking statuses found",
+                        List.of(),
+                        Instant.now());
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    bookingStatuses,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching booking statuses id and names: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch booking statuses id and names from database");
+        } finally {
+            LOGGER.info("End fetching booking statuses id and names from repository");
         }
     }
 

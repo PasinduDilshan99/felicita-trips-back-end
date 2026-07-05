@@ -524,12 +524,12 @@ public class CommonRepositoryImpl implements CommonRepository {
     public void readNotification(ReadNotificationInsertRequest request, Long userId) {
 
         String sql = """
-        UPDATE notification_recipients
-        SET is_read = 1,
-            read_at = NOW()
-        WHERE notification_id = ?
-          AND user_id = ?
-    """;
+                    UPDATE notification_recipients
+                    SET is_read = 1,
+                        read_at = NOW()
+                    WHERE notification_id = ?
+                      AND user_id = ?
+                """;
 
         jdbcTemplate.update(sql,
                 request.getNotificationId(),
@@ -541,11 +541,11 @@ public class CommonRepositoryImpl implements CommonRepository {
     public UnReadNotificationCountResponse getAllUnReadNotifications(Long userId) {
 
         String sql = """
-        SELECT COUNT(*) 
-        FROM notification_recipients
-        WHERE user_id = ?
-          AND is_read = 0
-    """;
+                    SELECT COUNT(*) 
+                    FROM notification_recipients
+                    WHERE user_id = ?
+                      AND is_read = 0
+                """;
 
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, userId);
 
@@ -558,12 +558,12 @@ public class CommonRepositoryImpl implements CommonRepository {
     public void readAllUnreadNotifications(Long userId) {
 
         String sql = """
-        UPDATE notification_recipients
-        SET is_read = 1,
-            read_at = NOW()
-        WHERE user_id = ?
-          AND is_read = 0
-    """;
+                    UPDATE notification_recipients
+                    SET is_read = 1,
+                        read_at = NOW()
+                    WHERE user_id = ?
+                      AND is_read = 0
+                """;
 
         jdbcTemplate.update(sql, userId);
     }
@@ -582,17 +582,17 @@ public class CommonRepositoryImpl implements CommonRepository {
                 .collect(Collectors.joining(","));
 
         String sql = """
-        SELECT DISTINCT u.email
-        FROM user u
-        INNER JOIN notification_settings ns 
-            ON ns.user_id = u.user_id
-        INNER JOIN notification_types nt 
-            ON nt.id = ns.notification_type_id
-        WHERE nt.name = ?
-          AND ns.is_email_enabled = 1
-          AND u.user_id IN (%s)
-          AND u.email IS NOT NULL
-    """.formatted(inSql);
+                    SELECT DISTINCT u.email
+                    FROM user u
+                    INNER JOIN notification_settings ns 
+                        ON ns.user_id = u.user_id
+                    INNER JOIN notification_types nt 
+                        ON nt.id = ns.notification_type_id
+                    WHERE nt.name = ?
+                      AND ns.is_email_enabled = 1
+                      AND u.user_id IN (%s)
+                      AND u.email IS NOT NULL
+                """.formatted(inSql);
 
         List<Object> params = new ArrayList<>();
         params.add(name);
@@ -605,10 +605,10 @@ public class CommonRepositoryImpl implements CommonRepository {
     public boolean existsByEmployeeCode(String employeeCode) {
         try {
             String query = """
-                SELECT COUNT(*)
-                FROM employees
-                WHERE employee_code = ?
-                """;
+                    SELECT COUNT(*)
+                    FROM employees
+                    WHERE employee_code = ?
+                    """;
 
             Integer count = jdbcTemplate.queryForObject(
                     query,
@@ -668,11 +668,11 @@ public class CommonRepositoryImpl implements CommonRepository {
     public List<TourIdAndNameResponse> getTourIdAndNameResponses() {
 
         String sql = """
-        SELECT tour_id, name
-        FROM tour
-        WHERE status = 1
-        ORDER BY name ASC
-    """;
+                    SELECT tour_id, name
+                    FROM tour
+                    WHERE status = 1
+                    ORDER BY name ASC
+                """;
 
         return jdbcTemplate.query(sql, (rs, rowNum) ->
                 TourIdAndNameResponse.builder()
@@ -687,13 +687,13 @@ public class CommonRepositoryImpl implements CommonRepository {
         try {
 
             String sql = """
-            SELECT 
-                package_id,
-                name
-            FROM packages
-            WHERE status = 1
-            ORDER BY name ASC
-        """;
+                        SELECT 
+                            package_id,
+                            name
+                        FROM packages
+                        WHERE status = 1
+                        ORDER BY name ASC
+                    """;
 
             return jdbcTemplate.query(sql, (rs, rowNum) ->
                     PackageIdAndNamesResponse.builder()
@@ -714,14 +714,14 @@ public class CommonRepositoryImpl implements CommonRepository {
         try {
 
             String sql = """
-            SELECT
-                ash.id,
-                ash.name
-            FROM activities_schedule ash
-            LEFT JOIN common_status cs ON cs.id = ash.status
-            WHERE cs.name = 'ACTIVE'
-            ORDER BY name ASC
-        """;
+                        SELECT
+                            ash.id,
+                            ash.name
+                        FROM activities_schedule ash
+                        LEFT JOIN common_status cs ON cs.id = ash.status
+                        WHERE cs.name = 'ACTIVE'
+                        ORDER BY name ASC
+                    """;
 
             return jdbcTemplate.query(sql, (rs, rowNum) ->
                     ActivityScheduleIdAndNameResponse.builder()
@@ -778,6 +778,224 @@ public class CommonRepositoryImpl implements CommonRepository {
 
             throw new InternalServerErrorExceptionHandler(
                     "Failed to retrieve assigned users.");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getCustomerIdAndNameResponses() {
+        try {
+            String query = """
+                    SELECT
+                        u.user_id as id,
+                        u.username as name
+                    FROM user u
+                    LEFT JOIN user_type ut
+                    ON ut.user_type_id = u.user_type_id
+                    LEFT JOIN user_status us
+                    ON us.user_status_id = u.user_status_id 
+                    WHERE
+                    ut.name = 'Customer' 
+                    AND us.name = 'Active'
+                    """;
+
+            return jdbcTemplate.query(
+                    query,
+                    (rs, rowNum) -> IdAndNameResponse.builder()
+                            .id(rs.getLong("id"))
+                            .name(rs.getString("name"))
+                            .build()
+            );
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching customers.", ex);
+            throw new InternalServerErrorExceptionHandler("Failed to retrieve customers.");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getPacakgeIdAndNameResponsesByTourId(Long id) {
+        try {
+            String query = "SELECT package_id as id, name FROM packages WHERE tour_id = ? AND terminated_at IS NULL";
+
+            return jdbcTemplate.query(
+                    query,
+                    new Object[]{id},
+                    (rs, rowNum) -> IdAndNameResponse.builder()
+                            .id(rs.getLong("id"))
+                            .name(rs.getString("name"))
+                            .build()
+            );
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching packages for tour id: {}", id, ex);
+            throw new InternalServerErrorExceptionHandler("Failed to retrieve packages for the tour.");
+        }
+    }
+
+    @Override
+    public List<PackageIdScheduleIdAndScheduleNameResponse> getPacakgeScheduleIdAndNameResponsesByTourId(Long id) {
+        try {
+            String query = "SELECT ps.id as schedule_id, ps.name as schedule_name, p.package_id " +
+                    "FROM package_schedule ps " +
+                    "INNER JOIN packages p ON ps.package_id = p.package_id " +
+                    "WHERE p.tour_id = ? AND ps.terminated_at IS NULL";
+
+            return jdbcTemplate.query(
+                    query,
+                    new Object[]{id},
+                    (rs, rowNum) -> PackageIdScheduleIdAndScheduleNameResponse.builder()
+                            .packageId(rs.getLong("package_id"))
+                            .scheduleId(rs.getLong("schedule_id"))
+                            .scheduleName(rs.getString("schedule_name"))
+                            .build()
+            );
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching package schedules for tour id: {}", id, ex);
+            throw new InternalServerErrorExceptionHandler("Failed to retrieve package schedules.");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getGenderIdAndNameResponses() {
+        try {
+            String query = "SELECT gender_id as id, name FROM gender WHERE terminated_at IS NULL";
+
+            return jdbcTemplate.query(
+                    query,
+                    (rs, rowNum) -> IdAndNameResponse.builder()
+                            .id(rs.getLong("id"))
+                            .name(rs.getString("name"))
+                            .build()
+            );
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching genders.", ex);
+            throw new InternalServerErrorExceptionHandler("Failed to retrieve genders.");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getCountryIdAndNameResponses() {
+        try {
+            String query = "SELECT country_id as id, name FROM country WHERE terminated_at IS NULL";
+
+            return jdbcTemplate.query(
+                    query,
+                    (rs, rowNum) -> IdAndNameResponse.builder()
+                            .id(rs.getLong("id"))
+                            .name(rs.getString("name"))
+                            .build()
+            );
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching countries.", ex);
+            throw new InternalServerErrorExceptionHandler("Failed to retrieve countries.");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getStatusIdAndNameResponses() {
+        try {
+            String query = "SELECT id, name FROM common_status WHERE terminated_at IS NULL";
+
+            return jdbcTemplate.query(
+                    query,
+                    (rs, rowNum) -> IdAndNameResponse.builder()
+                            .id(rs.getLong("id"))
+                            .name(rs.getString("name"))
+                            .build()
+            );
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching statuses.", ex);
+            throw new InternalServerErrorExceptionHandler("Failed to retrieve statuses.");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getHotelIdAndNameResponses() {
+        try {
+            String query = "SELECT service_provider_id as id, name " +
+                    "FROM service_provider " +
+                    "WHERE service_provider_type_id = (SELECT service_provider_type_id FROM service_provider_type WHERE name = 'HOTEL') " +
+                    "AND terminated_at IS NULL";
+
+            return jdbcTemplate.query(
+                    query,
+                    (rs, rowNum) -> IdAndNameResponse.builder()
+                            .id(rs.getLong("id"))
+                            .name(rs.getString("name"))
+                            .build()
+            );
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching hotels.", ex);
+            throw new InternalServerErrorExceptionHandler("Failed to retrieve hotels.");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getVehicleIdAndRegisterNumberResponses() {
+        try {
+            String query = "SELECT vehicle_id as id, registration_number as name FROM vehicles WHERE terminated_at IS NULL";
+
+            return jdbcTemplate.query(
+                    query,
+                    (rs, rowNum) -> IdAndNameResponse.builder()
+                            .id(rs.getLong("id"))
+                            .name(rs.getString("name"))
+                            .build()
+            );
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching vehicles.", ex);
+            throw new InternalServerErrorExceptionHandler("Failed to retrieve vehicles.");
+        }
+    }
+
+    @Override
+    public List<IdAndNameResponse> getActivityIdAndNameResponsesByTourId(Long id) {
+        try {
+            String query = """
+                    SELECT DISTINCT a.id, a.name
+                    	FROM tour t
+                    INNER JOIN tour_destination td ON td.tour_id = t.tour_id
+                    INNER JOIN activities a ON a.id = td.activities_id
+                    WHERE t.tour_id = ?
+                    AND a.terminated_at IS NULL
+                    """;
+
+            return jdbcTemplate.query(
+                    query,
+                    new Object[]{id},
+                    (rs, rowNum) -> IdAndNameResponse.builder()
+                            .id(rs.getLong("id"))
+                            .name(rs.getString("name"))
+                            .build()
+            );
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching activities for tour id: {}", id, ex);
+            throw new InternalServerErrorExceptionHandler("Failed to retrieve activities for the tour.");
+        }
+    }
+
+    @Override
+    public List<ActivityIdScheduleIdAndScheduleNameResponse> getActivityScheduleIdAndNameResponsesByTourId(Long id) {
+        try {
+            String query = """
+                    SELECT DISTINCT acs.id, acs.name, acs.activity_id
+                    	FROM tour t
+                    INNER JOIN tour_destination td ON td.tour_id = t.tour_id
+                    INNER JOIN activities a ON a.id = td.activities_id
+                    INNER JOIN activities_schedule acs ON acs.activity_id = a.id
+                    WHERE t.tour_id = ?
+                    """;
+
+            return jdbcTemplate.query(
+                    query,
+                    new Object[]{id},
+                    (rs, rowNum) -> ActivityIdScheduleIdAndScheduleNameResponse.builder()
+                            .activityId(rs.getLong("activity_id"))
+                            .scheduleId(rs.getLong("id"))
+                            .scheduleName(rs.getString("name"))
+                            .build()
+            );
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching activity schedules for tour id: {}", id, ex);
+            throw new InternalServerErrorExceptionHandler("Failed to retrieve activity schedules.");
         }
     }
 

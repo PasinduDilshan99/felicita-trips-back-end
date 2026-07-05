@@ -24,6 +24,7 @@ import com.felicita.model.response.bookings.status.BookingStatusDetailsResponse;
 import com.felicita.model.response.bookings.unassign.UnassignBookingWithParamsResponse;
 import com.felicita.model.response.bookings.unassign.UnassignBookingsRequestParamsResponse;
 import com.felicita.model.response.common.BookingIdAndReferenceResponse;
+import com.felicita.model.response.common.BookingStatusIdAndNameResponse;
 import com.felicita.model.response.statistics.BookingAssignStatisticsResponse;
 import com.felicita.model.response.statistics.BookingHistoryStatisticsResponse;
 import com.felicita.model.response.statistics.BookingStatisticsResponse;
@@ -111,4 +112,8 @@ public interface BookingService {
     CommonResponse<BookingsHistoryRequestParamsResponse> getBookingsHistoryParamsData();
 
     CommonResponse<BookingHistoryDetailsResponse> getBookingHistoryDetailsById(CommonIdRequest bookingId);
+
+    CommonResponse<BookingCreatingRequestParamsResponse> getCreateBookingParams(CommonIdRequest tourId);
+
+    CommonResponse<List<BookingStatusIdAndNameResponse>> getBookingsStatusesIdAndNames();
 }
