@@ -158,7 +158,7 @@
                     .path("/")
                     .maxAge(Duration.ofSeconds(refreshCookieMaxAge))
                     .sameSite("None")
-//                    .domain(".felicitatrips.com")
+                    .domain(".felicitatrips.com")
                     .build();
         }
 
