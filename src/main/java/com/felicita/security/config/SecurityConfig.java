@@ -224,7 +224,7 @@ public class SecurityConfig {
 
                                 .requestMatchers(PublicEndpoints.ENDPOINTS).permitAll()
                         .requestMatchers(AuthorizeEndPoints.ENDPOINTS).permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
@@ -249,7 +249,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("https://stg.felicitatrips.com","https://felicitatrips.com","https://admin-stg.felicitatrips.com","https://admin.felicitatrips.com"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3001","http://localhost:3000"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type","Cookie"));
         configuration.setAllowCredentials(true);

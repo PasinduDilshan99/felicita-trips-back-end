@@ -142,11 +142,11 @@
         public ResponseCookie buildAccessTokenCookie(String token) {
             return ResponseCookie.from(accessCookieName, token)
                     .httpOnly(true)
-                    .secure(true)
+                    .secure(false)
                     .path("/")
                     .maxAge(Duration.ofSeconds(accessCookieMaxAge))
-                    .sameSite("None")
-                    .domain(".felicitatrips.com")
+                    .sameSite("Strict")
+//                    .domain(".felicitatrips.com")
                     .build();
         }
 
@@ -154,11 +154,11 @@
         public ResponseCookie buildRefreshTokenCookie(String token) {
             return ResponseCookie.from(refreshCookieName, token)
                     .httpOnly(true)
-                    .secure(true)
+                    .secure(false)
                     .path("/")
                     .maxAge(Duration.ofSeconds(refreshCookieMaxAge))
-                    .sameSite("None")
-                    .domain(".felicitatrips.com")
+                    .sameSite("Strict")
+//                    .domain(".felicitatrips.com")
                     .build();
         }
 
@@ -213,11 +213,11 @@
         public ResponseCookie buildLogoutAccessTokenCookie() {
             return ResponseCookie.from(accessCookieName, "")
                     .httpOnly(true)
-                    .secure(true)
+                    .secure(false)
                     .path("/")
                     .maxAge(0)
-                    .sameSite("None")
-                    .domain(".felicitatrips.com")
+                    .sameSite("Strict")
+//                    .domain(".felicitatrips.com")
                     .build();
         }
 
@@ -225,11 +225,11 @@
         public ResponseCookie buildLogoutRefreshTokenCookie() {
             return ResponseCookie.from(refreshCookieName, "")
                     .httpOnly(true)
-                    .secure(true)
+                    .secure(false)
                     .path("/")
                     .maxAge(0)
-                    .sameSite("None")
-                    .domain(".felicitatrips.com")
+                    .sameSite("Strict")
+//                    .domain(".felicitatrips.com")
                     .build();
         }
     }

@@ -1202,57 +1202,524 @@ public class ActivitiesQueries {
             """;
 
     public static final String TERMINATE_ACTIVITY_CATEGORIES = """
-        UPDATE activity_category_map
-        SET
-            status = ?,
-            terminated_at = CURRENT_TIMESTAMP,
-            terminated_by = ?,
-            updated_at = CURRENT_TIMESTAMP,
-            updated_by = ?
-        WHERE activity_id = ?
-        """;
+            UPDATE activity_category_map
+            SET
+                status = ?,
+                terminated_at = CURRENT_TIMESTAMP,
+                terminated_by = ?,
+                updated_at = CURRENT_TIMESTAMP,
+                updated_by = ?
+            WHERE activity_id = ?
+            """;
 
     public static final String GET_ACTIVITIES_BY_DESTINATION_ID = """
-        SELECT
-            a.id AS activity_id,
-            a.destination_id,
-            a.name,
-            a.description,
-            a.duration_hours,
-            a.available_from,
-            a.available_to,
-            a.price_local,
-            a.price_foreigners,
-            a.min_participate,
-            a.max_participate,
-            a.season,
-            a.season_id,
-            a.status AS status_id,
+            SELECT
+                a.id AS activity_id,
+                a.destination_id,
+                a.name,
+                a.description,
+                a.duration_hours,
+                a.available_from,
+                a.available_to,
+                a.price_local,
+                a.price_foreigners,
+                a.min_participate,
+                a.max_participate,
+                a.season,
+                a.season_id,
+                a.status AS status_id,
+            
+                acm.category_id,
+                ac.name AS category_name,
+                acm.is_primary,
+            
+                ai.id AS image_id,
+                ai.name AS image_name,
+                ai.description AS image_description,
+                ai.image_url
+            
+            FROM activities a
+            
+            LEFT JOIN activity_category_map acm
+                ON a.id = acm.activity_id
+                AND acm.terminated_at IS NULL
+            
+            LEFT JOIN activity_category ac
+                ON acm.category_id = ac.id
+            
+            LEFT JOIN activities_images ai
+                ON a.id = ai.activity_id
+                AND ai.terminated_at IS NULL
+            
+            WHERE a.destination_id = ?
+              AND a.terminated_at IS NULL
+            """;
 
-            acm.category_id,
-            ac.name AS category_name,
-            acm.is_primary,
+    public static final String BASE_ACTIVITY_SCHEDULE_QUERY = """
+            SELECT
+                a.id AS activity_id,
+                a.destination_id,
+                d.name AS destination_name,
+                a.name AS activity_name,
+                a.description,
+                a.duration_hours,
+                a.available_from,
+                a.available_to,
+                a.price_local,
+                a.price_foreigners,
+                a.min_participate,
+                a.max_participate,
+                a.season_id,
+                a.season,
+                cs.name AS status,
+                a.created_at,
+                a.updated_at,
+            
+                s.id AS schedule_id,
+                s.name AS activity_schedule_name,
+                s.assume_start_date,
+                s.assume_end_date,
+                s.duration_hours_start,
+                s.duration_hours_end,
+                s.special_note,
+                s.description AS schedule_description,
+                scs.name AS schedule_status
+            
+            FROM activities_schedule s
+            INNER JOIN activities a ON s.activity_id = a.id
+            INNER JOIN destination d ON a.destination_id = d.destination_id
+            INNER JOIN common_status cs ON a.status = cs.id
+            INNER JOIN common_status scs ON s.status = scs.id
+            WHERE 1=1
+            """;
 
-            ai.id AS image_id,
-            ai.name AS image_name,
-            ai.description AS image_description,
-            ai.image_url
+    public static final String COUNT_ACTIVITY_SCHEDULE_QUERY = """
+            SELECT COUNT(DISTINCT s.id)
+            FROM activities_schedule s
+            INNER JOIN activities a ON s.activity_id = a.id
+            INNER JOIN destination d ON a.destination_id = d.destination_id
+            WHERE 1=1
+            """;
 
-        FROM activities a
+    public static final String ACTIVITY_CATEGORIES_QUERY = """
+            SELECT
+                ac.id,
+                ac.name,
+                ac.description,
+                acm.is_primary
+            FROM activity_category_map acm
+            INNER JOIN activity_category ac
+                ON acm.category_id = ac.id
+            WHERE acm.activity_id = ?
+            """;
 
-        LEFT JOIN activity_category_map acm
-            ON a.id = acm.activity_id
-            AND acm.terminated_at IS NULL
+    public static final String ACTIVITY_IMAGES_QUERY = """
+            SELECT
+                id,
+                name,
+                description,
+                image_url,
+                status
+            FROM activities_images
+            WHERE activity_id = ?
+            """;
 
-        LEFT JOIN activity_category ac
-            ON acm.category_id = ac.id
+    public static final String GET_DISTINCT_ACTIVITY_DURATIONS = """
+            SELECT DISTINCT
+                duration_hours
+            FROM activities
+            WHERE duration_hours IS NOT NULL
+            ORDER BY duration_hours ASC
+            """;
 
-        LEFT JOIN activities_images ai
-            ON a.id = ai.activity_id
-            AND ai.terminated_at IS NULL
+    public static final String GET_ACTIVITY_SCHEDULE_DETAILS_BY_ID = """
+            SELECT
+            
+                -- =====================================================
+                -- ACTIVITY SCHEDULE
+                -- =====================================================
+            
+                s.id AS activity_schedule_id,
+                s.name AS activity_schedule_name,
+                s.assume_start_date,
+                s.assume_end_date,
+                s.duration_hours_start,
+                s.duration_hours_end,
+                s.special_note,
+                s.description AS schedule_description,
+                scs.name AS schedule_status,
+                s.created_at AS schedule_created_at,
+                s.updated_at AS schedule_updated_at,
+            
+                -- =====================================================
+                -- ACTIVITY
+                -- =====================================================
+            
+                a.id AS activity_id,
+                a.name AS activity_name,
+                a.description AS activity_description,
+                a.duration_hours,
+                a.available_from,
+                a.available_to,
+                a.price_local,
+                a.price_foreigners,
+                a.min_participate,
+                a.max_participate,
+                a.season_id,
+                a.season,
+                acs.name AS activity_status,
+                a.created_at AS activity_created_at,
+                a.updated_at AS activity_updated_at,
+            
+                -- =====================================================
+                -- DESTINATION
+                -- =====================================================
+            
+                d.destination_id,
+                d.name AS destination_name,
+            
+                -- =====================================================
+                -- TOUR SCHEDULE
+                -- =====================================================
+            
+                ts.id AS tour_schedule_id,
+                ts.name AS tour_schedule_name,
+                ts.assume_start_date AS tour_schedule_start_date,
+                ts.assume_end_date AS tour_schedule_end_date,
+                ts.duration_start AS tour_schedule_duration_start,
+                ts.duration_end AS tour_schedule_duration_end,
+                tss.name AS tour_schedule_status,
+            
+                -- =====================================================
+                -- TOUR
+                -- =====================================================
+            
+                t.tour_id,
+                t.name AS tour_name,
+                t.description AS tour_description,
+                t.duration AS tour_duration,
+                t.start_location,
+                t.end_location,
+                tcs.name AS tour_status,
+            
+                -- =====================================================
+                -- PACKAGE SCHEDULE
+                -- =====================================================
+            
+                ps.id AS package_schedule_id,
+                ps.name AS package_schedule_name,
+                ps.assume_start_date AS package_schedule_start_date,
+                ps.assume_end_date AS package_schedule_end_date,
+                ps.duration_start AS package_schedule_duration_start,
+                ps.duration_end AS package_schedule_duration_end,
+                pss.name AS package_schedule_status,
+            
+                -- =====================================================
+                -- PACKAGE
+                -- =====================================================
+            
+                p.package_id,
+                p.name AS package_name,
+                p.description AS package_description,
+                p.total_price,
+                p.discount_percentage,
+                p.price_per_person,
+                p.min_person_count,
+                p.max_person_count,
+                pcs.name AS package_status
+            
+            FROM activities_schedule s
+            
+            INNER JOIN activities a
+                ON s.activity_id = a.id
+            
+            INNER JOIN destination d
+                ON a.destination_id = d.destination_id
+            
+            LEFT JOIN tour_schedule ts
+                ON s.tour_schedule_id = ts.id
+            
+            LEFT JOIN common_status tss
+                ON ts.status = tss.id
+            
+            LEFT JOIN tour t
+                ON ts.tour_id = t.tour_id
+            
+            LEFT JOIN common_status tcs
+                ON t.status = tcs.id
+            
+            LEFT JOIN package_schedule ps
+                ON s.package_schedule_id = ps.id
+            
+            LEFT JOIN common_status pss
+                ON ps.status = pss.id
+            
+            LEFT JOIN packages p
+                ON ps.package_id = p.package_id
+            
+            LEFT JOIN common_status pcs
+                ON p.status = pcs.id
+            
+            INNER JOIN common_status acs
+                ON a.status = acs.id
+            
+            INNER JOIN common_status scs
+                ON s.status = scs.id
+            
+            WHERE s.id = ?
+            """;
 
-        WHERE a.destination_id = ?
-          AND a.terminated_at IS NULL
-        """;
+    public static final String INSERT_ACTIVITY_SCHEDULE = """
+            INSERT INTO activities_schedule (
+                name,
+                activity_id,
+                assume_start_date,
+                assume_end_date,
+                duration_hours_start,
+                duration_hours_end,
+                special_note,
+                description,
+                package_schedule_id,
+                tour_schedule_id,
+                status,
+                created_by,
+                updated_by
+            )
+            VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            )
+            """;
+
+    public static final String GET_ACTIVITY_SCHEDULE_BASIC_DETAILS = """
+            SELECT
+                s.id AS activity_schedule_id,
+                s.name AS activity_schedule_name,
+                s.activity_id,
+                s.assume_start_date,
+                s.assume_end_date,
+                s.duration_hours_start,
+                s.duration_hours_end,
+                s.special_note,
+                s.description,
+                s.package_schedule_id,
+                s.tour_schedule_id,
+                cs.name AS status,
+            
+                s.created_by,
+                CONCAT(cu.first_name, ' ', cu.last_name) AS created_by_name,
+            
+                s.updated_by,
+                CONCAT(uu.first_name, ' ', uu.last_name) AS updated_by_name,
+            
+                s.created_at,
+                s.updated_at
+            
+            FROM activities_schedule s
+            
+            INNER JOIN common_status cs
+                ON s.status = cs.id
+            
+            LEFT JOIN user cu
+                ON s.created_by = cu.user_id
+            
+            LEFT JOIN user uu
+                ON s.updated_by = uu.user_id
+            
+            WHERE s.id = ?
+            """;
+
+    public static final String UPDATE_ACTIVITY_SCHEDULE = """
+            UPDATE activities_schedule
+            SET
+                name = ?,
+                activity_id = ?,
+                assume_start_date = ?,
+                assume_end_date = ?,
+                duration_hours_start = ?,
+                duration_hours_end = ?,
+                special_note = ?,
+                description = ?,
+                package_schedule_id = ?,
+                tour_schedule_id = ?,
+                status = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """;
+
+    public static final String TERMINATE_ACTIVITY_SCHEDULE_BY_ID = """
+    UPDATE activities_schedule
+    SET
+        status = ?,
+        terminated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+    """;
+
+    public static final String GET_ACTIVITY_CATEGORY_DETAILS_BY_ID = """
+    SELECT
+        ac.id,
+        ac.name,
+        ac.description,
+        ac.color,
+        ac.hover_color,
+
+        cs.name AS status,
+
+        ac.created_at,
+        ac.created_by,
+        ac.updated_at,
+        ac.updated_by,
+        ac.terminated_at,
+        ac.terminated_by,
+
+        CONCAT(cu.first_name, ' ', cu.last_name) AS created_by_name,
+        CONCAT(uu.first_name, ' ', uu.last_name) AS updated_by_name
+
+    FROM activity_category ac
+
+    LEFT JOIN common_status cs
+        ON ac.status = cs.id
+
+    LEFT JOIN user cu
+        ON ac.created_by = cu.user_id
+
+    LEFT JOIN user uu
+        ON ac.updated_by = uu.user_id
+
+    WHERE ac.id = ?
+    """;
+
+
+    public static final String GET_ACTIVITY_CATEGORY_IMAGES_BY_CATEGORY_ID = """
+    SELECT
+        aci.id,
+        aci.name,
+        aci.description,
+        aci.image_url,
+        cs.name AS status,
+        aci.created_at
+
+    FROM activity_category_images aci
+
+    LEFT JOIN common_status cs
+        ON aci.status = cs.id
+
+    WHERE aci.activity_category_id = ?
+    ORDER BY aci.id ASC
+    """;
+
+
+    public static final String GET_PRIMARY_ACTIVITIES_BY_CATEGORY_ID = """
+    SELECT
+        a.id,
+        a.name
+
+    FROM activity_category_map acm
+
+    INNER JOIN activities a
+        ON acm.activity_id = a.id
+
+    WHERE acm.category_id = ?
+    AND acm.is_primary = 1
+
+    ORDER BY a.name ASC
+    """;
+
+
+    public static final String GET_OTHER_ACTIVITIES_BY_CATEGORY_ID = """
+    SELECT
+        a.id,
+        a.name
+
+    FROM activity_category_map acm
+
+    INNER JOIN activities a
+        ON acm.activity_id = a.id
+
+    WHERE acm.category_id = ?
+    AND (acm.is_primary = 0 OR acm.is_primary IS NULL)
+
+    ORDER BY a.name ASC
+    """;
+
+    public static final String TERMINATE_ACTIVITY_CATEGORY = """
+    UPDATE activity_category
+    SET
+        status = ?,
+        terminated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+    """;
+
+    public static final String INSERT_ACTIVITY_CATEGORY = """
+    INSERT INTO activity_category (
+        name,
+        description,
+        color,
+        hover_color,
+        status
+    )
+    VALUES (?, ?, ?, ?, ?)
+    """;
+
+
+    public static final String INSERT_ACTIVITY_CATEGORY_IMAGE = """
+    INSERT INTO activity_category_images (
+        activity_category_id,
+        name,
+        description,
+        image_url,
+        status
+    )
+    VALUES (?, ?, ?, ?, ?)
+    """;
+
+
+    public static final String INSERT_ACTIVITY_CATEGORY_MAP_FOR_CATEGORY = """
+    INSERT INTO activity_category_map (
+        activity_id,
+        category_id,
+        is_primary,
+        status
+    )
+    VALUES (?, ?, ?, ?)
+    """;
+
+    public static final String UPDATE_ACTIVITY_CATEGORY_BASIC_DETAILS = """
+    UPDATE activity_category
+    SET
+        name = ?,
+        description = ?,
+        color = ?,
+        hover_color = ?,
+        status = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+    """;
+
+
+    public static final String REMOVE_ACTIVITY_CATEGORY_FOR_ACTIVITY = """
+    DELETE FROM activity_category_map
+    WHERE category_id = ?
+    AND activity_id = ?
+    """;
+
+
+    public static final String REMOVE_ACTIVITY_CATEGORY_IMAGE = """
+    DELETE FROM activity_category_images
+    WHERE activity_category_id = ?
+    AND id = ?
+    """;
+
+
+    public static final String UPDATE_ACTIVITY_CATEGORY_IMAGE = """
+    UPDATE activity_category_images
+    SET
+        name = ?,
+        description = ?,
+        image_url = ?,
+        status = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+    AND activity_category_id = ?
+    """;
 
 }

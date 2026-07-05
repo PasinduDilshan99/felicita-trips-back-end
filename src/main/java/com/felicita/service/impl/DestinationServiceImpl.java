@@ -931,7 +931,7 @@ public class DestinationServiceImpl implements DestinationService {
 
             List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
             Long destinationCategoryId = destinationRepository.insertDestinationCategory(destinationCategoryInsertRequest, userId);
-            destinationRepository.insertDestinationCategoryImages(destinationCategoryInsertRequest.getImages(), destinationCategoryId, userId);
+//            destinationRepository.insertDestinationCategoryImages(destinationCategoryInsertRequest.getImages(), destinationCategoryId, userId);
 
             if (destinationCategoryId != null) {
                 List<Long> supervisorUserIds = extractSupervisorUserIds(supervisorDetails);

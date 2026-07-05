@@ -3,7 +3,12 @@ package com.felicita.controller;
 import com.felicita.model.dto.ActivityCategoryResponseDto;
 import com.felicita.model.dto.ActivityResponseDto;
 import com.felicita.model.request.*;
+import com.felicita.model.request.activity.category.ActivityCategoryInsertRequest;
+import com.felicita.model.request.activity.category.ActivityCategoryUpdateRequest;
+import com.felicita.model.request.activity.schedule.ActivityScheduleUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.activity.category.ActivityCategoryDetailsResponse;
+import com.felicita.model.response.common.ActivityScheduleIdAndNameResponse;
 import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
 import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
 import com.felicita.service.ActivitiesService;
@@ -196,4 +201,101 @@ public class ActivitiesController {
         LOGGER.info("{} End execute get activities by destination id {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    @PostMapping(path = "/activities-schedule")
+    public ResponseEntity<CommonResponse<ActivityScheduleWithParamsResponse>> getActivitiesScheduleWithParams(@RequestBody ActivityScheduleDataRequest activityScheduleDataRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<ActivityScheduleWithParamsResponse> response = activitiesService.getActivitiesScheduleWithParams(activityScheduleDataRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/activities-schedule-params")
+    public ResponseEntity<CommonResponse<ActivityScheduleParamsResponse>> getActivitiesScheduleParams() {
+        LOGGER.info("{} Start execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<ActivityScheduleParamsResponse> response = activitiesService.getActivitiesScheduleParams();
+        LOGGER.info("{} End execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/activities-schedule-id-and-names")
+    public ResponseEntity<CommonResponse<List<ActivityScheduleIdAndNameResponse>>> getActivityScheduleIdAndNames() {
+        LOGGER.info("{} Start execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<ActivityScheduleIdAndNameResponse>> response = activitiesService.getActivityScheduleIdAndNames();
+        LOGGER.info("{} End execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/activities-schedule-details-by-id")
+    public ResponseEntity<CommonResponse<ActivityScheduleDetailsResponse>> getActivityScheduleDetailsById(@RequestBody CommonIdRequest activityScheduleId) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<ActivityScheduleDetailsResponse> response = activitiesService.getActivityScheduleDetailsById(activityScheduleId);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/create-activities-schedule")
+    public ResponseEntity<CommonResponse<InsertResponse>> createActivitySchedule(@RequestBody ActivityScheduleInsertRequest activityScheduleInsertRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = activitiesService.createActivitySchedule(activityScheduleInsertRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/update-activities-schedule")
+    public ResponseEntity<CommonResponse<UpdateResponse>> updateActivitySchedule(@RequestBody ActivityScheduleUpdateRequest activityScheduleUpdateRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UpdateResponse> response = activitiesService.updateActivitySchedule(activityScheduleUpdateRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/terminate-activities-schedule")
+    public ResponseEntity<CommonResponse<TerminateResponse>> termianteActivityScheduleById(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TerminateResponse> response = activitiesService.termianteActivityScheduleById(commonIdRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/activity-category-details")
+    public ResponseEntity<CommonResponse<ActivityCategoryDetailsResponse>> getActivityCategoryDetailsById(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<ActivityCategoryDetailsResponse> response = activitiesService.getActivityCategoryDetailsById(commonIdRequest);
+        LOGGER.info("{} End execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/terminate-activity-category")
+    public ResponseEntity<CommonResponse<TerminateResponse>> terminateActivityCategory(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TerminateResponse> response = activitiesService.terminateActivityCategory(commonIdRequest);
+        LOGGER.info("{} End execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/add-activity-category")
+    public ResponseEntity<CommonResponse<InsertResponse>> insertActivityCategory(@RequestBody ActivityCategoryInsertRequest activityCategoryInsertRequest) {
+        LOGGER.info("{} Start execute insert activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = activitiesService.insertActivityCategory(activityCategoryInsertRequest);
+        LOGGER.info("{} End execute insert activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/update-activity-category")
+    public ResponseEntity<CommonResponse<UpdateResponse>> updateActivityCategory(@RequestBody ActivityCategoryUpdateRequest activityCategoryUpdateRequest) {
+        LOGGER.info("{} Start execute update activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UpdateResponse> response = activitiesService.updateActivityCategory(activityCategoryUpdateRequest);
+        LOGGER.info("{} End execute update activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/activities-for-destination-id")
+    public ResponseEntity<CommonResponse<List<ActivityIdAndNameResponse>>> getActivitiesByDestinationId(@RequestBody CommonIdRequest destinationId) {
+        LOGGER.info("{} Start execute update activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<ActivityIdAndNameResponse>> response = activitiesService.getActivitiesByDestinationId(destinationId);
+        LOGGER.info("{} End execute update activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
 }

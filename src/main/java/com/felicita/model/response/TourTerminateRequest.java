@@ -11,5 +11,4 @@ import lombok.NoArgsConstructor;
 @Builder
 public class TourTerminateRequest {
     private Long tourId;
-
 }

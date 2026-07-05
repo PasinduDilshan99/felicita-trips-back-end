@@ -5,13 +5,18 @@ import lombok.Getter;
 @Getter
 public enum BookingStatus {
 
-    PENDING("Booking is pending confirmation"),
+    NEW_INQUIRY("New booking inquiry received"),
+    PENDING("Booking is pending review or action"),
+    CONTACTED("Customer has been contacted"),
+    QUOTATION_SENT("Quotation has been sent to the customer"),
+    NEGOTIATION("Booking is under negotiation"),
     CONFIRMED("Booking has been confirmed"),
-    PAID("Booking has been fully paid"),
-    IN_PROGRESS("Tour is currently ongoing"),
-    BOOKING_COMPLETED("Booking has been completed"),
+    PAYMENT_PENDING("Awaiting customer payment"),
+    BOOKED("Booking has been successfully booked"),
+    COMPLETED("Booking has been completed"),
     CANCELLED("Booking has been cancelled"),
-    TOUR_COMPLETED("Tour experience finished");
+    REJECTED("Booking has been rejected"),
+    EXPIRED("Booking inquiry or quotation has expired");
 
     private final String description;
 

@@ -133,6 +133,7 @@ public class EmployeeQueries {
                     u.email AS email,
                     u.mobile_number1 AS mobileNumber,
                     u.nic AS nic,
+                    u.image_url AS imageUrl,
             
                     e.employee_type_id AS employeeTypeId,
                     et.type_name AS employeeType,
@@ -190,6 +191,7 @@ public class EmployeeQueries {
                 u.email,
                 u.mobile_number1 AS mobileNumber,
                 u.nic,
+                u.image_url AS imageUrl,
             
                 e.employee_type_id AS employeeTypeId,
                 et.type_name AS employeeType,

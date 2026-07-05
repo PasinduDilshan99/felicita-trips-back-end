@@ -1,8 +1,13 @@
 package com.felicita.validation.impl;
 
+import com.felicita.model.request.CommonIdRequest;
 import com.felicita.model.request.PackageInsertRequest;
 import com.felicita.model.request.PackageTerminateRequest;
 import com.felicita.model.request.PackageUpdateRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleInsertRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleUpdateRequest;
+import com.felicita.model.request.packages.type.PackageTypeInsertRequest;
+import com.felicita.model.request.packages.type.PackageTypeUpdateRequest;
 import com.felicita.validation.CommonValidationService;
 import com.felicita.validation.PackageValidationService;
 import org.slf4j.Logger;
@@ -34,6 +39,36 @@ public class PackageValidationServiceImpl implements PackageValidationService {
 
     @Override
     public void validatePackageUpdateRequest(PackageUpdateRequest packageUpdateRequest) {
+
+    }
+
+    @Override
+    public void validateCommonIdRequest(CommonIdRequest commonIdRequest) {
+
+    }
+
+    @Override
+    public void validatePackageTypeInsertRequest(PackageTypeInsertRequest packageTypeInsertRequest) {
+
+    }
+
+    @Override
+    public void validatePackageTypeUpdateRequest(PackageTypeUpdateRequest packageTypeUpdateRequest) {
+
+    }
+
+    @Override
+    public void validatePackageScheduleDataRequest(PackageValidationService packageValidationService) {
+
+    }
+
+    @Override
+    public void validatePackageScheduleInsertRequest(PackageScheduleInsertRequest packageScheduleInsertRequest) {
+
+    }
+
+    @Override
+    public void validatePackageScheduleUpdateRequest(PackageScheduleUpdateRequest packageScheduleUpdateRequest) {
 
     }
 }

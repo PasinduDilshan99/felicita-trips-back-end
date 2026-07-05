@@ -24,4 +24,6 @@ public class PackageDataRequest {
     private Date toDate;
     private int pageSize;
     private int pageNumber;
+    private String sortBy;
+    private String sortDirection;
 }

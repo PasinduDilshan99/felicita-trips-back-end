@@ -1202,4 +1202,1774 @@ public class BookingQueries {
                 b.updated_at = NOW()
             WHERE b.booking_id = ?
             """;
+
+    public static final String GET_POPULAR_ACTIVITIES = """
+    SELECT
+        a.id AS activity_id,
+        a.name AS activity_name,
+        COUNT(DISTINCT ba.booking_id)
+            AS total_bookings,
+        COALESCE(
+            SUM(ba.number_of_participants),
+            0
+        ) AS total_participants,
+        COALESCE(
+            SUM(ba.total_price),
+            0
+        ) AS total_revenue
+    FROM booking_activities ba
+    INNER JOIN activities a
+        ON ba.activity_id = a.id
+    GROUP BY
+        a.id,
+        a.name
+    ORDER BY total_bookings DESC
+    LIMIT 10
+    """;
+
+    public static final String GET_TOP_TOURS = """
+    SELECT
+        t.tour_id,
+        t.name AS tour_name,
+        COUNT(*) AS total_bookings,
+        COALESCE(SUM(b.total_persons),0)
+            AS total_participants,
+        COALESCE(SUM(b.final_amount),0)
+            AS total_revenue
+    FROM bookings b
+    INNER JOIN tour t
+        ON b.tour_id = t.tour_id
+    GROUP BY
+        t.tour_id,
+        t.name
+    ORDER BY total_bookings DESC
+    LIMIT 10
+    """;
+
+    public static final String GET_BOOKING_FUNNEL = """
+    SELECT
+        CASE bs.name
+            WHEN 'NEW_INQUIRY' THEN 1
+            WHEN 'PENDING' THEN 2
+            WHEN 'CONTACTED' THEN 3
+            WHEN 'QUOTATION_SENT' THEN 4
+            WHEN 'NEGOTIATION' THEN 5
+            WHEN 'CONFIRMED' THEN 6
+            WHEN 'PAYMENT_PENDING' THEN 7
+            WHEN 'BOOKED' THEN 8
+            WHEN 'COMPLETED' THEN 9
+            ELSE 99
+        END AS step_order,
+
+        bs.name AS booking_status_name,
+
+        COUNT(*) AS total_bookings,
+
+        ROUND(
+            COUNT(*) * 100.0 /
+            (
+                SELECT COUNT(*)
+                FROM bookings b2
+                INNER JOIN booking_status bs2
+                    ON b2.booking_status_id = bs2.id
+                WHERE bs2.name='NEW_INQUIRY'
+            ),
+            2
+        ) AS conversion_percentage
+
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+
+    GROUP BY
+        step_order,
+        bs.name
+
+    ORDER BY
+        step_order
+    """;
+
+    public static final String GET_BOOKING_STATUS_DISTRIBUTION = """
+    SELECT
+        bs.id AS booking_status_id,
+        bs.name AS booking_status_name,
+        COUNT(*) AS total_bookings,
+        ROUND(
+            COUNT(*) * 100.0 /
+            (SELECT COUNT(*) FROM bookings),
+            2
+        ) AS percentage
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    GROUP BY
+        bs.id,
+        bs.name
+    ORDER BY total_bookings DESC
+    """;
+
+    public static final String GET_MONTHLY_REVENUE_TRENDS = """
+    SELECT
+        YEAR(b.created_at) AS year,
+        MONTH(b.created_at) AS month,
+        COALESCE(SUM(b.final_amount),0) AS total_revenue
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    WHERE bs.name IN ('BOOKED','COMPLETED')
+    GROUP BY
+        YEAR(b.created_at),
+        MONTH(b.created_at)
+    ORDER BY
+        year,
+        month
+    """;
+
+    public static final String GET_MONTHLY_BOOKING_TRENDS = """
+    SELECT
+        YEAR(created_at) AS year,
+        MONTH(created_at) AS month,
+        COUNT(*) AS total_bookings
+    FROM bookings
+    GROUP BY
+        YEAR(created_at),
+        MONTH(created_at)
+    ORDER BY
+        year,
+        month
+    """;
+
+    public static final String GET_BOOKING_SUMMARY_STATISTICS = """
+    SELECT
+        COUNT(*) AS total_bookings,
+
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN bs.name IN ('BOOKED','COMPLETED')
+                    THEN b.final_amount
+                    ELSE 0
+                END
+            ),0
+        ) AS total_revenue,
+
+        COUNT(
+            CASE
+                WHEN bs.name IN (
+                    'NEW_INQUIRY',
+                    'PENDING',
+                    'CONTACTED',
+                    'QUOTATION_SENT',
+                    'NEGOTIATION',
+                    'CONFIRMED',
+                    'PAYMENT_PENDING',
+                    'BOOKED'
+                )
+                THEN 1
+            END
+        ) AS active_bookings,
+
+        COUNT(
+            CASE
+                WHEN bs.name='CANCELLED'
+                THEN 1
+            END
+        ) AS cancelled_bookings,
+
+        COALESCE(SUM(b.total_persons),0) AS total_travellers,
+
+        COALESCE(AVG(b.final_amount),0) AS average_booking_value
+
+    FROM bookings b
+    LEFT JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    """;
+
+    public static final String GET_BOOKING_STATUS_SUMMARY_STATISTICS = """
+    SELECT
+        (SELECT COUNT(*) FROM booking_status) AS total_statuses,
+
+        (
+            SELECT COUNT(*)
+            FROM booking_status bs
+            INNER JOIN common_status cs
+                ON bs.status = cs.id
+            WHERE UPPER(cs.name) = 'ACTIVE'
+        ) AS active_statuses,
+
+        (
+            SELECT bs.name
+            FROM bookings b
+            INNER JOIN booking_status bs
+                ON b.booking_status_id = bs.id
+            GROUP BY bs.id, bs.name
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+        ) AS most_used_status,
+
+        (
+            SELECT COUNT(*)
+            FROM bookings b
+            INNER JOIN booking_status bs
+                ON b.booking_status_id = bs.id
+            GROUP BY bs.id
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+        ) AS most_used_status_count,
+
+        ROUND(
+            (
+                (
+                    SELECT COUNT(*)
+                    FROM bookings b
+                    INNER JOIN booking_status bs
+                        ON b.booking_status_id = bs.id
+                    WHERE bs.name IN ('BOOKED','COMPLETED')
+                )
+                /
+                NULLIF(
+                    (
+                        SELECT COUNT(*)
+                        FROM bookings b
+                        INNER JOIN booking_status bs
+                            ON b.booking_status_id = bs.id
+                        WHERE bs.name = 'NEW_INQUIRY'
+                    ),
+                    0
+                )
+            ) * 100,
+            2
+        ) AS inquiry_to_booked_percentage
+    """;
+
+    public static final String GET_STATUS_DISTRIBUTIONS = """
+    SELECT
+        bs.id AS booking_status_id,
+        bs.name AS booking_status_name,
+        COUNT(*) AS total_bookings,
+        ROUND(
+            COUNT(*) * 100.0 /
+            (SELECT COUNT(*) FROM bookings),
+            2
+        ) AS percentage
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    GROUP BY
+        bs.id,
+        bs.name
+    ORDER BY total_bookings DESC
+    """;
+
+    public static final String GET_STATUS_FUNNELS = """
+    SELECT
+        CASE bs.name
+            WHEN 'NEW_INQUIRY' THEN 1
+            WHEN 'PENDING' THEN 2
+            WHEN 'CONTACTED' THEN 3
+            WHEN 'QUOTATION_SENT' THEN 4
+            WHEN 'NEGOTIATION' THEN 5
+            WHEN 'CONFIRMED' THEN 6
+            WHEN 'PAYMENT_PENDING' THEN 7
+            WHEN 'BOOKED' THEN 8
+            WHEN 'COMPLETED' THEN 9
+            WHEN 'CANCELLED' THEN 10
+            WHEN 'REJECTED' THEN 11
+            WHEN 'EXPIRED' THEN 12
+            ELSE 99
+        END AS step_order,
+
+        bs.name AS booking_status_name,
+
+        COUNT(*) AS total_bookings,
+
+        ROUND(
+            COUNT(*) * 100.0 /
+            NULLIF(
+                (
+                    SELECT COUNT(*)
+                    FROM bookings b2
+                    INNER JOIN booking_status bs2
+                        ON b2.booking_status_id = bs2.id
+                    WHERE bs2.name='NEW_INQUIRY'
+                ),
+                0
+            ),
+            2
+        ) AS conversion_percentage
+
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    GROUP BY
+        step_order,
+        bs.name
+    ORDER BY
+        step_order
+    """;
+
+    public static final String GET_STATUS_TRENDS = """
+    SELECT
+        YEAR(b.created_at) AS year,
+        MONTH(b.created_at) AS month,
+        bs.id AS booking_status_id,
+        bs.name AS booking_status_name,
+        COUNT(*) AS total_bookings
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    GROUP BY
+        YEAR(b.created_at),
+        MONTH(b.created_at),
+        bs.id,
+        bs.name
+    ORDER BY
+        year,
+        month,
+        booking_status_name
+    """;
+
+    public static final String GET_DROP_OFF_STATISTICS = """
+    SELECT
+        bs.name AS booking_status_name,
+        COUNT(*) AS total_bookings,
+        ROUND(
+            COUNT(*) * 100.0 /
+            (SELECT COUNT(*) FROM bookings),
+            2
+        ) AS percentage
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    WHERE bs.name IN (
+        'CANCELLED',
+        'REJECTED',
+        'EXPIRED'
+    )
+    GROUP BY
+        bs.name
+    ORDER BY
+        total_bookings DESC
+    """;
+
+
+    public static final String GET_BOOKING_ASSIGN_SUMMARY_STATISTICS = """
+    SELECT
+        COUNT(*) AS total_bookings,
+
+        COUNT(
+            CASE
+                WHEN assign_to IS NOT NULL
+                THEN 1
+            END
+        ) AS assigned_bookings,
+
+        COUNT(
+            CASE
+                WHEN assign_to IS NULL
+                THEN 1
+            END
+        ) AS unassigned_bookings,
+
+        COUNT(DISTINCT assign_to)
+            AS total_assigned_employees,
+
+        ROUND(
+            COUNT(
+                CASE
+                    WHEN assign_to IS NOT NULL
+                    THEN 1
+                END
+            ) /
+            NULLIF(
+                COUNT(DISTINCT assign_to),
+                0
+            ),
+            2
+        ) AS average_bookings_per_employee
+
+    FROM bookings
+    """;
+
+    public static final String GET_EMPLOYEE_WORKLOADS = """
+    SELECT
+        e.id AS employee_id,
+        u.user_id,
+        CONCAT(
+            u.first_name,
+            ' ',
+            u.last_name
+        ) AS employee_name,
+        ed.designation_name,
+        dep.department_name,
+        COUNT(b.booking_id)
+            AS total_bookings
+
+    FROM bookings b
+    INNER JOIN user u
+        ON b.assign_to = u.user_id
+    INNER JOIN employees e
+        ON u.user_id = e.user_id
+    LEFT JOIN employee_designations ed
+        ON e.designation_id = ed.id
+    LEFT JOIN employee_departments dep
+        ON e.department_id = dep.id
+
+    GROUP BY
+        e.id,
+        u.user_id,
+        employee_name,
+        ed.designation_name,
+        dep.department_name
+
+    ORDER BY
+        total_bookings DESC
+    """;
+
+    public static final String GET_EMPLOYEE_REVENUES = """
+    SELECT
+        e.id AS employee_id,
+        u.user_id,
+        CONCAT(
+            u.first_name,
+            ' ',
+            u.last_name
+        ) AS employee_name,
+        COUNT(b.booking_id)
+            AS total_bookings,
+        COALESCE(
+            SUM(b.final_amount),
+            0
+        ) AS total_revenue
+
+    FROM bookings b
+    INNER JOIN user u
+        ON b.assign_to = u.user_id
+    INNER JOIN employees e
+        ON u.user_id = e.user_id
+
+    GROUP BY
+        e.id,
+        u.user_id,
+        employee_name
+
+    ORDER BY
+        total_revenue DESC
+    """;
+
+    public static final String GET_DEPARTMENT_DISTRIBUTIONS = """
+    SELECT
+        dep.id AS department_id,
+        dep.department_name,
+        COUNT(*) AS total_bookings,
+
+        ROUND(
+            COUNT(*) * 100.0 /
+            (
+                SELECT COUNT(*)
+                FROM bookings
+                WHERE assign_to IS NOT NULL
+            ),
+            2
+        ) AS percentage
+
+    FROM bookings b
+    INNER JOIN employees e
+        ON b.assign_to = e.user_id
+    INNER JOIN employee_departments dep
+        ON e.department_id = dep.id
+
+    GROUP BY
+        dep.id,
+        dep.department_name
+
+    ORDER BY
+        total_bookings DESC
+    """;
+
+    public static final String GET_DESIGNATION_DISTRIBUTIONS = """
+    SELECT
+        ed.id AS designation_id,
+        ed.designation_name,
+        COUNT(*) AS total_bookings,
+
+        ROUND(
+            COUNT(*) * 100.0 /
+            (
+                SELECT COUNT(*)
+                FROM bookings
+                WHERE assign_to IS NOT NULL
+            ),
+            2
+        ) AS percentage
+
+    FROM bookings b
+    INNER JOIN employees e
+        ON b.assign_to = e.user_id
+    INNER JOIN employee_designations ed
+        ON e.designation_id = ed.id
+
+    GROUP BY
+        ed.id,
+        ed.designation_name
+
+    ORDER BY
+        total_bookings DESC
+    """;
+
+    public static final String GET_MONTHLY_ASSIGNMENT_TRENDS = """
+    SELECT
+        YEAR(created_at) AS year,
+        MONTH(created_at) AS month,
+        COUNT(*) AS total_assigned_bookings
+
+    FROM bookings
+    WHERE assign_to IS NOT NULL
+
+    GROUP BY
+        YEAR(created_at),
+        MONTH(created_at)
+
+    ORDER BY
+        year,
+        month
+    """;
+
+    public static final String GET_ASSIGNMENT_STATUS_DISTRIBUTIONS = """
+    SELECT
+        CASE
+            WHEN assign_to IS NULL
+                THEN 'UNASSIGNED'
+            ELSE 'ASSIGNED'
+        END AS assignment_type,
+
+        COUNT(*) AS total_bookings,
+
+        ROUND(
+            COUNT(*) * 100.0 /
+            (SELECT COUNT(*) FROM bookings),
+            2
+        ) AS percentage
+
+    FROM bookings
+
+    GROUP BY
+        assignment_type
+    """;
+
+    public static final String GET_BOOKING_HISTORY_SUMMARY_STATISTICS = """
+    SELECT
+        COUNT(*) AS total_bookings,
+        COALESCE(SUM(final_amount), 0) AS total_revenue,
+        MIN(booking_date) AS first_booking_date,
+        MAX(booking_date) AS latest_booking_date,
+        ROUND(
+            COUNT(*) /
+            NULLIF(
+                COUNT(DISTINCT DATE_FORMAT(booking_date, '%Y-%m')),
+                0
+            ),
+            2
+        ) AS average_monthly_bookings,
+        ROUND(
+            COALESCE(SUM(final_amount), 0) /
+            NULLIF(
+                COUNT(DISTINCT DATE_FORMAT(booking_date, '%Y-%m')),
+                0
+            ),
+            2
+        ) AS average_monthly_revenue
+    FROM bookings
+    """;
+
+
+    public static final String GET_BOOKING_GROWTH_TRENDS = """
+    SELECT
+        YEAR(booking_date) AS year,
+        MONTH(booking_date) AS month,
+        COUNT(*) AS total_bookings
+    FROM bookings
+    WHERE booking_date IS NOT NULL
+    GROUP BY
+        YEAR(booking_date),
+        MONTH(booking_date)
+    ORDER BY
+        year,
+        month
+    """;
+
+
+    public static final String GET_REVENUE_GROWTH_TRENDS = """
+    SELECT
+        YEAR(booking_date) AS year,
+        MONTH(booking_date) AS month,
+        COALESCE(SUM(final_amount), 0) AS total_revenue
+    FROM bookings
+    WHERE booking_date IS NOT NULL
+    GROUP BY
+        YEAR(booking_date),
+        MONTH(booking_date)
+    ORDER BY
+        year,
+        month
+    """;
+
+
+    public static final String GET_BOOKING_STATUS_HISTORIES = """
+    SELECT
+        YEAR(b.booking_date) AS year,
+        MONTH(b.booking_date) AS month,
+        bs.id AS booking_status_id,
+        bs.name AS booking_status_name,
+        COUNT(*) AS total_bookings
+    FROM bookings b
+    INNER JOIN booking_status bs
+        ON b.booking_status_id = bs.id
+    WHERE b.booking_date IS NOT NULL
+    GROUP BY
+        YEAR(b.booking_date),
+        MONTH(b.booking_date),
+        bs.id,
+        bs.name
+    ORDER BY
+        year,
+        month,
+        booking_status_name
+    """;
+
+
+    public static final String GET_CANCELLATION_TRENDS = """
+    SELECT
+        YEAR(cancellation_date) AS year,
+        MONTH(cancellation_date) AS month,
+        COUNT(*) AS total_cancelled_bookings,
+        ROUND(
+            COUNT(*) * 100.0 /
+            NULLIF(
+                (
+                    SELECT COUNT(*)
+                ),
+                0
+            ),
+            2
+        ) AS cancellation_rate
+    FROM bookings
+    WHERE cancellation_date IS NOT NULL
+    GROUP BY
+        YEAR(cancellation_date),
+        MONTH(cancellation_date)
+    ORDER BY
+        year,
+        month
+    """;
+
+
+    public static final String GET_HISTORICAL_TOP_TOURS = """
+    SELECT
+        t.tour_id,
+        t.name AS tour_name,
+        COUNT(b.booking_id) AS total_bookings,
+        COALESCE(SUM(b.total_persons), 0) AS total_participants,
+        COALESCE(SUM(b.final_amount), 0) AS total_revenue
+    FROM bookings b
+    INNER JOIN tour t
+        ON b.tour_id = t.tour_id
+    GROUP BY
+        t.tour_id,
+        t.name
+    ORDER BY
+        total_bookings DESC,
+        total_revenue DESC
+    """;
+
+
+    public static final String GET_CUSTOMER_RETURN_STATISTICS = """
+    SELECT
+        customer_type,
+        COUNT(*) AS total_customers,
+        ROUND(
+            COUNT(*) * 100.0 /
+            (
+                SELECT COUNT(DISTINCT user_id)
+                FROM bookings
+                WHERE user_id IS NOT NULL
+            ),
+            2
+        ) AS percentage
+    FROM
+    (
+        SELECT
+            user_id,
+            CASE
+                WHEN COUNT(*) = 1
+                    THEN 'NEW_CUSTOMER'
+                ELSE 'RETURNING_CUSTOMER'
+            END AS customer_type
+        FROM bookings
+        WHERE user_id IS NOT NULL
+        GROUP BY user_id
+    ) x
+    GROUP BY customer_type
+    """;
+
+
+    public static final String GET_PEAK_BOOKING_PERIODS = """
+    SELECT
+        MONTH(booking_date) AS month,
+        MONTHNAME(booking_date) AS month_name,
+        COUNT(*) AS total_bookings
+    FROM bookings
+    WHERE booking_date IS NOT NULL
+    GROUP BY
+        MONTH(booking_date),
+        MONTHNAME(booking_date)
+    ORDER BY
+        total_bookings DESC
+    """;
+
+    public static final String GET_BOOKING_BASIC_DETAILS_FOR_PARAMS = """
+        SELECT
+            b.booking_id,
+            b.booking_reference,
+            b.booking_date,
+            b.travel_start_date,
+            b.travel_end_date,
+            b.total_persons,
+            b.total_amount,
+            b.discount_amount,
+            b.tax_amount,
+            b.insurance_amount,
+            b.final_amount,
+            b.insurance_required,
+            b.assign_to,
+            b.assign_message,
+            DATE(b.cancellation_date) AS cancellation_date,
+            b.refund_amount,
+            b.special_requirements,
+            b.dietary_restrictions,
+
+            u.user_id,
+            u.username,
+            CONCAT(
+                COALESCE(u.first_name, ''),
+                ' ',
+                COALESCE(u.last_name, '')
+            ) AS customer_name,
+            u.email,
+            u.mobile_number1,
+
+            t.tour_id,
+            t.name AS tour_name,
+            t.duration AS tour_duration,
+            t.start_location,
+            t.end_location,
+
+            p.package_id,
+            p.name AS package_name,
+
+            bs.id AS booking_status_id,
+            bs.name AS booking_status_name,
+
+            au.user_id AS assigned_employee_id,
+            CONCAT(
+                COALESCE(au.first_name, ''),
+                ' ',
+                COALESCE(au.last_name, '')
+            ) AS assigned_employee_name
+
+        FROM bookings b
+        LEFT JOIN user u
+            ON b.user_id = u.user_id
+        LEFT JOIN tour t
+            ON b.tour_id = t.tour_id
+        LEFT JOIN packages p
+            ON b.package_id = p.package_id
+        LEFT JOIN booking_status bs
+            ON b.booking_status_id = bs.id
+        LEFT JOIN employees e
+            ON b.assign_to = e.id
+        LEFT JOIN user au
+            ON e.user_id = au.user_id
+        WHERE 1=1
+        """;
+
+    public static final String GET_BOOKING_COUNT_FOR_PARAMS = """
+        SELECT COUNT(*)
+        FROM bookings b
+        LEFT JOIN user u
+            ON b.user_id = u.user_id
+        LEFT JOIN tour t
+            ON b.tour_id = t.tour_id
+        LEFT JOIN packages p
+            ON b.package_id = p.package_id
+        WHERE 1=1
+        """;
+    public static final String GET_BOOKINGS_REQUEST_PARAMS = """
+        SELECT
+            COALESCE(MIN(final_amount),0) AS min_price,
+            COALESCE(MAX(final_amount),0) AS max_price,
+            COALESCE(MIN(discount_amount),0) AS min_discount_amount,
+            COALESCE(MAX(discount_amount),0) AS max_discount_amount,
+            MIN(booking_date) AS min_booking_date,
+            MAX(booking_date) AS max_booking_date,
+            MIN(travel_start_date) AS min_travel_start_date,
+            MAX(travel_start_date) AS max_travel_start_date
+        FROM bookings
+        """;
+
+    public static final String GET_BOOKING_PARAM_STATUSES = """
+        SELECT
+            id,
+            name
+        FROM booking_status
+        ORDER BY name
+        """;
+
+    public static final String GET_BOOKING_PARAM_TOURS = """
+        SELECT
+            tour_id AS id,
+            name
+        FROM tour
+        ORDER BY name
+        """;
+    public static final String GET_BOOKING_PARAM_PACKAGES = """
+        SELECT
+            package_id AS id,
+            name
+        FROM packages
+        ORDER BY name
+        """;
+    public static final String GET_BOOKING_PARAM_ASSIGN_EMPLOYEES = """
+        SELECT
+            e.id,
+            CONCAT(
+                COALESCE(u.first_name,''),
+                ' ',
+                COALESCE(u.last_name,'')
+            ) AS name
+        FROM employees e
+        INNER JOIN user u
+            ON e.user_id = u.user_id
+        ORDER BY name
+        """;
+
+    public static final String GET_BOOKING_INFORMATION_BY_ID = """
+        SELECT
+            b.booking_id,
+            b.booking_reference,
+            b.booking_date,
+            b.travel_start_date,
+            b.travel_end_date,
+            b.total_persons,
+            b.total_amount,
+            b.discount_amount,
+            b.tax_amount,
+            b.insurance_amount,
+            b.final_amount,
+            b.insurance_required,
+            b.special_requirements,
+            b.dietary_restrictions
+        FROM bookings b
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_CUSTOMER_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            u.user_id,
+            u.username,
+            u.first_name,
+            u.last_name,
+            CONCAT(
+                COALESCE(u.first_name,''),
+                ' ',
+                COALESCE(u.last_name,'')
+            ) AS full_name,
+            u.email,
+            u.mobile_number1,
+            u.passport_number
+        FROM bookings b
+        INNER JOIN user u
+            ON b.user_id = u.user_id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_TOUR_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            t.tour_id,
+            t.name AS tour_name,
+            t.description AS tour_description,
+            t.duration,
+            t.start_location,
+            t.end_location,
+            t.latitude,
+            t.longitude
+        FROM bookings b
+        INNER JOIN tour t
+            ON b.tour_id = t.tour_id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_PACKAGE_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            p.package_id,
+            p.name AS package_name,
+            p.description AS package_description,
+            p.total_price,
+            p.price_per_person,
+            p.discount_percentage
+        FROM bookings b
+        INNER JOIN packages p
+            ON b.package_id = p.package_id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_BOOKING_STATUS_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            bs.id,
+            bs.name,
+            bs.description
+        FROM bookings b
+        INNER JOIN booking_status bs
+            ON b.booking_status_id = bs.id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_ASSIGNMENT_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            e.id AS employee_id,
+            e.user_id,
+            e.employee_code,
+            CONCAT(
+                COALESCE(u.first_name,''),
+                ' ',
+                COALESCE(u.last_name,'')
+            ) AS employee_name,
+            ed.department_name,
+            des.designation_name,
+            b.assign_message
+        FROM bookings b
+        INNER JOIN employees e
+            ON b.assign_to = e.id
+        INNER JOIN user u
+            ON e.user_id = u.user_id
+        LEFT JOIN employee_departments ed
+            ON e.department_id = ed.id
+        LEFT JOIN employee_designations des
+            ON e.designation_id = des.id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_PARTICIPANTS_BY_BOOKING_ID = """
+        SELECT
+            bp.id,
+            bp.first_name,
+            bp.last_name,
+            CONCAT(
+                COALESCE(bp.first_name,''),
+                ' ',
+                COALESCE(bp.last_name,'')
+            ) AS full_name,
+            bp.date_of_birth,
+            g.name AS gender_name,
+            c.name AS country_name,
+            bp.passport_number,
+            bp.email,
+            bp.mobile_number,
+            bp.emergency_contact_name,
+            bp.emergency_contact_phone,
+            bp.emergency_contact_relationship,
+            bp.medical_conditions,
+            bp.allergies,
+            bp.special_assistance_required,
+            bp.assistance_details
+        FROM booking_participants bp
+        LEFT JOIN gender g
+            ON bp.gender_id = g.gender_id
+        LEFT JOIN country c
+            ON bp.nationality_country_id = c.country_id
+        WHERE bp.booking_id = ?
+        ORDER BY bp.id
+        """;
+
+
+    public static final String GET_CANCELLATION_INFORMATION_BY_BOOKING_ID = """
+        SELECT
+            DATE(b.cancellation_date) AS cancellation_date,
+            cr.name,
+            b.cancellation_notes,
+            b.refund_amount,
+            rs.name AS refund_status
+        FROM bookings b
+        LEFT JOIN cancellation_reasons cr
+            ON b.cancellation_reason_id = cr.id
+        LEFT JOIN refund_status rs
+            ON b.refund_status_id = rs.id
+        WHERE b.booking_id = ?
+        """;
+
+
+    public static final String GET_ACCOMMODATIONS_BY_BOOKING_ID = """
+        SELECT
+            ba.id,
+            sp.name AS hotel_name,
+            ba.room_type,
+            ba.room_number,
+            ba.confirmation_number,
+            ba.check_in_date,
+            ba.check_out_date
+        FROM booking_accommodation ba
+        LEFT JOIN service_provider sp
+        ON sp.service_provider_id = ba.hotel_id
+        WHERE ba.booking_id = ?
+        ORDER BY ba.check_in_date
+        """;
+
+
+    public static final String GET_TRANSPORTATIONS_BY_BOOKING_ID = """
+        SELECT
+            bt.id,
+            bt.transport_type,
+            bt.departure_date,
+            bt.departure_time,
+            bt.arrival_date,
+            bt.arrival_time,
+            bt.departure_location,
+            bt.arrival_location,
+            bt.carrier_name,
+            bt.reference_number,
+            bt.seat_numbers,
+            v.registration_number
+        FROM booking_transportation bt
+        LEFT JOIN vehicles v
+        ON v.vehicle_id = bt.vehicle_id
+        WHERE bt.booking_id = ?
+        ORDER BY bt.departure_date,
+                 bt.departure_time
+        """;
+
+
+    public static final String GET_ACTIVITIES_BY_BOOKING_ID = """
+        SELECT
+            ba.id,
+            a.id AS activity_id,
+            a.name AS activity_name,
+            ba.activity_date,
+            ba.start_time,
+            ba.end_time,
+            ba.number_of_participants,
+            ba.price_per_person,
+            ba.total_price,
+            cs.name AS status_name
+        FROM booking_activities ba
+        INNER JOIN activities a
+            ON ba.activity_id = a.id
+        LEFT JOIN common_status cs
+            ON ba.status = cs.id
+        WHERE ba.booking_id = ?
+        ORDER BY ba.activity_date,
+                 ba.start_time
+        """;
+
+    public static final String INSERT_BOOKING = """
+    INSERT INTO bookings (
+        booking_reference,
+        user_id,
+        package_schedule_id,
+        total_persons,
+        total_amount,
+        discount_amount,
+        tax_amount,
+        insurance_amount,
+        final_amount,
+        booking_date,
+        travel_start_date,
+        travel_end_date,
+        booking_status_id,
+        special_requirements,
+        dietary_restrictions,
+        insurance_required,
+        created_by,
+        tour_id,
+        package_id,
+        assign_to,
+        assign_message
+    )
+    VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+    """;
+
+    public static final String ADD_BOOKING_PARTICIPANT = """
+    INSERT INTO booking_participants (
+        booking_id,
+        first_name,
+        last_name,
+        date_of_birth,
+        gender_id,
+        passport_number,
+        nationality_country_id,
+        email,
+        mobile_number,
+        emergency_contact_name,
+        emergency_contact_phone,
+        emergency_contact_relationship,
+        medical_conditions,
+        allergies,
+        special_assistance_required,
+        assistance_details,
+        room_sharing_with,
+        status_id,
+        created_by
+    )
+    VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+    """;
+
+    public static final String ADD_BOOKING_ACCOMMODATION = """
+    INSERT INTO booking_accommodation (
+        booking_id,
+        check_in_date,
+        check_out_date,
+        hotel_id,
+        room_type,
+        room_number,
+        confirmation_number,
+        status_id,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_TRANSPORTATION = """
+    INSERT INTO booking_transportation (
+        booking_id,
+        transport_type,
+        vehicle_id,
+        departure_date,
+        departure_time,
+        arrival_date,
+        arrival_time,
+        departure_location,
+        arrival_location,
+        carrier_name,
+        reference_number,
+        seat_numbers,
+        status_id,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_ACTIVITY = """
+    INSERT INTO booking_activities (
+        booking_id,
+        activity_id,
+        activity_schedule_id,
+        activity_date,
+        start_time,
+        end_time,
+        number_of_participants,
+        price_per_person,
+        total_price,
+        status,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_DOCUMENT = """
+    INSERT INTO booking_documents (
+        booking_id,
+        document_type,
+        document_name,
+        document_url,
+        file_size,
+        mime_type,
+        status,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_INSURANCE = """
+    INSERT INTO booking_insurance (
+        booking_id,
+        insurance_provider,
+        policy_number,
+        coverage_type,
+        premium_amount,
+        coverage_details,
+        policy_start_date,
+        policy_end_date,
+        status_id,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_NOTE = """
+    INSERT INTO booking_notes (
+        booking_id,
+        note_type,
+        note_text,
+        is_important,
+        follow_up_date,
+        follow_up_completed,
+        status_id,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_PRICE_BREAKDOWN = """
+    INSERT INTO booking_price_breakdown (
+        booking_id,
+        item_type,
+        item_name,
+        item_description,
+        quantity,
+        unit_price,
+        total_price,
+        status_id,
+        created_by
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+    public static final String ADD_BOOKING_INVOICE = """
+    INSERT INTO booking_invoices (
+        booking_id,
+        invoice_number,
+        invoice_date,
+        due_date,
+        subtotal,
+        tax_amount,
+        discount_amount,
+        total_amount,
+        amount_paid,
+        balance_due,
+        billing_full_name,
+        billing_address,
+        billing_email,
+        billing_phone,
+        status,
+        insurance_amount,
+        created_by
+    )
+    VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+    """;
+
+    public static final String ADD_BOOKING_ITINERARY = """
+    INSERT INTO booking_itinerary (
+        booking_id,
+        day_number,
+        itinerary_date,
+        title,
+        description,
+        start_time,
+        end_time,
+        location,
+        included_meals,
+        status_id,
+        created_by,
+        updated_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """;
+
+// ======================================================
+// BOOKINGS
+// ======================================================
+
+    public static final String UPDATE_BOOKING_BASIC_INFORMATION = """
+        UPDATE bookings
+        SET user_id = ?,
+            tour_id = ?,
+            package_id = ?,
+            package_schedule_id = ?,
+            booking_date = ?,
+            travel_start_date = ?,
+            travel_end_date = ?,
+            total_persons = ?,
+            total_amount = ?,
+            discount_amount = ?,
+            tax_amount = ?,
+            insurance_amount = ?,
+            final_amount = ?,
+            insurance_required = ?,
+            booking_status_id = ?,
+            special_requirements = ?,
+            dietary_restrictions = ?,
+            assign_to = ?,
+            assign_message = ?,
+            updated_by = ?
+        WHERE booking_id = ?
+        """;
+
+
+// ======================================================
+// PARTICIPANTS
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_PARTICIPANT = """
+        UPDATE booking_participants
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_PARTICIPANT = """
+        UPDATE booking_participants
+        SET first_name = ?,
+            last_name = ?,
+            date_of_birth = ?,
+            gender_id = ?,
+            passport_number = ?,
+            nationality_country_id = ?,
+            email = ?,
+            mobile_number = ?,
+            emergency_contact_name = ?,
+            emergency_contact_phone = ?,
+            emergency_contact_relationship = ?,
+            medical_conditions = ?,
+            allergies = ?,
+            special_assistance_required = ?,
+            assistance_details = ?,
+            room_sharing_with = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// ACCOMMODATIONS
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_ACCOMMODATION = """
+        UPDATE booking_accommodation
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_ACCOMMODATION = """
+        UPDATE booking_accommodation
+        SET check_in_date = ?,
+            check_out_date = ?,
+            hotel_id = ?,
+            room_type = ?,
+            room_number = ?,
+            confirmation_number = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// TRANSPORTATIONS
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_TRANSPORTATION = """
+        UPDATE booking_transportation
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_TRANSPORTATION = """
+        UPDATE booking_transportation
+        SET transport_type = ?,
+            vehicle_id = ?,
+            departure_date = ?,
+            departure_time = ?,
+            arrival_date = ?,
+            arrival_time = ?,
+            departure_location = ?,
+            arrival_location = ?,
+            carrier_name = ?,
+            reference_number = ?,
+            seat_numbers = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// ACTIVITIES
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_ACTIVITY = """
+        UPDATE booking_activities
+        SET status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_ACTIVITY = """
+        UPDATE booking_activities
+        SET activity_id = ?,
+            activity_schedule_id = ?,
+            activity_date = ?,
+            start_time = ?,
+            end_time = ?,
+            number_of_participants = ?,
+            price_per_person = ?,
+            total_price = ?,
+            status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// DOCUMENTS
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_DOCUMENT = """
+        UPDATE booking_documents
+        SET status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_DOCUMENT = """
+        UPDATE booking_documents
+        SET document_name = ?,
+            document_type = ?,
+            document_url = ?,
+            file_size = ?,
+            mime_type = ?,
+            status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// INSURANCE
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_INSURANCE = """
+        UPDATE booking_insurance
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_INSURANCE = """
+        UPDATE booking_insurance
+        SET insurance_provider = ?,
+            policy_number = ?,
+            coverage_type = ?,
+            premium_amount = ?,
+            coverage_details = ?,
+            policy_start_date = ?,
+            policy_end_date = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// ITINERARY
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_ITINERARY = """
+        UPDATE booking_itinerary
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_ITINERARY = """
+        UPDATE booking_itinerary
+        SET day_number = ?,
+            itinerary_date = ?,
+            title = ?,
+            description = ?,
+            start_time = ?,
+            end_time = ?,
+            location = ?,
+            included_meals = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// NOTES
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_NOTE = """
+        UPDATE booking_notes
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_NOTE = """
+        UPDATE booking_notes
+        SET note_type = ?,
+            note_text = ?,
+            is_important = ?,
+            follow_up_date = ?,
+            follow_up_completed = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// PRICE BREAKDOWN
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_PRICE_BREAKDOWN = """
+        UPDATE booking_price_breakdown
+        SET status_id = ?,
+            terminated_at = CURRENT_TIMESTAMP,
+            terminated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_PRICE_BREAKDOWN = """
+        UPDATE booking_price_breakdown
+        SET item_type = ?,
+            item_name = ?,
+            item_description = ?,
+            quantity = ?,
+            unit_price = ?,
+            total_price = ?,
+            status_id = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+
+// ======================================================
+// INVOICE
+// ======================================================
+
+    public static final String TERMINATE_BOOKING_INVOICE = """
+        UPDATE booking_invoices
+        SET status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_INVOICE = """
+        UPDATE booking_invoices
+        SET due_date = ?,
+            subtotal = ?,
+            tax_amount = ?,
+            total_amount = ?,
+            discount_amount = ?,
+            insurance_amount = ?,
+            amount_paid = ?,
+            balance_due = ?,
+            billing_full_name = ?,
+            billing_address = ?,
+            billing_email = ?,
+            billing_phone = ?,
+            status = ?,
+            updated_by = ?
+        WHERE id = ?
+          AND booking_id = ?
+        """;
+
+    public static final String GET_BOOKING_BASIC_DETAILS_FOR_BOOKING_ID = """
+        SELECT
+            b.booking_id,
+            b.booking_reference,
+            b.booking_date,
+            b.travel_start_date,
+            b.travel_end_date,
+            b.total_persons,
+            b.total_amount,
+            b.discount_amount,
+            b.tax_amount,
+            b.insurance_amount,
+            b.final_amount,
+            b.insurance_required,
+            b.assign_to,
+            b.assign_message,
+            DATE(b.cancellation_date) AS cancellation_date,
+            b.refund_amount,
+            b.special_requirements,
+            b.dietary_restrictions,
+
+            u.user_id,
+            u.username,
+            CONCAT(
+                COALESCE(u.first_name, ''),
+                ' ',
+                COALESCE(u.last_name, '')
+            ) AS customer_name,
+            u.email,
+            u.mobile_number1,
+
+            t.tour_id,
+            t.name AS tour_name,
+            t.duration AS tour_duration,
+            t.start_location,
+            t.end_location,
+
+            p.package_id,
+            p.name AS package_name,
+
+            bs.id AS booking_status_id,
+            bs.name AS booking_status_name,
+
+            au.user_id AS assigned_employee_id,
+            CONCAT(
+                COALESCE(au.first_name, ''),
+                ' ',
+                COALESCE(au.last_name, '')
+            ) AS assigned_employee_name
+
+        FROM bookings b
+        LEFT JOIN user u
+            ON b.user_id = u.user_id
+        LEFT JOIN tour t
+            ON b.tour_id = t.tour_id
+        LEFT JOIN packages p
+            ON b.package_id = p.package_id
+        LEFT JOIN booking_status bs
+            ON b.booking_status_id = bs.id
+        LEFT JOIN employees e
+            ON b.assign_to = e.id
+        LEFT JOIN user au
+            ON e.user_id = au.user_id
+        WHERE b.booking_id = ?
+        """;
+
+    public static final String UPDATE_BOOKING_STATUS = """
+        UPDATE bookings
+        SET booking_status_id = ?,
+            updated_by = ?
+        WHERE booking_id = ?
+        """;
+
+    public static final String GET_UNASSIGN_BOOKING_BASIC_DETAILS =
+            """
+            SELECT
+                b.booking_id,
+                b.booking_reference,
+                b.booking_date,
+                b.travel_start_date,
+                b.travel_end_date,
+                b.total_persons,
+    
+                u.user_id,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.mobile_number1,
+                u.nic,
+                u.passport_number,
+    
+                t.tour_id,
+                t.name AS tour_name,
+                t.description,
+                t.duration,
+                t.start_location,
+                t.end_location,
+    
+                p.package_id,
+                p.name AS package_name,
+                p.total_price,
+                p.price_per_person,
+                p.min_person_count,
+                p.max_person_count,
+    
+                ps.id AS package_schedule_id,
+                ps.name AS schedule_name,
+                ps.assume_start_date,
+                ps.assume_end_date,
+    
+                b.total_amount,
+                b.discount_amount,
+                b.tax_amount,
+                b.insurance_amount,
+                b.final_amount,
+                b.paid_amount,
+                b.due_amount,
+    
+                e.id AS assign_to,
+                u2.username AS assigned_user,
+                b.assign_message,
+    
+                bs.id AS booking_status_id,
+                bs.name AS booking_status
+    
+            FROM bookings b
+            LEFT JOIN user u ON u.user_id = b.user_id
+            LEFT JOIN tour t ON t.tour_id = b.tour_id
+            LEFT JOIN packages p ON p.package_id = b.package_id
+            LEFT JOIN package_schedule ps ON ps.id = b.package_schedule_id
+            LEFT JOIN booking_status bs ON bs.id = b.booking_status_id
+            LEFT JOIN employees e ON e.id = b.assign_to
+            LEFT JOIN user u2 ON e.user_id = u2.user_id
+            WHERE 1=1
+            """;
+
+    public static final String COUNT_UNASSIGN_BOOKING_BASIC_DETAILS =
+            """
+            SELECT COUNT(*)
+            FROM bookings b
+            LEFT JOIN user u ON u.user_id = b.user_id
+            LEFT JOIN tour t ON t.tour_id = b.tour_id
+            LEFT JOIN packages p ON p.package_id = b.package_id
+            LEFT JOIN package_schedule ps ON ps.id = b.package_schedule_id
+            LEFT JOIN booking_status bs ON bs.id = b.booking_status_id
+            WHERE 1=1
+            """;
+
+    public static final String GET_UNASSIGN_BOOKING_REFERENCES = """
+    SELECT DISTINCT
+        booking_reference
+    FROM bookings
+    ORDER BY booking_reference
+    """;
+
 }
+
