@@ -129,38 +129,103 @@ public class CommonQueries {
             """;
 
     public static final String GET_SUPERVISOR_EMAILS_BY_USER_ID = """
-        WITH RECURSIVE supervisor_hierarchy AS (
-
-            -- direct supervisor
-            SELECT
-                e.supervisor_id,
-                u.user_id,
-                u.username,
-                u.email
-            FROM employees e
-            JOIN employees s ON e.supervisor_id = s.id
-            JOIN user u ON s.user_id = u.user_id
-            WHERE e.user_id = ?
-
-            UNION ALL
-
-            -- higher level supervisors
-            SELECT
-                s.supervisor_id,
-                u.user_id,
-                u.username,
-                u.email
-            FROM employees s
-            JOIN supervisor_hierarchy sh ON sh.supervisor_id = s.id
-            JOIN user u ON s.user_id = u.user_id
-            WHERE s.supervisor_id IS NOT NULL
-        )
-
-        SELECT DISTINCT
-            user_id,
-            username,
-            email
-        FROM supervisor_hierarchy
-        WHERE email IS NOT NULL
+            WITH RECURSIVE supervisor_hierarchy AS (
+            
+                                       -- direct supervisor
+                                       SELECT
+                                           s.id AS employee_id,
+                                           s.supervisor_id,
+                                           u.user_id,
+                                           u.username,
+                                           u.email,
+                                           CAST(s.id AS CHAR(1000)) AS path
+                                       FROM employees e
+                                       JOIN employees s ON e.supervisor_id = s.id
+                                       JOIN user u ON s.user_id = u.user_id
+                                       WHERE e.user_id = ?
+            
+                                       UNION ALL
+            
+                                       -- higher level supervisors
+                                       SELECT
+                                           s.id AS employee_id,
+                                           s.supervisor_id,
+                                           u.user_id,
+                                           u.username,
+                                           u.email,
+                                           CONCAT(sh.path, ',', s.id)
+                                       FROM employees s
+                                       JOIN supervisor_hierarchy sh
+                                           ON sh.supervisor_id = s.id
+                                       JOIN user u
+                                           ON s.user_id = u.user_id
+                                       WHERE s.supervisor_id IS NOT NULL
+                                         AND FIND_IN_SET(s.id, sh.path) = 0
+                                   )
+            
+                                   SELECT DISTINCT
+                                       user_id,
+                                       username,
+                                       email
+                                   FROM supervisor_hierarchy
+                                   WHERE email IS NOT NULL;
         """;
+
+    public static final String GET_ACTIVITY_ID_AND_NAME = """
+        SELECT
+            id AS activity_id,
+            name AS activity_name
+        FROM activities
+        ORDER BY name ASC
+        """;
+
+    public static final String GET_DESTINATION_ID_AND_NAME = """
+        SELECT
+            destination_id,
+            name AS destination_name
+        FROM destination
+        ORDER BY name ASC
+        """;
+
+    public static final String GET_TOUR_SCHEDULE_ID_AND_NAME = """
+        SELECT
+            id AS tour_schedule_id,
+            name AS tour_schedule_name
+        FROM tour_schedule
+        ORDER BY name ASC
+        """;
+
+    public static final String GET_PACKAGE_SCHEDULE_ID_AND_NAME = """
+        SELECT
+            id AS package_schedule_id,
+            name AS package_schedule_name
+        FROM package_schedule
+        ORDER BY name ASC
+        """;
+
+    public static final String GET_SEASON_ID_AND_NAME = """
+        SELECT
+            id AS season_id,
+            name AS season
+        FROM seasons
+        ORDER BY name ASC
+        """;
+
+    public static final String GET_BOOKING_STATUS_ID_AND_NAME = """
+    SELECT
+        id,
+        name
+    FROM booking_status
+    ORDER BY name
+    """;
+
+    public static final String GET_TOUR_ASSIGN_USER_ID_AND_NAME = """
+    SELECT
+        e.id AS id,
+        u.username AS name
+    FROM employees e
+    INNER JOIN user u ON e.user_id = u.user_id
+    """;
+
+
 }

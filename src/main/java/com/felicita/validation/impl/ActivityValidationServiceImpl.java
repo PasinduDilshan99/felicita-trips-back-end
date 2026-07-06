@@ -1,8 +1,9 @@
 package com.felicita.validation.impl;
 
-import com.felicita.model.request.ActivityInsertRequest;
-import com.felicita.model.request.ActivityTerminateRequest;
-import com.felicita.model.request.ActivityUpdateRequest;
+import com.felicita.model.request.*;
+import com.felicita.model.request.activity.category.ActivityCategoryInsertRequest;
+import com.felicita.model.request.activity.category.ActivityCategoryUpdateRequest;
+import com.felicita.model.request.activity.schedule.ActivityScheduleUpdateRequest;
 import com.felicita.validation.ActivityValidationService;
 import com.felicita.validation.CommonValidationService;
 import org.slf4j.Logger;
@@ -34,6 +35,36 @@ public class ActivityValidationServiceImpl implements ActivityValidationService 
 
     @Override
     public void validateActivityUpdateRequest(ActivityUpdateRequest activityUpdateRequest) {
+
+    }
+
+    @Override
+    public void validateActivityScheduleInsertRequest(ActivityScheduleInsertRequest activityScheduleInsertRequest) {
+
+    }
+
+    @Override
+    public void validateActivityScheduleUpdateRequest(ActivityScheduleUpdateRequest activityScheduleUpdateRequest) {
+
+    }
+
+    @Override
+    public void validateActivityScheduleTerminateRequest(CommonIdRequest commonIdRequest) {
+
+    }
+
+    @Override
+    public void validateCommonIdRequest(CommonIdRequest commonIdRequest) {
+
+    }
+
+    @Override
+    public void validateActivityCategoryInsertRequest(ActivityCategoryInsertRequest activityCategoryInsertRequest) {
+
+    }
+
+    @Override
+    public void validateActivityCategoryUpdateRequest(ActivityCategoryUpdateRequest activityCategoryUpdateRequest) {
 
     }
 }

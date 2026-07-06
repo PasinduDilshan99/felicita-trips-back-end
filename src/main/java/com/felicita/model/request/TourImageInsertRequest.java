@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class TourImageInsertRequest {
-    private String imageName;
-    private String imageDescription;
+    private String name;
+    private String description;
     private String imageUrl;
     private String status;
 }

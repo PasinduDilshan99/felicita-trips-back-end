@@ -3,7 +3,12 @@ package com.felicita.service;
 import com.felicita.model.dto.ActivityCategoryResponseDto;
 import com.felicita.model.dto.ActivityResponseDto;
 import com.felicita.model.request.*;
+import com.felicita.model.request.activity.category.ActivityCategoryInsertRequest;
+import com.felicita.model.request.activity.category.ActivityCategoryUpdateRequest;
+import com.felicita.model.request.activity.schedule.ActivityScheduleUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.activity.category.ActivityCategoryDetailsResponse;
+import com.felicita.model.response.common.ActivityScheduleIdAndNameResponse;
 import com.felicita.model.response.statistics.ActivityCategoriesStatisticsResponse;
 import com.felicita.model.response.statistics.ActivityScheduleStatisticsResponse;
 
@@ -52,4 +57,28 @@ public interface ActivitiesService {
     CommonResponse<ActivityCategoriesStatisticsResponse> getActivityCategoriesStatistics();
 
     CommonResponse<List<ActivityBasicDetailsResponse>> getActivityByDestinationId(ActivitiesByDestinationId activitiesByDestinationId);
+
+    CommonResponse<ActivityScheduleWithParamsResponse> getActivitiesScheduleWithParams(ActivityScheduleDataRequest activityScheduleDataRequest);
+
+    CommonResponse<ActivityScheduleParamsResponse> getActivitiesScheduleParams();
+
+    CommonResponse<ActivityScheduleDetailsResponse> getActivityScheduleDetailsById(CommonIdRequest activityScheduleId);
+
+    CommonResponse<InsertResponse> createActivitySchedule(ActivityScheduleInsertRequest activityScheduleInsertRequest);
+
+    CommonResponse<UpdateResponse> updateActivitySchedule(ActivityScheduleUpdateRequest activityScheduleUpdateRequest);
+
+    CommonResponse<TerminateResponse> termianteActivityScheduleById(CommonIdRequest commonIdRequest);
+
+    CommonResponse<ActivityCategoryDetailsResponse> getActivityCategoryDetailsById(CommonIdRequest commonIdRequest);
+
+    CommonResponse<TerminateResponse> terminateActivityCategory(CommonIdRequest commonIdRequest);
+
+    CommonResponse<InsertResponse> insertActivityCategory(ActivityCategoryInsertRequest activityCategoryInsertRequest);
+
+    CommonResponse<UpdateResponse> updateActivityCategory(ActivityCategoryUpdateRequest activityCategoryUpdateRequest);
+
+    CommonResponse<List<ActivityIdAndNameResponse>> getActivitiesByDestinationId(CommonIdRequest destinationId);
+
+    CommonResponse<List<ActivityScheduleIdAndNameResponse>> getActivityScheduleIdAndNames();
 }

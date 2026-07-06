@@ -4,16 +4,40 @@ import com.felicita.email.TourEmailHelperService;
 import com.felicita.exception.*;
 import com.felicita.model.dto.*;
 import com.felicita.model.enums.*;
-import com.felicita.model.other.ActivitiesComparisonResult;
-import com.felicita.model.other.TourComparisonResult;
+import com.felicita.model.other.*;
+import com.felicita.model.request.CommonIdRequest;
 import com.felicita.model.request.TourDataRequest;
 import com.felicita.model.request.TourInsertRequest;
 import com.felicita.model.request.TourUpdateRequest;
+import com.felicita.model.request.tour.category.TourCategoryImageInsertRequest;
+import com.felicita.model.request.tour.category.TourCategoryImageUpdateRequest;
+import com.felicita.model.request.tour.category.TourCategoryInsertRequest;
+import com.felicita.model.request.tour.category.TourCategoryUpdateRequest;
+import com.felicita.model.request.tour.schedule.TourScheduleDataRequest;
+import com.felicita.model.request.tour.schedule.TourScheduleInsertRequest;
+import com.felicita.model.request.tour.schedule.TourScheduleUpdateRequest;
+import com.felicita.model.request.tour.type.TourTypeImageInsertRequest;
+import com.felicita.model.request.tour.type.TourTypeImageUpdateRequest;
+import com.felicita.model.request.tour.type.TourTypeInsertRequest;
+import com.felicita.model.request.tour.type.TourTypeUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.SortByResponse;
+import com.felicita.model.response.common.TourScheduleIdAndNameResponse;
 import com.felicita.model.response.statistics.TourCategoryStatisticsResponse;
 import com.felicita.model.response.statistics.TourScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.TourStatisticsResponse;
 import com.felicita.model.response.statistics.TourTypeStatisticsResponse;
+import com.felicita.model.response.tour.ParamsForTourRequestResponse;
+import com.felicita.model.response.tour.category.TourCategoryAllDetailsResponse;
+import com.felicita.model.response.tour.category.TourCategoryBasicDetailsResponse;
+import com.felicita.model.response.tour.category.TourCategoryImageResponse;
+import com.felicita.model.response.tour.schedule.TourScheduleBasicDetailsResponse;
+import com.felicita.model.response.tour.schedule.TourScheduleDetailsResponse;
+import com.felicita.model.response.tour.schedule.TourScheduleParamsResponse;
+import com.felicita.model.response.tour.schedule.TourScheduleWithParamsResponse;
+import com.felicita.model.response.tour.type.TourTypeAllDetailsResponse;
+import com.felicita.model.response.tour.type.TourTypeBasicDetailsResponse;
+import com.felicita.model.response.tour.type.TourTypeImageResponse;
 import com.felicita.repository.TourRepository;
 import com.felicita.repository.WishListRepository;
 import com.felicita.security.model.User;
@@ -34,7 +58,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.felicita.util.Constant.COMPANY_EMAIL;
-import static com.felicita.util.FrontEndUrls.VIEW_TOUR_DETAILS;
+import static com.felicita.util.FrontEndUrls.*;
 
 @Service
 public class TourServiceImpl implements TourService {
@@ -806,7 +830,7 @@ public class TourServiceImpl implements TourService {
                 emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
                 emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
                 String body = tourEmailHelperService.buildTourCreateSuccessfullBody(tourInsertRequest, tourId, loggedUser);
-                String subject = tourEmailHelperService.buildTourCreateSuccessfullSubject(tourInsertRequest,tourId, loggedUser);
+                String subject = tourEmailHelperService.buildTourCreateSuccessfullSubject(tourInsertRequest, tourId, loggedUser);
 //                emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
             }
 
@@ -1121,8 +1145,8 @@ public class TourServiceImpl implements TourService {
             List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.ACTIVITY_UPDATED.name(), supervisorUserIds);
             emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
             emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
-            String subject = tourEmailHelperService.buildTourUpdateSuccessfullSubject(loggedUser,tourUpdateRequest.getTourId());
-            String body = tourEmailHelperService.buildTourUpdateSuccessfullBody(loggedUser,tourUpdateRequest.getTourId(), comparisonResult);
+            String subject = tourEmailHelperService.buildTourUpdateSuccessfullSubject(loggedUser, tourUpdateRequest.getTourId());
+            String body = tourEmailHelperService.buildTourUpdateSuccessfullBody(loggedUser, tourUpdateRequest.getTourId(), comparisonResult);
 //            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
 
             return new CommonResponse<>(
@@ -1293,6 +1317,1735 @@ public class TourServiceImpl implements TourService {
         }
     }
 
+    @Override
+    public CommonResponse<List<TourCategoryBasicDetailsResponse>> getTourCategories() {
+        LOGGER.info("Start fetching tour categories from repository");
+        try {
+            List<TourCategoryBasicDetailsResponse> tourCategories = tourRepository.getTourCategories();
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourCategories,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour categories: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour categories from database");
+        } finally {
+            LOGGER.info("End fetching tour categories from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TourCategoryAllDetailsResponse> getTourCategoryDetailsById(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start fetching tour category details by id from repository");
+        try {
+            TourCategoryAllDetailsResponse tourCategoryDetails = tourRepository.getTourCategoryDetailsById(commonIdRequest);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourCategoryDetails,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour category details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour category details from database");
+        } finally {
+            LOGGER.info("End fetching tour category details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TourCategoryBasicDetailsResponse> getTourCategoryBasicDetailsById(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start fetching tour category basic details by id from repository");
+        try {
+            TourCategoryBasicDetailsResponse tourCategoryBasicDetails = tourRepository.getTourCategoryBasicDetailsById(commonIdRequest);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourCategoryBasicDetails,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour category basic details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour category basic details from database");
+        } finally {
+            LOGGER.info("End fetching tour category basic details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TerminateResponse> terminateTourCategory(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start terminating tour category by id from repository");
+        try {
+            tourValidationService.validateCommonIdRequest(commonIdRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            TourCategoryBasicDetailsResponse tourCategoryResponse = getTourCategoryBasicDetailsById(commonIdRequest).getData();
+            tourRepository.terminateTourCategory(commonIdRequest, userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.TOUR_CATEGORY_TERMINATED.name())
+                    .priority(Priority.HIGH.name())
+                    .title("Tour Category Terminated")
+                    .message("The tour category '" + tourCategoryResponse.getCategoryName() + "' has been terminated.")
+                    .actionUrl(VIEW_TOUR_CATEGORY_DETAILS + "/" + tourCategoryResponse.getCategoryId())
+                    .actionText("View Tour Category")
+                    .icon("FolderX")
+                    .color("#EF4444")
+                    .metadata(Map.of(
+                            "tourCategoryId", tourCategoryResponse.getCategoryId(),
+                            "tourCategoryName", tourCategoryResponse.getCategoryName(),
+                            "status", tourCategoryResponse.getStatus(),
+                            "terminatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.TOUR_CATEGORY_TERMINATE.name())
+                    .sourceModule(SourceModule.TOUR_CATEGORY.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TOUR_CATEGORY_TERMINATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+
+            String subject = tourEmailHelperService.buildTourCategoryTerminateSuccessfullSubject(loggedUser, tourCategoryResponse);
+            String body = tourEmailHelperService.buildTourCategoryTerminateSuccessfullBody(loggedUser, tourCategoryResponse);
+
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_MESSAGE,
+                    new TerminateResponse(""),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while terminating tour category: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to terminate tour category in database");
+        } finally {
+            LOGGER.info("End terminating tour category from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<InsertResponse> insertTourCategory(TourCategoryInsertRequest tourCategoryInsertRequest) {
+        LOGGER.info("Start inserting tour category from repository");
+        try {
+            tourValidationService.validateTourCategoryInsertRequest(tourCategoryInsertRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            Long tourCategoryId = tourRepository.insertTourCategoryBasicDetails(tourCategoryInsertRequest, userId);
+            tourRepository.insertTourCatgeoryImages(tourCategoryId, tourCategoryInsertRequest.getImages(), userId);
+            tourRepository.insertToursForTourCategory(tourCategoryId, tourCategoryInsertRequest.getTourIds(), userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.TOUR_CATEGORY_CREATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("New Tour Category Created")
+                    .message("A new tour category '" + tourCategoryInsertRequest.getCategoryName() + "' has been created.")
+                    .actionUrl(VIEW_TOUR_CATEGORY_DETAILS + "/" + tourCategoryId)
+                    .actionText("View Tour Category")
+                    .icon("FolderPlus")
+                    .color("#10B981")
+                    .metadata(Map.of(
+                            "tourCategoryId", tourCategoryId,
+                            "tourCategoryName", tourCategoryInsertRequest.getCategoryName(),
+                            "createdBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.TOUR_CATEGORY_CREATE.name())
+                    .sourceModule(SourceModule.TOUR_CATEGORY.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            if (tourCategoryId != null) {
+                List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TOUR_CATEGORY_CREATED.name(), supervisorUserIds);
+                emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+                emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+                String body = tourEmailHelperService.buildTourCategoryCreateSuccessfullBody(tourCategoryId, tourCategoryInsertRequest, loggedUser);
+                String subject = tourEmailHelperService.buildTourCategoryCreateSuccessfullSubject(tourCategoryId, tourCategoryInsertRequest, loggedUser);
+//                emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_MESSAGE,
+                    new InsertResponse(""),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while inserting tour category: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to insert tour category in database");
+        } finally {
+            LOGGER.info("End inserting tour category from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<UpdateResponse> updateTourCategory(TourCategoryUpdateRequest tourCategoryUpdateRequest) {
+        LOGGER.info("Start updating tour category from repository");
+        try {
+            tourValidationService.vaidateTourCategoryUpdateRequest(tourCategoryUpdateRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            TourCategoryBasicDetailsResponse previousTourCategoryResponse = getTourCategoryBasicDetailsById(new CommonIdRequest(tourCategoryUpdateRequest.getCategoryId())).getData();
+
+            tourRepository.updateTourCategoryBasicDetails(tourCategoryUpdateRequest, userId);
+
+            tourRepository.insertToursForTourCategory(tourCategoryUpdateRequest.getCategoryId(), tourCategoryUpdateRequest.getAddTourIds(), userId);
+            tourRepository.removeToursForTourCategory(tourCategoryUpdateRequest.getCategoryId(), tourCategoryUpdateRequest.getRemoveTourIds(), userId);
+
+            tourRepository.insertTourCatgeoryImages(tourCategoryUpdateRequest.getCategoryId(), tourCategoryUpdateRequest.getAddImages(), userId);
+            tourRepository.removeTourCatgeoryImages(tourCategoryUpdateRequest.getCategoryId(), tourCategoryUpdateRequest.getRemoveImageIds(), userId);
+            tourRepository.updateTourCatgeoryImages(tourCategoryUpdateRequest.getCategoryId(), tourCategoryUpdateRequest.getUpdateImages(), userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.TOUR_CATEGORY_UPDATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("Tour Category Updated")
+                    .message("The tour category '" + tourCategoryUpdateRequest.getCategoryName() + "' has been updated.")
+                    .actionUrl(VIEW_TOUR_CATEGORY_DETAILS + "/" + tourCategoryUpdateRequest.getCategoryId())
+                    .actionText("View Tour Category")
+                    .icon("FolderEdit")
+                    .color("#3B82F6")
+                    .metadata(Map.of(
+                            "tourCategoryId", tourCategoryUpdateRequest.getCategoryId(),
+                            "tourCategoryName", tourCategoryUpdateRequest.getCategoryName(),
+                            "status", tourCategoryUpdateRequest.getStatus(),
+                            "updatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.TOUR_CATEGORY_UPDATE.name())
+                    .sourceModule(SourceModule.TOUR_CATEGORY.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            TourCategoryComparisonResult comparisonResult = compareTourCategoryUpdates(
+                    previousTourCategoryResponse,
+                    tourCategoryUpdateRequest,
+                    loggedUser
+            );
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TOUR_CATEGORY_UPDATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+            String subject = tourEmailHelperService.buildTourCategoryUpdateSuccessfullSubject(loggedUser, tourCategoryUpdateRequest);
+            String body = tourEmailHelperService.buildTourCategoryUpdateSuccessfullBody(loggedUser, tourCategoryUpdateRequest, comparisonResult);
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
+                    new UpdateResponse(),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while updating tour category: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to update tour category in database");
+        } finally {
+            LOGGER.info("End updating tour category from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<List<TourTypeBasicDetailsResponse>> getTourTypes() {
+        LOGGER.info("Start fetching tour types from repository");
+        try {
+            List<TourTypeBasicDetailsResponse> tourTypes = tourRepository.getTourTypes();
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourTypes,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour types: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour types from database");
+        } finally {
+            LOGGER.info("End fetching tour types from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TourTypeAllDetailsResponse> getTourTypeDetailsById(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start fetching tour type details by id from repository");
+        try {
+            TourTypeAllDetailsResponse tourTypeDetails = tourRepository.getTourTypeDetailsById(commonIdRequest);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourTypeDetails,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour type details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour type details from database");
+        } finally {
+            LOGGER.info("End fetching tour type details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TourTypeBasicDetailsResponse> getTourTypeBasicDetailsById(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start fetching tour type basic details by id from repository");
+        try {
+            TourTypeBasicDetailsResponse tourTypeBasicDetails = tourRepository.getTourTypeBasicDetailsById(commonIdRequest);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourTypeBasicDetails,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour type basic details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour type basic details from database");
+        } finally {
+            LOGGER.info("End fetching tour type basic details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TerminateResponse> terminateTourType(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start terminating tour type by id from repository");
+        try {
+            tourValidationService.validateCommonIdRequest(commonIdRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            TourTypeBasicDetailsResponse tourTypeResponse = getTourTypeBasicDetailsById(commonIdRequest).getData();
+            tourRepository.terminateTourType(commonIdRequest, userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.TOUR_TYPE_TERMINATED.name())
+                    .priority(Priority.HIGH.name())
+                    .title("Tour Type Terminated")
+                    .message("The tour type '" + tourTypeResponse.getTypeName() + "' has been terminated.")
+                    .actionUrl(VIEW_TOUR_TYPE_DETAILS + "/" + tourTypeResponse.getTypeId())
+                    .actionText("View Tour Type")
+                    .icon("Tags")
+                    .color("#EF4444")
+                    .metadata(Map.of(
+                            "tourTypeId", tourTypeResponse.getTypeId(),
+                            "tourTypeName", tourTypeResponse.getTypeName(),
+                            "status", tourTypeResponse.getStatus(),
+                            "terminatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.TOUR_TYPE_TERMINATE.name())
+                    .sourceModule(SourceModule.TOUR_TYPE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TOUR_TYPE_TERMINATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+
+            String subject = tourEmailHelperService.buildTourTypeTerminateSuccessfullSubject(loggedUser, tourTypeResponse);
+            String body = tourEmailHelperService.buildTourTypeTerminateSuccessfullBody(loggedUser, tourTypeResponse);
+
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_MESSAGE,
+                    new TerminateResponse(""),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while terminating tour type: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to terminate tour type in database");
+        } finally {
+            LOGGER.info("End terminating tour type from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<InsertResponse> insertTourType(TourTypeInsertRequest tourTypeInsertRequest) {
+        LOGGER.info("Start inserting tour type from repository");
+        try {
+            tourValidationService.validateTourTypeInsertRequest(tourTypeInsertRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            Long tourTypeId = tourRepository.insertTourTypeBasicDetails(tourTypeInsertRequest, userId);
+            tourRepository.insertTourTypeImages(tourTypeId, tourTypeInsertRequest.getImages(), userId);
+            tourRepository.insertToursForTourType(tourTypeId, tourTypeInsertRequest.getTourIds(), userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.TOUR_TYPE_CREATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("New Tour Type Created")
+                    .message("A new tour type '" + tourTypeInsertRequest.getTypeName() + "' has been created.")
+                    .actionUrl(VIEW_TOUR_TYPE_DETAILS + "/" + tourTypeId)
+                    .actionText("View Tour Type")
+                    .icon("Tags")
+                    .color("#10B981")
+                    .metadata(Map.of(
+                            "tourTypeId", tourTypeId,
+                            "tourTypeName", tourTypeInsertRequest.getTypeName(),
+                            "createdBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.TOUR_TYPE_CREATE.name())
+                    .sourceModule(SourceModule.TOUR_TYPE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            if (tourTypeId != null) {
+                List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TOUR_TYPE_CREATED.name(), supervisorUserIds);
+                emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+                emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+                String body = tourEmailHelperService.buildTourTypeCreateSuccessfullBody(tourTypeId, tourTypeInsertRequest, loggedUser);
+                String subject = tourEmailHelperService.buildTourTypeCreateSuccessfullSubject(tourTypeId, tourTypeInsertRequest, loggedUser);
+//                emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_MESSAGE,
+                    new InsertResponse(""),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while inserting tour type: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to insert tour type in database");
+        } finally {
+            LOGGER.info("End inserting tour type from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<UpdateResponse> updateTourType(TourTypeUpdateRequest tourTypeUpdateRequest) {
+        LOGGER.info("Start updating tour type from repository");
+        try {
+            tourValidationService.vaidateTourTypeUpdateRequest(tourTypeUpdateRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            TourTypeBasicDetailsResponse previousTourTypeResponse =
+                    getTourTypeBasicDetailsById(new CommonIdRequest(tourTypeUpdateRequest.getTypeId())).getData();
+
+            tourRepository.updateTourTypeBaiscDetails(tourTypeUpdateRequest, userId);
+
+            tourRepository.insertToursForTourType(tourTypeUpdateRequest.getTypeId(), tourTypeUpdateRequest.getAddTourIds(), userId);
+            tourRepository.removeToursForTourType(tourTypeUpdateRequest.getTypeId(), tourTypeUpdateRequest.getRemoveTourIds(), userId);
+
+            tourRepository.insertTourTypeImages(tourTypeUpdateRequest.getTypeId(), tourTypeUpdateRequest.getAddImages(), userId);
+            tourRepository.removeTourTypeImages(tourTypeUpdateRequest.getTypeId(), tourTypeUpdateRequest.getRemoveImageIds(), userId);
+            tourRepository.updateTourTypeImages(tourTypeUpdateRequest.getTypeId(), tourTypeUpdateRequest.getUpdateImages(), userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.TOUR_TYPE_UPDATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("Tour Type Updated")
+                    .message("The tour type '" + tourTypeUpdateRequest.getTypeName() + "' has been updated.")
+                    .actionUrl(VIEW_TOUR_TYPE_DETAILS + "/" + tourTypeUpdateRequest.getTypeId())
+                    .actionText("View Tour Type")
+                    .icon("Tags")
+                    .color("#3B82F6")
+                    .metadata(Map.of(
+                            "tourTypeId", tourTypeUpdateRequest.getTypeId(),
+                            "tourTypeName", tourTypeUpdateRequest.getTypeName(),
+                            "status", tourTypeUpdateRequest.getStatus(),
+                            "updatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.TOUR_TYPE_UPDATE.name())
+                    .sourceModule(SourceModule.TOUR_TYPE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            TourTypeComparisonResult comparisonResult = compareTourTypeUpdates(
+                    previousTourTypeResponse,
+                    tourTypeUpdateRequest,
+                    loggedUser
+            );
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TOUR_TYPE_UPDATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+            String subject = tourEmailHelperService.buildTourTypeUpdateSuccessfullSubject(loggedUser, tourTypeUpdateRequest);
+            String body = tourEmailHelperService.buildTourTypeUpdateSuccessfullBody(loggedUser, tourTypeUpdateRequest, comparisonResult);
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
+                    new UpdateResponse(),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while updating tour type: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to update tour type in database");
+        } finally {
+            LOGGER.info("End updating tour type from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TourScheduleWithParamsResponse> getTourScheduleWithParams(TourScheduleDataRequest tourScheduleDataRequest) {
+        LOGGER.info("Start fetching tour schedule with params from repository");
+        try {
+            tourValidationService.validateTourScheduleDataRequest(tourScheduleDataRequest);
+            TourScheduleWithParamsResponse tourScheduleWithParams = tourRepository.getTourScheduleWithParams(tourScheduleDataRequest);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourScheduleWithParams,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour schedule with params: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour schedule with params from database");
+        } finally {
+            LOGGER.info("End fetching tour schedule with params from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TourScheduleParamsResponse> getToursScheduleParams() {
+        LOGGER.info("Start fetching tour schedule params from repository");
+        try {
+            TourScheduleParamsResponse tourScheduleParamsResponse = new TourScheduleParamsResponse();
+            tourScheduleParamsResponse.setDurations(tourRepository.getDistinctTourDurations());
+            tourScheduleParamsResponse.setTourIdAndNameResponses(commonService.getTourIdAndNameResponses());
+            tourScheduleParamsResponse.setSeasonIdAndNameResponses(commonService.getSeasonIdAndNameResponses());
+
+            List<SortByResponse> sortByResponses = List.of(
+                    SortByResponse.builder()
+                            .sortByDisplayName("Name")
+                            .sortBy("name")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Tour Name")
+                            .sortBy("tourName")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Duration")
+                            .sortBy("duration")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Start Location")
+                            .sortBy("startLocation")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("End Location")
+                            .sortBy("endLocation")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Season")
+                            .sortBy("season")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Status")
+                            .sortBy("status")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Assume Start Date")
+                            .sortBy("assumeStartDate")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Assume End Date")
+                            .sortBy("assumeEndDate")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Created At")
+                            .sortBy("createdAt")
+                            .build(),
+
+                    SortByResponse.builder()
+                            .sortByDisplayName("Updated At")
+                            .sortBy("updatedAt")
+                            .build()
+            );
+
+
+            tourScheduleParamsResponse.setSortByResponses(sortByResponses);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourScheduleParamsResponse,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour schedule params: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour schedule params from database");
+        } finally {
+            LOGGER.info("End fetching tour schedule params from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<TourScheduleDetailsResponse> getTourScheduleDetailsById(CommonIdRequest tourScheduleId) {
+        LOGGER.info("Start fetching tour schedule details by id from repository");
+        try {
+            TourScheduleDetailsResponse tourScheduleDetails = tourRepository.getTourScheduleDetailsById(tourScheduleId);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourScheduleDetails,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour schedule details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour schedule details from database");
+        } finally {
+            LOGGER.info("End fetching tour schedule details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<InsertResponse> createTourSchedule(TourScheduleInsertRequest tourScheduleInsertRequest) {
+        LOGGER.info("Start creating tour schedule from repository");
+        try {
+            tourValidationService.validateTourScheduleInsertRequest(tourScheduleInsertRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            Long tourScheduleId = tourRepository.createTourSchedule(tourScheduleInsertRequest);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.TOUR_SCHEDULE_CREATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("New Tour Schedule Created")
+                    .message("A new tour schedule '" + tourScheduleInsertRequest.getTourScheduleName() + "' has been created.")
+                    .actionUrl(VIEW_TOUR_SCHEDULE_DETAILS + "/" + tourScheduleId)
+                    .actionText("View Tour Schedule")
+                    .icon("CalendarPlus")
+                    .color("#10B981")
+                    .metadata(Map.of(
+                            "tourScheduleId", tourScheduleId,
+                            "tourScheduleName", tourScheduleInsertRequest.getTourScheduleName(),
+                            "createdBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.TOUR_SCHEDULE_CREATE.name())
+                    .sourceModule(SourceModule.TOUR_SCHEDULE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            if (tourScheduleId != null) {
+                List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TOUR_SCHEDULE_CREATED.name(), supervisorUserIds);
+                emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+                emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+                String body = tourEmailHelperService.buildTourScheduleCreateSuccessfullBody(tourScheduleId, tourScheduleInsertRequest, loggedUser);
+                String subject = tourEmailHelperService.buildTourScheduleCreateSuccessfullSubject(tourScheduleId, tourScheduleInsertRequest, loggedUser);
+//                emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_MESSAGE,
+                    new InsertResponse(""),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while creating tour schedule: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to create tour schedule in database");
+        } finally {
+            LOGGER.info("End creating tour schedule from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<UpdateResponse> updateTourSchedule(TourScheduleUpdateRequest tourScheduleUpdateRequest) {
+        LOGGER.info("Start updating tour schedule from repository");
+        try {
+            tourValidationService.validateTourScheduleUpdateRequest(tourScheduleUpdateRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            TourScheduleBasicDetailsResponse previousTourScheduleResponse = tourRepository.getTourScheduleBasicDetails(tourScheduleUpdateRequest.getTourScheduleId());
+            tourRepository.updateTourSchedule(tourScheduleUpdateRequest,userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.TOUR_SCHEDULE_UPDATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("Tour Schedule Updated")
+                    .message("The tour schedule '" + tourScheduleUpdateRequest.getTourScheduleName() + "' has been updated.")
+                    .actionUrl(VIEW_TOUR_SCHEDULE_DETAILS + "/" + tourScheduleUpdateRequest.getTourScheduleId())
+                    .actionText("View Tour Schedule")
+                    .icon("CalendarClock")
+                    .color("#3B82F6")
+                    .metadata(Map.of(
+                            "tourScheduleId", tourScheduleUpdateRequest.getTourScheduleId(),
+                            "tourScheduleName", tourScheduleUpdateRequest.getTourScheduleName(),
+                            "status", tourScheduleUpdateRequest.getStatus(),
+                            "updatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.TOUR_SCHEDULE_UPDATE.name())
+                    .sourceModule(SourceModule.TOUR_SCHEDULE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            TourScheduleComparisonResult comparisonResult = compareToursScheduleUpdates(
+                    tourScheduleUpdateRequest,
+                    previousTourScheduleResponse,
+                    loggedUser
+            );
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TOUR_SCHEDULE_UPDATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+            String subject = tourEmailHelperService.buildTourScheduleUpdateSuccessfullSubject(loggedUser, tourScheduleUpdateRequest);
+            String body = tourEmailHelperService.buildTourScheduleUpdateSuccessfullBody(loggedUser, tourScheduleUpdateRequest, comparisonResult);
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
+                    new UpdateResponse(),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while updating tour schedule: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to update tour schedule in database");
+        } finally {
+            LOGGER.info("End updating tour schedule from repository");
+        }
+    }
+
+    private TourScheduleComparisonResult compareToursScheduleUpdates(
+            TourScheduleUpdateRequest tourScheduleUpdateRequest,
+            TourScheduleBasicDetailsResponse previousTourScheduleResponse,
+            User loggedUser) {
+
+        TourScheduleComparisonResult.TourScheduleComparisonResultBuilder resultBuilder =
+                TourScheduleComparisonResult.builder();
+
+        List<TourScheduleComparisonResult.FieldChange> fieldChanges = new ArrayList<>();
+        List<String> changes = new ArrayList<>();
+        boolean hasChanges = false;
+        List<String> warnings = new ArrayList<>();
+
+        boolean isDateRangeValid = true;
+        boolean isDurationRangeValid = true;
+        Integer daysBetweenDates = null;
+        Double durationDifference = null;
+
+        // Compare tourScheduleName
+        if (tourScheduleUpdateRequest.getTourScheduleName() != null &&
+                previousTourScheduleResponse.getTourScheduleName() != null &&
+                !tourScheduleUpdateRequest.getTourScheduleName().equals(previousTourScheduleResponse.getTourScheduleName())) {
+            changes.add(String.format("Tour Schedule Name changed from '%s' to '%s'",
+                    previousTourScheduleResponse.getTourScheduleName(),
+                    tourScheduleUpdateRequest.getTourScheduleName()));
+            fieldChanges.add(new TourScheduleComparisonResult.FieldChange(
+                    "tourScheduleName",
+                    previousTourScheduleResponse.getTourScheduleName(),
+                    tourScheduleUpdateRequest.getTourScheduleName(),
+                    "Tour Schedule Name"));
+            hasChanges = true;
+        }
+
+        // Compare tourId
+        if (tourScheduleUpdateRequest.getTourId() != null &&
+                previousTourScheduleResponse.getTourId() != null &&
+                !tourScheduleUpdateRequest.getTourId().equals(previousTourScheduleResponse.getTourId())) {
+            changes.add(String.format("Tour ID changed from %d to %d",
+                    previousTourScheduleResponse.getTourId(),
+                    tourScheduleUpdateRequest.getTourId()));
+            fieldChanges.add(new TourScheduleComparisonResult.FieldChange(
+                    "tourId",
+                    previousTourScheduleResponse.getTourId(),
+                    tourScheduleUpdateRequest.getTourId(),
+                    "Tour ID"));
+            hasChanges = true;
+        }
+
+        // Compare assumeStartDate
+        if (tourScheduleUpdateRequest.getAssumeStartDate() != null &&
+                previousTourScheduleResponse.getAssumeStartDate() != null &&
+                !tourScheduleUpdateRequest.getAssumeStartDate().equals(previousTourScheduleResponse.getAssumeStartDate())) {
+            changes.add(String.format("Assume Start Date changed from %s to %s",
+                    previousTourScheduleResponse.getAssumeStartDate(),
+                    tourScheduleUpdateRequest.getAssumeStartDate()));
+            fieldChanges.add(new TourScheduleComparisonResult.FieldChange(
+                    "assumeStartDate",
+                    previousTourScheduleResponse.getAssumeStartDate(),
+                    tourScheduleUpdateRequest.getAssumeStartDate(),
+                    "Assume Start Date"));
+            hasChanges = true;
+        }
+
+        // Compare assumeEndDate
+        if (tourScheduleUpdateRequest.getAssumeEndDate() != null &&
+                previousTourScheduleResponse.getAssumeEndDate() != null &&
+                !tourScheduleUpdateRequest.getAssumeEndDate().equals(previousTourScheduleResponse.getAssumeEndDate())) {
+            changes.add(String.format("Assume End Date changed from %s to %s",
+                    previousTourScheduleResponse.getAssumeEndDate(),
+                    tourScheduleUpdateRequest.getAssumeEndDate()));
+            fieldChanges.add(new TourScheduleComparisonResult.FieldChange(
+                    "assumeEndDate",
+                    previousTourScheduleResponse.getAssumeEndDate(),
+                    tourScheduleUpdateRequest.getAssumeEndDate(),
+                    "Assume End Date"));
+            hasChanges = true;
+        }
+
+        // Validate date range
+        if (tourScheduleUpdateRequest.getAssumeStartDate() != null &&
+                tourScheduleUpdateRequest.getAssumeEndDate() != null) {
+
+            Date startDate = tourScheduleUpdateRequest.getAssumeStartDate();
+            Date endDate = tourScheduleUpdateRequest.getAssumeEndDate();
+
+            if (endDate.before(startDate)) {
+                isDateRangeValid = false;
+                warnings.add("Warning: End date is before start date!");
+            } else if (endDate.equals(startDate)) {
+                warnings.add("Note: Start date and end date are the same day");
+                daysBetweenDates = 0;
+            } else {
+                // Calculate days between dates
+                long diffInMillies = Math.abs(endDate.getTime() - startDate.getTime());
+                daysBetweenDates = (int) (diffInMillies / (24 * 60 * 60 * 1000));
+                if (daysBetweenDates > 365) {
+                    warnings.add(String.format("Warning: Tour schedule spans more than a year (%d days)", daysBetweenDates));
+                }
+            }
+        }
+
+        // Compare durationHoursStart
+        if (tourScheduleUpdateRequest.getDurationHoursStart() != null &&
+                previousTourScheduleResponse.getDurationHoursStart() != null &&
+                !tourScheduleUpdateRequest.getDurationHoursStart().equals(previousTourScheduleResponse.getDurationHoursStart())) {
+            changes.add(String.format("Duration Hours Start changed from %.2f to %.2f",
+                    previousTourScheduleResponse.getDurationHoursStart(),
+                    tourScheduleUpdateRequest.getDurationHoursStart()));
+            fieldChanges.add(new TourScheduleComparisonResult.FieldChange(
+                    "durationHoursStart",
+                    previousTourScheduleResponse.getDurationHoursStart(),
+                    tourScheduleUpdateRequest.getDurationHoursStart(),
+                    "Duration Hours Start"));
+            hasChanges = true;
+        }
+
+        // Compare durationHoursEnd
+        if (tourScheduleUpdateRequest.getDurationHoursEnd() != null &&
+                previousTourScheduleResponse.getDurationHoursEnd() != null &&
+                !tourScheduleUpdateRequest.getDurationHoursEnd().equals(previousTourScheduleResponse.getDurationHoursEnd())) {
+            changes.add(String.format("Duration Hours End changed from %.2f to %.2f",
+                    previousTourScheduleResponse.getDurationHoursEnd(),
+                    tourScheduleUpdateRequest.getDurationHoursEnd()));
+            fieldChanges.add(new TourScheduleComparisonResult.FieldChange(
+                    "durationHoursEnd",
+                    previousTourScheduleResponse.getDurationHoursEnd(),
+                    tourScheduleUpdateRequest.getDurationHoursEnd(),
+                    "Duration Hours End"));
+            hasChanges = true;
+        }
+
+        // Validate duration range
+        if (tourScheduleUpdateRequest.getDurationHoursStart() != null &&
+                tourScheduleUpdateRequest.getDurationHoursEnd() != null) {
+
+            Double durationStart = tourScheduleUpdateRequest.getDurationHoursStart();
+            Double durationEnd = tourScheduleUpdateRequest.getDurationHoursEnd();
+
+            if (durationEnd < durationStart) {
+                isDurationRangeValid = false;
+                warnings.add("Warning: Duration hours end is less than duration hours start!");
+            } else {
+                durationDifference = durationEnd - durationStart;
+                if (durationDifference > 24) {
+                    warnings.add(String.format("Warning: Duration range is very wide (%.2f hours difference)", durationDifference));
+                }
+            }
+
+            // Additional validations
+            if (durationStart < 0 || durationEnd < 0) {
+                isDurationRangeValid = false;
+                warnings.add("Warning: Duration hours cannot be negative!");
+            }
+
+            if (durationStart > 168 || durationEnd > 168) { // 168 hours = 7 days
+                warnings.add("Warning: Duration exceeds 7 days (168 hours)");
+            }
+        }
+
+        // Compare specialNotes
+        if (!Objects.equals(tourScheduleUpdateRequest.getSpecialNotes(), previousTourScheduleResponse.getSpecialNotes())) {
+            String oldNotes = previousTourScheduleResponse.getSpecialNotes() != null ?
+                    previousTourScheduleResponse.getSpecialNotes() : "null";
+            String newNotes = tourScheduleUpdateRequest.getSpecialNotes() != null ?
+                    tourScheduleUpdateRequest.getSpecialNotes() : "null";
+            changes.add(String.format("Special Notes changed from '%s' to '%s'", oldNotes, newNotes));
+            fieldChanges.add(new TourScheduleComparisonResult.FieldChange(
+                    "specialNotes",
+                    previousTourScheduleResponse.getSpecialNotes(),
+                    tourScheduleUpdateRequest.getSpecialNotes(),
+                    "Special Notes"));
+            hasChanges = true;
+        }
+
+        // Compare description
+        if (!Objects.equals(tourScheduleUpdateRequest.getDescription(), previousTourScheduleResponse.getDescription())) {
+            String oldDesc = previousTourScheduleResponse.getDescription() != null ?
+                    previousTourScheduleResponse.getDescription() : "null";
+            String newDesc = tourScheduleUpdateRequest.getDescription() != null ?
+                    tourScheduleUpdateRequest.getDescription() : "null";
+            changes.add(String.format("Description changed from '%s' to '%s'", oldDesc, newDesc));
+            fieldChanges.add(new TourScheduleComparisonResult.FieldChange(
+                    "description",
+                    previousTourScheduleResponse.getDescription(),
+                    tourScheduleUpdateRequest.getDescription(),
+                    "Description"));
+            hasChanges = true;
+        }
+
+        // Compare status
+        String oldStatus = previousTourScheduleResponse.getStatus();
+        String newStatus = tourScheduleUpdateRequest.getStatus();
+        if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
+            changes.add(String.format("Status changed from '%s' to '%s'", oldStatus, newStatus));
+            fieldChanges.add(new TourScheduleComparisonResult.FieldChange(
+                    "status",
+                    oldStatus,
+                    newStatus,
+                    "Status"));
+            hasChanges = true;
+
+            // Status change warnings
+            if ("CANCELLED".equals(newStatus)) {
+                warnings.add("Warning: Tour schedule is being cancelled!");
+            } else if ("COMPLETED".equals(newStatus)) {
+                warnings.add("Note: Tour schedule marked as completed");
+            } else if ("INACTIVE".equals(newStatus)) {
+                warnings.add("Warning: Tour schedule is being deactivated");
+            }
+        }
+
+        // Validate dates with duration
+        if (tourScheduleUpdateRequest.getAssumeStartDate() != null &&
+                tourScheduleUpdateRequest.getDurationHoursStart() != null) {
+            // This is just an informational check, not a validation error
+            warnings.add("Info: Please ensure that duration hours align with the date range");
+        }
+
+        // Check if any changes were made
+        if (!hasChanges) {
+            changes.add("No changes detected in tour schedule");
+        }
+
+        // Build the result
+        return resultBuilder
+                .fieldChanges(fieldChanges)
+                .changes(changes)
+                .hasChanges(hasChanges)
+                .warnings(warnings)
+                .isDateRangeValid(isDateRangeValid)
+                .isDurationRangeValid(isDurationRangeValid)
+                .daysBetweenDates(daysBetweenDates)
+                .durationDifference(durationDifference)
+                .oldStatus(oldStatus)
+                .newStatus(newStatus)
+                .changedBy(loggedUser != null ?
+                        loggedUser.getFirstName() + " " + loggedUser.getLastName() : "Unknown")
+                .changedByUserId(loggedUser != null ? loggedUser.getId() : null)
+                .changeTimestamp(new Date().toString())
+                .build();
+    }
+
+    @Override
+    public CommonResponse<TerminateResponse> termianteTourScheduleById(CommonIdRequest commonIdRequest) {
+        LOGGER.info("Start terminating tour schedule by id from repository");
+        try {
+            tourValidationService.validateCommonIdRequest(commonIdRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            TourScheduleBasicDetailsResponse tourScheduleResponse = tourRepository.getTourScheduleBasicDetails(commonIdRequest.getId());
+
+            tourRepository.terminateTourScheduleById(commonIdRequest, userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.TOUR_SCHEDULE_TERMINATED.name())
+                    .priority(Priority.HIGH.name())
+                    .title("Tour Schedule Terminated")
+                    .message("The tour schedule '" + tourScheduleResponse.getTourScheduleName() + "' has been terminated.")
+                    .actionUrl(VIEW_TOUR_SCHEDULE_DETAILS + "/" + tourScheduleResponse.getTourScheduleId())
+                    .actionText("View Tour Schedule")
+                    .icon("CalendarX")
+                    .color("#EF4444")
+                    .metadata(Map.of(
+                            "tourScheduleId", tourScheduleResponse.getTourScheduleId(),
+                            "tourScheduleName", tourScheduleResponse.getTourScheduleName(),
+                            "status", tourScheduleResponse.getStatus(),
+                            "terminatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.TOUR_SCHEDULE_TERMINATE.name())
+                    .sourceModule(SourceModule.TOUR_SCHEDULE.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(NotificationType.TOUR_SCHEDULE_TERMINATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+
+            String subject = tourEmailHelperService.buildTourScheduleTerminateSuccessfullSubject(loggedUser, tourScheduleResponse);
+            String body = tourEmailHelperService.buildTourScheduleTerminateSuccessfullBody(loggedUser, tourScheduleResponse);
+
+//            emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_MESSAGE,
+                    new TerminateResponse(""),
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while terminating tour schedule: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to terminate tour schedule in database");
+        } finally {
+            LOGGER.info("End terminating tour schedule from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<List<TourScheduleIdAndNameResponse>> getTourScheduleIdAndNames() {
+        LOGGER.info("Start fetching tour type details by id from repository");
+        try {
+            List<TourScheduleIdAndNameResponse> tourScheduleIdAndNameResponses = commonService.getTourScheduleIdAndNameResponses();
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    tourScheduleIdAndNameResponses,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching tour type details: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch tour type details from database");
+        } finally {
+            LOGGER.info("End fetching tour type details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<ParamsForTourRequestResponse> getParamsForTourRequest() {
+        LOGGER.info("Start fetching params for tour request from repository");
+        try {
+            ParamsForTourRequestResponse paramsForTourRequest = new ParamsForTourRequestResponse();
+            paramsForTourRequest.setMinPrice(tourRepository.getMinPriceForTour());
+            paramsForTourRequest.setMaxPrice(tourRepository.getMaxPriceForTour());
+            paramsForTourRequest.setDurations(tourRepository.getDistnictDurations());
+            paramsForTourRequest.setLocations(tourRepository.getDistinctLocations());
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    paramsForTourRequest,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching params for tour request: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch params for tour request from database");
+        } finally {
+            LOGGER.info("End fetching params for tour request from repository");
+        }
+    }
+
+    private TourTypeComparisonResult compareTourTypeUpdates(
+            TourTypeBasicDetailsResponse previousTourTypeResponse,
+            TourTypeUpdateRequest tourTypeUpdateRequest,
+            User loggedUser) {
+
+        TourTypeComparisonResult.TourTypeComparisonResultBuilder resultBuilder =
+                TourTypeComparisonResult.builder();
+
+        List<TourTypeComparisonResult.FieldChange> fieldChanges = new ArrayList<>();
+        List<String> changes = new ArrayList<>();
+        boolean hasChanges = false;
+        List<String> warnings = new ArrayList<>();
+
+        // Compare typeName
+        if (tourTypeUpdateRequest.getTypeName() != null &&
+                previousTourTypeResponse.getTypeName() != null &&
+                !tourTypeUpdateRequest.getTypeName().equals(previousTourTypeResponse.getTypeName())) {
+            changes.add(String.format("Type Name changed from '%s' to '%s'",
+                    previousTourTypeResponse.getTypeName(),
+                    tourTypeUpdateRequest.getTypeName()));
+            fieldChanges.add(new TourTypeComparisonResult.FieldChange(
+                    "typeName",
+                    previousTourTypeResponse.getTypeName(),
+                    tourTypeUpdateRequest.getTypeName(),
+                    "Type Name"));
+            hasChanges = true;
+        }
+
+        // Compare description
+        if (!Objects.equals(tourTypeUpdateRequest.getDescription(), previousTourTypeResponse.getDescription())) {
+            String oldDesc = previousTourTypeResponse.getDescription() != null ?
+                    previousTourTypeResponse.getDescription() : "null";
+            String newDesc = tourTypeUpdateRequest.getDescription() != null ?
+                    tourTypeUpdateRequest.getDescription() : "null";
+            changes.add(String.format("Description changed from '%s' to '%s'", oldDesc, newDesc));
+            fieldChanges.add(new TourTypeComparisonResult.FieldChange(
+                    "description",
+                    previousTourTypeResponse.getDescription(),
+                    tourTypeUpdateRequest.getDescription(),
+                    "Description"));
+            hasChanges = true;
+        }
+
+        // Compare color
+        if (tourTypeUpdateRequest.getColor() != null &&
+                previousTourTypeResponse.getColor() != null &&
+                !tourTypeUpdateRequest.getColor().equals(previousTourTypeResponse.getColor())) {
+            changes.add(String.format("Color changed from '%s' to '%s'",
+                    previousTourTypeResponse.getColor(),
+                    tourTypeUpdateRequest.getColor()));
+            fieldChanges.add(new TourTypeComparisonResult.FieldChange(
+                    "color",
+                    previousTourTypeResponse.getColor(),
+                    tourTypeUpdateRequest.getColor(),
+                    "Color"));
+            hasChanges = true;
+        }
+
+        // Compare hoverColor
+        if (tourTypeUpdateRequest.getHoverColor() != null &&
+                previousTourTypeResponse.getHoverColor() != null &&
+                !tourTypeUpdateRequest.getHoverColor().equals(previousTourTypeResponse.getHoverColor())) {
+            changes.add(String.format("Hover Color changed from '%s' to '%s'",
+                    previousTourTypeResponse.getHoverColor(),
+                    tourTypeUpdateRequest.getHoverColor()));
+            fieldChanges.add(new TourTypeComparisonResult.FieldChange(
+                    "hoverColor",
+                    previousTourTypeResponse.getHoverColor(),
+                    tourTypeUpdateRequest.getHoverColor(),
+                    "Hover Color"));
+            hasChanges = true;
+        }
+
+        // Compare status
+        String oldStatus = previousTourTypeResponse.getStatus();
+        String newStatus = tourTypeUpdateRequest.getStatus();
+        if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
+            changes.add(String.format("Status changed from '%s' to '%s'", oldStatus, newStatus));
+            fieldChanges.add(new TourTypeComparisonResult.FieldChange(
+                    "status",
+                    oldStatus,
+                    newStatus,
+                    "Status"));
+            hasChanges = true;
+        }
+
+        // Handle tours to add
+        List<Long> toursToAdd = new ArrayList<>();
+        if (tourTypeUpdateRequest.getAddTourIds() != null &&
+                !tourTypeUpdateRequest.getAddTourIds().isEmpty()) {
+            toursToAdd.addAll(tourTypeUpdateRequest.getAddTourIds());
+            changes.add(String.format("Tours to add: %s", tourTypeUpdateRequest.getAddTourIds()));
+            hasChanges = true;
+        }
+
+        // Handle tours to remove
+        List<Long> toursToRemove = new ArrayList<>();
+        if (tourTypeUpdateRequest.getRemoveTourIds() != null &&
+                !tourTypeUpdateRequest.getRemoveTourIds().isEmpty()) {
+            toursToRemove.addAll(tourTypeUpdateRequest.getRemoveTourIds());
+            changes.add(String.format("Tours to remove: %s", tourTypeUpdateRequest.getRemoveTourIds()));
+            hasChanges = true;
+        }
+
+        // Validate tour changes
+        if (!toursToRemove.isEmpty() && !toursToAdd.isEmpty()) {
+            // Check for conflicts (same tour in both lists)
+            List<Long> conflicts = toursToRemove.stream()
+                    .filter(toursToAdd::contains)
+                    .collect(Collectors.toList());
+            if (!conflicts.isEmpty()) {
+                warnings.add(String.format("Warning: Tours %s are both being added and removed!", conflicts));
+            }
+        }
+
+        // Handle images to add
+        List<TourTypeComparisonResult.ImageChange> imagesToAdd = new ArrayList<>();
+        if (tourTypeUpdateRequest.getAddImages() != null &&
+                !tourTypeUpdateRequest.getAddImages().isEmpty()) {
+            for (TourTypeImageInsertRequest imageRequest : tourTypeUpdateRequest.getAddImages()) {
+                TourTypeComparisonResult.ImageChange imageChange =
+                        TourTypeComparisonResult.ImageChange.builder()
+                                .name(imageRequest.getName())
+                                .description(imageRequest.getDescription())
+                                .imageUrl(imageRequest.getImageUrl())
+                                .status(imageRequest.getStatus())
+                                .build();
+                imagesToAdd.add(imageChange);
+                changes.add(String.format("Image to add: %s", imageRequest.getName()));
+            }
+            hasChanges = true;
+        }
+
+        // Handle images to remove
+        List<Long> imagesToRemove = new ArrayList<>();
+        if (tourTypeUpdateRequest.getRemoveImageIds() != null &&
+                !tourTypeUpdateRequest.getRemoveImageIds().isEmpty()) {
+            imagesToRemove.addAll(tourTypeUpdateRequest.getRemoveImageIds());
+            changes.add(String.format("Images to remove IDs: %s", tourTypeUpdateRequest.getRemoveImageIds()));
+            hasChanges = true;
+        }
+
+        // Handle images to update
+        List<TourTypeComparisonResult.ImageUpdateChange> imagesToUpdate = new ArrayList<>();
+        if (tourTypeUpdateRequest.getUpdateImages() != null &&
+                !tourTypeUpdateRequest.getUpdateImages().isEmpty()) {
+
+            // Find existing images in previous response for comparison
+            Map<Long, TourTypeImageResponse> existingImagesMap = new HashMap<>();
+            if (previousTourTypeResponse.getImages() != null) {
+                existingImagesMap = previousTourTypeResponse.getImages().stream()
+                        .collect(Collectors.toMap(
+                                TourTypeImageResponse::getImageId,
+                                image -> image
+                        ));
+            }
+
+            for (TourTypeImageUpdateRequest updateRequest : tourTypeUpdateRequest.getUpdateImages()) {
+                TourTypeImageResponse existingImage = existingImagesMap.get(updateRequest.getImageId());
+
+                if (existingImage != null) {
+                    // Check if there are actual changes
+                    boolean hasImageChanges = false;
+                    String oldName = existingImage.getName();
+                    String newName = updateRequest.getName();
+                    String oldDescription = existingImage.getDescription();
+                    String newDescription = updateRequest.getDescription();
+                    String oldImageUrl = existingImage.getImageUrl();
+                    String newImageUrl = updateRequest.getImageUrl();
+                    String oldImgStatus = existingImage.getStatus();
+                    String newImgStatus = updateRequest.getStatus();
+
+                    if (!Objects.equals(oldName, newName) && newName != null) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d name changed from '%s' to '%s'",
+                                updateRequest.getImageId(), oldName, newName));
+                    }
+                    if (!Objects.equals(oldDescription, newDescription) && newDescription != null) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d description changed from '%s' to '%s'",
+                                updateRequest.getImageId(), oldDescription, newDescription));
+                    }
+                    if (!Objects.equals(oldImageUrl, newImageUrl) && newImageUrl != null) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d URL changed from '%s' to '%s'",
+                                updateRequest.getImageId(), oldImageUrl, newImageUrl));
+                    }
+                    if (!Objects.equals(oldImgStatus, newImgStatus) && newImgStatus != null) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d status changed from '%s' to '%s'",
+                                updateRequest.getImageId(), oldImgStatus, newImgStatus));
+                    }
+
+                    if (hasImageChanges) {
+                        TourTypeComparisonResult.ImageUpdateChange imageUpdateChange =
+                                TourTypeComparisonResult.ImageUpdateChange.builder()
+                                        .imageId(updateRequest.getImageId())
+                                        .oldName(oldName)
+                                        .newName(newName)
+                                        .oldDescription(oldDescription)
+                                        .newDescription(newDescription)
+                                        .oldImageUrl(oldImageUrl)
+                                        .newImageUrl(newImageUrl)
+                                        .oldStatus(oldImgStatus)
+                                        .newStatus(newImgStatus)
+                                        .build();
+                        imagesToUpdate.add(imageUpdateChange);
+                        hasChanges = true;
+                    }
+                } else {
+                    warnings.add(String.format("Warning: Image with ID %d not found for update",
+                            updateRequest.getImageId()));
+                }
+            }
+        }
+
+        // Additional warnings for image operations
+        if (!imagesToAdd.isEmpty() && imagesToAdd.size() > 10) {
+            warnings.add("Warning: Adding more than 10 images at once might impact performance");
+        }
+
+        if (!imagesToRemove.isEmpty() && !imagesToAdd.isEmpty()) {
+            warnings.add("Note: Adding and removing images in the same operation");
+        }
+
+        // Warning for duplicate tour operations
+        if (toursToAdd.size() > 20) {
+            warnings.add("Warning: Adding more than 20 tours at once might impact performance");
+        }
+
+        if (toursToRemove.size() > 20) {
+            warnings.add("Warning: Removing more than 20 tours at once might impact performance");
+        }
+
+        // Warning for status change implications
+        if (oldStatus != null && newStatus != null &&
+                !oldStatus.equals(newStatus)) {
+            if ("INACTIVE".equals(newStatus)) {
+                warnings.add("Warning: Changing status to INACTIVE will hide this tour type from users");
+            } else if ("ACTIVE".equals(newStatus) && "INACTIVE".equals(oldStatus)) {
+                warnings.add("Info: Reactivating this tour type will make it visible to users again");
+            }
+        }
+
+        // Warning for empty type name
+        if (tourTypeUpdateRequest.getTypeName() != null &&
+                tourTypeUpdateRequest.getTypeName().trim().isEmpty()) {
+            warnings.add("Warning: Type name is empty, this might cause issues");
+        }
+
+        // Build the result
+        return resultBuilder
+                .fieldChanges(fieldChanges)
+                .changes(changes)
+                .hasChanges(hasChanges)
+                .warnings(warnings)
+                .toursToAdd(toursToAdd)
+                .toursToRemove(toursToRemove)
+                .imagesToAdd(imagesToAdd)
+                .imagesToRemove(imagesToRemove)
+                .imagesToUpdate(imagesToUpdate)
+                .oldStatus(oldStatus)
+                .newStatus(newStatus)
+                .changedBy(loggedUser != null ?
+                        loggedUser.getFirstName() + " " + loggedUser.getLastName() : "Unknown")
+                .changedByUserId(loggedUser != null ? loggedUser.getId() : null)
+                .changeTimestamp(new Date().toString())
+                .build();
+    }
+
+    private TourCategoryComparisonResult compareTourCategoryUpdates(
+            TourCategoryBasicDetailsResponse previousTourCategoryResponse,
+            TourCategoryUpdateRequest tourCategoryUpdateRequest,
+            User loggedUser) {
+
+        TourCategoryComparisonResult.TourCategoryComparisonResultBuilder resultBuilder =
+                TourCategoryComparisonResult.builder();
+
+        List<TourCategoryComparisonResult.FieldChange> fieldChanges = new ArrayList<>();
+        List<String> changes = new ArrayList<>();
+        boolean hasChanges = false;
+        List<String> warnings = new ArrayList<>();
+
+        // Compare categoryName
+        if (tourCategoryUpdateRequest.getCategoryName() != null &&
+                previousTourCategoryResponse.getCategoryName() != null &&
+                !tourCategoryUpdateRequest.getCategoryName().equals(previousTourCategoryResponse.getCategoryName())) {
+            changes.add(String.format("Category Name changed from '%s' to '%s'",
+                    previousTourCategoryResponse.getCategoryName(),
+                    tourCategoryUpdateRequest.getCategoryName()));
+            fieldChanges.add(new TourCategoryComparisonResult.FieldChange(
+                    "categoryName",
+                    previousTourCategoryResponse.getCategoryName(),
+                    tourCategoryUpdateRequest.getCategoryName(),
+                    "Category Name"));
+            hasChanges = true;
+        }
+
+        // Compare description
+        if (!Objects.equals(tourCategoryUpdateRequest.getDescription(), previousTourCategoryResponse.getDescription())) {
+            String oldDesc = previousTourCategoryResponse.getDescription() != null ?
+                    previousTourCategoryResponse.getDescription() : "null";
+            String newDesc = tourCategoryUpdateRequest.getDescription() != null ?
+                    tourCategoryUpdateRequest.getDescription() : "null";
+            changes.add(String.format("Description changed from '%s' to '%s'", oldDesc, newDesc));
+            fieldChanges.add(new TourCategoryComparisonResult.FieldChange(
+                    "description",
+                    previousTourCategoryResponse.getDescription(),
+                    tourCategoryUpdateRequest.getDescription(),
+                    "Description"));
+            hasChanges = true;
+        }
+
+        // Compare color
+        if (tourCategoryUpdateRequest.getColor() != null &&
+                previousTourCategoryResponse.getColor() != null &&
+                !tourCategoryUpdateRequest.getColor().equals(previousTourCategoryResponse.getColor())) {
+            changes.add(String.format("Color changed from '%s' to '%s'",
+                    previousTourCategoryResponse.getColor(),
+                    tourCategoryUpdateRequest.getColor()));
+            fieldChanges.add(new TourCategoryComparisonResult.FieldChange(
+                    "color",
+                    previousTourCategoryResponse.getColor(),
+                    tourCategoryUpdateRequest.getColor(),
+                    "Color"));
+            hasChanges = true;
+        }
+
+        // Compare hoverColor
+        if (tourCategoryUpdateRequest.getHoverColor() != null &&
+                previousTourCategoryResponse.getHoverColor() != null &&
+                !tourCategoryUpdateRequest.getHoverColor().equals(previousTourCategoryResponse.getHoverColor())) {
+            changes.add(String.format("Hover Color changed from '%s' to '%s'",
+                    previousTourCategoryResponse.getHoverColor(),
+                    tourCategoryUpdateRequest.getHoverColor()));
+            fieldChanges.add(new TourCategoryComparisonResult.FieldChange(
+                    "hoverColor",
+                    previousTourCategoryResponse.getHoverColor(),
+                    tourCategoryUpdateRequest.getHoverColor(),
+                    "Hover Color"));
+            hasChanges = true;
+        }
+
+        // Compare status
+        String oldStatus = previousTourCategoryResponse.getStatus();
+        String newStatus = tourCategoryUpdateRequest.getStatus();
+        if (oldStatus != null && newStatus != null && !oldStatus.equals(newStatus)) {
+            changes.add(String.format("Status changed from '%s' to '%s'", oldStatus, newStatus));
+            fieldChanges.add(new TourCategoryComparisonResult.FieldChange(
+                    "status",
+                    oldStatus,
+                    newStatus,
+                    "Status"));
+            hasChanges = true;
+        }
+
+        // Handle tours to add
+        List<Long> toursToAdd = new ArrayList<>();
+        if (tourCategoryUpdateRequest.getAddTourIds() != null &&
+                !tourCategoryUpdateRequest.getAddTourIds().isEmpty()) {
+            toursToAdd.addAll(tourCategoryUpdateRequest.getAddTourIds());
+            changes.add(String.format("Tours to add: %s", tourCategoryUpdateRequest.getAddTourIds()));
+            hasChanges = true;
+        }
+
+        // Handle tours to remove
+        List<Long> toursToRemove = new ArrayList<>();
+        if (tourCategoryUpdateRequest.getRemoveTourIds() != null &&
+                !tourCategoryUpdateRequest.getRemoveTourIds().isEmpty()) {
+            toursToRemove.addAll(tourCategoryUpdateRequest.getRemoveTourIds());
+            changes.add(String.format("Tours to remove: %s", tourCategoryUpdateRequest.getRemoveTourIds()));
+            hasChanges = true;
+        }
+
+        // Validate tour changes
+        if (!toursToRemove.isEmpty() && !toursToAdd.isEmpty()) {
+            // Check for conflicts (same tour in both lists)
+            List<Long> conflicts = toursToRemove.stream()
+                    .filter(toursToAdd::contains)
+                    .collect(Collectors.toList());
+            if (!conflicts.isEmpty()) {
+                warnings.add(String.format("Warning: Tours %s are both being added and removed!", conflicts));
+            }
+        }
+
+        // Handle images to add
+        List<TourCategoryComparisonResult.ImageChange> imagesToAdd = new ArrayList<>();
+        if (tourCategoryUpdateRequest.getAddImages() != null &&
+                !tourCategoryUpdateRequest.getAddImages().isEmpty()) {
+            for (TourCategoryImageInsertRequest imageRequest : tourCategoryUpdateRequest.getAddImages()) {
+                TourCategoryComparisonResult.ImageChange imageChange =
+                        TourCategoryComparisonResult.ImageChange.builder()
+                                .name(imageRequest.getName())
+                                .description(imageRequest.getDescription())
+                                .imageUrl(imageRequest.getImageUrl())
+                                .status(imageRequest.getStatus())
+                                .build();
+                imagesToAdd.add(imageChange);
+                changes.add(String.format("Image to add: %s", imageRequest.getName()));
+            }
+            hasChanges = true;
+        }
+
+        // Handle images to remove
+        List<Long> imagesToRemove = new ArrayList<>();
+        if (tourCategoryUpdateRequest.getRemoveImageIds() != null &&
+                !tourCategoryUpdateRequest.getRemoveImageIds().isEmpty()) {
+            imagesToRemove.addAll(tourCategoryUpdateRequest.getRemoveImageIds());
+            changes.add(String.format("Images to remove IDs: %s", tourCategoryUpdateRequest.getRemoveImageIds()));
+            hasChanges = true;
+        }
+
+        // Handle images to update
+        List<TourCategoryComparisonResult.ImageUpdateChange> imagesToUpdate = new ArrayList<>();
+        if (tourCategoryUpdateRequest.getUpdateImages() != null &&
+                !tourCategoryUpdateRequest.getUpdateImages().isEmpty()) {
+
+            // Find existing images in previous response for comparison
+            Map<Long, TourCategoryImageResponse> existingImagesMap = new HashMap<>();
+            if (previousTourCategoryResponse.getImages() != null) {
+                existingImagesMap = previousTourCategoryResponse.getImages().stream()
+                        .collect(Collectors.toMap(
+                                TourCategoryImageResponse::getImageId,
+                                image -> image
+                        ));
+            }
+
+            for (TourCategoryImageUpdateRequest updateRequest : tourCategoryUpdateRequest.getUpdateImages()) {
+                TourCategoryImageResponse existingImage = existingImagesMap.get(updateRequest.getImageId());
+
+                if (existingImage != null) {
+                    // Check if there are actual changes
+                    boolean hasImageChanges = false;
+                    String oldName = existingImage.getName();
+                    String newName = updateRequest.getName();
+                    String oldDescription = existingImage.getDescription();
+                    String newDescription = updateRequest.getDescription();
+                    String oldImageUrl = existingImage.getImageUrl();
+                    String newImageUrl = updateRequest.getImageUrl();
+                    String oldImgStatus = existingImage.getStatus();
+                    String newImgStatus = updateRequest.getStatus();
+
+                    if (!Objects.equals(oldName, newName)) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d name changed from '%s' to '%s'",
+                                updateRequest.getImageId(), oldName, newName));
+                    }
+                    if (!Objects.equals(oldDescription, newDescription)) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d description changed from '%s' to '%s'",
+                                updateRequest.getImageId(), oldDescription, newDescription));
+                    }
+                    if (!Objects.equals(oldImageUrl, newImageUrl)) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d URL changed", updateRequest.getImageId()));
+                    }
+                    if (!Objects.equals(oldImgStatus, newImgStatus)) {
+                        hasImageChanges = true;
+                        changes.add(String.format("Image ID %d status changed from '%s' to '%s'",
+                                updateRequest.getImageId(), oldImgStatus, newImgStatus));
+                    }
+
+                    if (hasImageChanges) {
+                        TourCategoryComparisonResult.ImageUpdateChange imageUpdateChange =
+                                TourCategoryComparisonResult.ImageUpdateChange.builder()
+                                        .imageId(updateRequest.getImageId())
+                                        .oldName(oldName)
+                                        .newName(newName)
+                                        .oldDescription(oldDescription)
+                                        .newDescription(newDescription)
+                                        .oldImageUrl(oldImageUrl)
+                                        .newImageUrl(newImageUrl)
+                                        .oldStatus(oldImgStatus)
+                                        .newStatus(newImgStatus)
+                                        .build();
+                        imagesToUpdate.add(imageUpdateChange);
+                        hasChanges = true;
+                    }
+                } else {
+                    warnings.add(String.format("Warning: Image with ID %d not found for update",
+                            updateRequest.getImageId()));
+                }
+            }
+        }
+
+        // Additional warnings for image operations
+        if (!imagesToAdd.isEmpty() && imagesToAdd.size() > 10) {
+            warnings.add("Warning: Adding more than 10 images at once might impact performance");
+        }
+
+        if (!imagesToRemove.isEmpty() && !imagesToAdd.isEmpty()) {
+            warnings.add("Note: Adding and removing images in the same operation");
+        }
+
+        // Warning for status change implications
+        if (oldStatus != null && newStatus != null &&
+                !oldStatus.equals(newStatus) && "INACTIVE".equals(newStatus)) {
+            warnings.add("Warning: Changing status to INACTIVE will hide this category from users");
+        }
+
+        // Build the result
+        return resultBuilder
+                .fieldChanges(fieldChanges)
+                .changes(changes)
+                .hasChanges(hasChanges)
+                .warnings(warnings)
+                .toursToAdd(toursToAdd)
+                .toursToRemove(toursToRemove)
+                .imagesToAdd(imagesToAdd)
+                .imagesToRemove(imagesToRemove)
+                .imagesToUpdate(imagesToUpdate)
+                .oldStatus(oldStatus)
+                .newStatus(newStatus)
+                .changedBy(loggedUser != null ?
+                        loggedUser.getFirstName() + " " + loggedUser.getLastName() : "Unknown")
+                .changedByUserId(loggedUser != null ? loggedUser.getId() : null)
+                .changeTimestamp(new Date().toString())
+                .build();
+    }
+
     private TourComparisonResult compareTourUpdates(
             TourUpdateRequest tourUpdateRequest,
             TourAllDetailsResponse previousTourData) {
@@ -1452,8 +3205,8 @@ public class TourServiceImpl implements TourService {
             List<TourComparisonResult.TourImageChange> imagesToAdd =
                     tourUpdateRequest.getAddImages().stream()
                             .map(img -> TourComparisonResult.TourImageChange.builder()
-                                    .imageName(img.getImageName())
-                                    .imageDescription(img.getImageDescription())
+                                    .imageName(img.getName())
+                                    .imageDescription(img.getDescription())
                                     .imageUrl(img.getImageUrl())
                                     .status(img.getStatus())
                                     .build())

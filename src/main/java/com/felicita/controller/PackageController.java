@@ -2,11 +2,24 @@ package com.felicita.controller;
 
 import com.felicita.model.dto.PackageResponseDto;
 import com.felicita.model.request.*;
+import com.felicita.model.request.packages.schedule.PackageScheduleDataRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleInsertRequest;
+import com.felicita.model.request.packages.schedule.PackageScheduleUpdateRequest;
+import com.felicita.model.request.packages.type.PackageTypeInsertRequest;
+import com.felicita.model.request.packages.type.PackageTypeUpdateRequest;
+import com.felicita.model.request.tour.schedule.TourScheduleInsertRequest;
+import com.felicita.model.request.tour.schedule.TourScheduleUpdateRequest;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.PackageScheduleIdAndNameResponse;
+import com.felicita.model.response.packages.ParamsForPackageRequestResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleAllDetailsResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleParamsResponse;
+import com.felicita.model.response.packages.schedule.PackageScheduleWithParamsResponse;
+import com.felicita.model.response.packages.type.PackageTypeAllDetailsResponse;
+import com.felicita.model.response.packages.type.PackageTypeBasicDetailsResponse;
 import com.felicita.model.response.statistics.PackageScheduleStatisticsResponse;
 import com.felicita.model.response.statistics.PackageStatisticsResponse;
 import com.felicita.model.response.statistics.PackageTypeStatisticsResponse;
-import com.felicita.model.response.statistics.TourStatisticsResponse;
 import com.felicita.service.PackageService;
 import com.felicita.util.Constant;
 import org.slf4j.Logger;
@@ -50,6 +63,14 @@ public class PackageController {
     public ResponseEntity<CommonResponse<PackageWithParamsResponse>> getPackagesWithParams(@RequestBody PackageDataRequest packageDataRequest) {
         LOGGER.info("{} Start execute get active package for request {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<PackageWithParamsResponse> response = packageService.getPackagesWithParams(packageDataRequest);
+        LOGGER.info("{} End execute get active packages for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/params-for-tour-request")
+    public ResponseEntity<CommonResponse<ParamsForPackageRequestResponse>> getParamsForPackageRequest() {
+        LOGGER.info("{} Start execute get active package for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<ParamsForPackageRequestResponse> response = packageService.getParamsForPackageRequest();
         LOGGER.info("{} End execute get active packages for request {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -182,7 +203,6 @@ public class PackageController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-
     @PostMapping(path = "/update-package")
     public ResponseEntity<CommonResponse<UpdateResponse>> updatePackage(@RequestBody PackageUpdateRequest packageUpdateRequest) {
         LOGGER.info("{} Start execute update package {}", Constant.DOTS, Constant.DOTS);
@@ -228,6 +248,110 @@ public class PackageController {
         LOGGER.info("{} Start execute get package type statistics {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<PackageTypeStatisticsResponse> response = packageService.getPackageTypeStatistics();
         LOGGER.info("{} End execute get package type statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/package-types")
+    public ResponseEntity<CommonResponse<List<PackageTypeBasicDetailsResponse>>> getPackageTypes() {
+        LOGGER.info("{} Start execute get tour type statistics {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<PackageTypeBasicDetailsResponse>> response = packageService.getPackageTypes();
+        LOGGER.info("{} End execute get tour type statistics {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/package-type-details")
+    public ResponseEntity<CommonResponse<PackageTypeAllDetailsResponse>> getPackageTypeDetailsById(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<PackageTypeAllDetailsResponse> response = packageService.getPackageTypeDetailsById(commonIdRequest);
+        LOGGER.info("{} End execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/package-type-basic-details")
+    public ResponseEntity<CommonResponse<PackageTypeBasicDetailsResponse>> getPackageTypeBasicDetailsById(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<PackageTypeBasicDetailsResponse> response = packageService.getPackageTypeBasicDetailsById(commonIdRequest);
+        LOGGER.info("{} End execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/terminate-package-type")
+    public ResponseEntity<CommonResponse<TerminateResponse>> terminatePackageType(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TerminateResponse> response = packageService.terminatePackageType(commonIdRequest);
+        LOGGER.info("{} End execute terminate activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/add-package-type")
+    public ResponseEntity<CommonResponse<InsertResponse>> insertPackageType(@RequestBody PackageTypeInsertRequest packageTypeInsertRequest) {
+        LOGGER.info("{} Start execute insert activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = packageService.insertPackageType(packageTypeInsertRequest);
+        LOGGER.info("{} End execute insert activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/update-package-type")
+    public ResponseEntity<CommonResponse<UpdateResponse>> updatePackageType(@RequestBody PackageTypeUpdateRequest packageTypeUpdateRequest) {
+        LOGGER.info("{} Start execute update activity {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UpdateResponse> response = packageService.updatePackageType(packageTypeUpdateRequest);
+        LOGGER.info("{} End execute update activity {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/package-schedule")
+    public ResponseEntity<CommonResponse<PackageScheduleWithParamsResponse>> getPackageScheduleWithParams(@RequestBody PackageScheduleDataRequest packageScheduleDataRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<PackageScheduleWithParamsResponse> response = packageService.getPackageScheduleWithParams(packageScheduleDataRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/package-schedule-params")
+    public ResponseEntity<CommonResponse<PackageScheduleParamsResponse>> getPackageScheduleParams() {
+        LOGGER.info("{} Start execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<PackageScheduleParamsResponse> response = packageService.getPackageScheduleParams();
+        LOGGER.info("{} End execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/package-schedule-details-by-id")
+    public ResponseEntity<CommonResponse<PackageScheduleAllDetailsResponse>> getPackageScheduleDetailsById(@RequestBody CommonIdRequest packageScheduleId) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<PackageScheduleAllDetailsResponse> response = packageService.getPackageScheduleDetailsById(packageScheduleId);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/create-package-schedule")
+    public ResponseEntity<CommonResponse<InsertResponse>> createPackageSchedule(@RequestBody PackageScheduleInsertRequest packageScheduleInsertRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = packageService.createPackageSchedule(packageScheduleInsertRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/update-package-schedule")
+    public ResponseEntity<CommonResponse<UpdateResponse>> updatePackageSchedule(@RequestBody PackageScheduleUpdateRequest packageScheduleUpdateRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UpdateResponse> response = packageService.updatePackageSchedule(packageScheduleUpdateRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/terminate-package-schedule")
+    public ResponseEntity<CommonResponse<TerminateResponse>> termiantePackageScheduleById(@RequestBody CommonIdRequest commonIdRequest) {
+        LOGGER.info("{} Start execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TerminateResponse> response = packageService.termiantePackageScheduleById(commonIdRequest);
+        LOGGER.info("{} End execute get active activities schedule for request {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/package-schedule-id-and-names")
+    public ResponseEntity<CommonResponse<List<PackageScheduleIdAndNameResponse>>> getPackageScheduleIdAndNames() {
+        LOGGER.info("{} Start execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<PackageScheduleIdAndNameResponse>> response = packageService.getPackageScheduleIdAndNames();
+        LOGGER.info("{} End execute get active activities schedule params for request {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

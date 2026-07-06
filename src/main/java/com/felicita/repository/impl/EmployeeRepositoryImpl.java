@@ -591,6 +591,7 @@ public class EmployeeRepositoryImpl implements EmployeeRepository {
                             .email(rs.getString("email"))
                             .mobileNumber(rs.getString("mobileNumber"))
                             .nic(rs.getString("nic"))
+                            .imageUrl(rs.getString("imageUrl"))
 
                             .employeeTypeId(rs.getLong("employeeTypeId"))
                             .employeeType(rs.getString("employeeType"))
@@ -684,6 +685,7 @@ public class EmployeeRepositoryImpl implements EmployeeRepository {
                             .email(rs.getString("email"))
                             .mobileNumber(rs.getString("mobileNumber"))
                             .nic(rs.getString("nic"))
+                            .imageUrl(rs.getString("imageUrl"))
 
                             .employeeTypeId(rs.getLong("employeeTypeId"))
                             .employeeType(rs.getString("employeeType"))
