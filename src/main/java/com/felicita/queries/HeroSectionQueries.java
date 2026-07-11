@@ -99,24 +99,31 @@ public class HeroSectionQueries {
             ORDER BY shs.`order` ASC
             """;
 
+    public static final String GET_HERO_SECTION_DATA_FOR_PARAMS = """
+            SELECT DISTINCT
+                primary_button_text AS PRIMARY_BUTTON_TEXT,
+                secondary_button_text AS SECONDARY_BUTTON_TEXT
+            FROM hero_section
+            WHERE terminated_at IS NULL
+            """;
+
     private HeroSectionQueries() {
     }
 
     public static final String GET_ALL_HERO_SECTION_DATA = """
             SELECT
-            	hs.id AS IMAGE_ID,
+                hs.id AS IMAGE_ID,
                 hs.name AS IMAGE_NAME,
                 hs.image_url AS IMAGE_URL,
                 hs.title AS IMAGE_TITLE,
                 hs.subtitle AS IMAGE_SUB_TITLE,
-                hs.description AS ImAGE_DESCRIPTION,
+                hs.description AS IMAGE_DESCRIPTION,
                 hs.primary_button_text AS IMAGE_PRIMARY_BUTTON_TEXT,
                 hs.primary_button_link AS IMAGE_PRIMARY_BUTTON_LINK,
-                hs.secondary_button_text AS IMAGE_SECONDRY_BUTTON_TEXT,
-                hs.secondary_button_link AS IMAGE_SECONDRY_BUTTON_LINK,
-                hss.name AS IMAGE_STATUS,
-                cs.name AS IMAGE_STATUS_STATUS,
-                hs.order AS IMAGE_ORDER,
+                hs.secondary_button_text AS IMAGE_SECONDARY_BUTTON_TEXT,
+                hs.secondary_button_link AS IMAGE_SECONDARY_BUTTON_LINK,
+                cs.name AS IMAGE_STATUS,
+                hs.`order` AS IMAGE_ORDER,
                 hs.created_at AS IMAGE_CREATED_AT,
                 hs.created_by AS IMAGE_CREATED_BY,
                 hs.updated_at AS IMAGE_UPDATED_AT,
@@ -124,10 +131,8 @@ public class HeroSectionQueries {
                 hs.terminated_at AS IMAGE_TERMINATED_AT,
                 hs.terminated_by AS IMAGE_TERMINATED_BY
             FROM hero_section hs
-            LEFT JOIN hero_section_status hss
-            ON hs.hero_section_status_id = hss.id
-            lEFT JOIN common_status cs
-            ON hss.common_status_id = cs.id
+            LEFT JOIN common_status cs
+                ON hs.status = cs.id
             """;
 
     public static final String GET_ALL_ABOUT_US_HERO_SECTION_DATA = """
@@ -354,19 +359,133 @@ public class HeroSectionQueries {
             """;
 
     public static final String GET_ACTIVITY_HERO_SECTION_DATA_BY_ACTIVITY_ID = """
-    SELECT
-        ai.id AS image_id,
-        ai.activity_id AS activity_id,
-        ai.name AS name,
-        ai.description AS description,
-        ai.image_url AS image_url,
-        cs.name AS status
-    FROM activities_images ai
-    LEFT JOIN common_status cs
-        ON cs.id = ai.status
-    WHERE ai.activity_id = ?;
+            SELECT
+                ai.id AS image_id,
+                ai.activity_id AS activity_id,
+                ai.name AS name,
+                ai.description AS description,
+                ai.image_url AS image_url,
+                cs.name AS status
+            FROM activities_images ai
+            LEFT JOIN common_status cs
+                ON cs.id = ai.status
+            WHERE ai.activity_id = ?;
+            """;
+
+    public static final String GET_HERO_SECTION_BASIC_DETAILS = """
+            SELECT
+                hs.id,
+                hs.name,
+                hs.image_url,
+                hs.title,
+                hs.subtitle,
+                hs.description,
+                hs.primary_button_text,
+                hs.primary_button_link,
+                hs.secondary_button_text,
+                hs.secondary_button_link,
+                cs.id AS status_id,
+                cs.name AS status,
+                hs.`order`
+            FROM %s hs
+            INNER JOIN common_status cs ON hs.status = cs.id
+            WHERE hs.terminated_at IS NULL
+            """;
+
+    public static final String GET_HERO_SECTION_BASIC_DETAILS_COUNT = """
+            SELECT COUNT(*)
+            FROM %s hs
+            INNER JOIN common_status cs ON hs.status = cs.id
+            WHERE hs.terminated_at IS NULL
+            """;
+
+    public static final String GET_HERO_SECTION_DETAILS_BY_ID = """
+            SELECT
+                hs.id AS ID,
+                hs.name AS NAME,
+                hs.image_url AS IMAGE_URL,
+                hs.title AS TITLE,
+                hs.subtitle AS SUBTITLE,
+                hs.description AS DESCRIPTION,
+                hs.primary_button_text AS PRIMARY_BUTTON_TEXT,
+                hs.primary_button_link AS PRIMARY_BUTTON_LINK,
+                hs.secondary_button_text AS SECONDARY_BUTTON_TEXT,
+                hs.secondary_button_link AS SECONDARY_BUTTON_LINK,
+                cs.id AS STATUS_ID,
+                cs.name AS STATUS,
+                hs.`order` AS `ORDER`,
+                hs.created_at AS CREATED_AT,
+                hs.created_by AS CREATED_BY,
+                uc.username AS CREATED_BY_USERNAME,
+                hs.updated_at AS UPDATED_AT,
+                hs.updated_by AS UPDATED_BY,
+                uu.username AS UPDATED_BY_USERNAME,
+                hs.terminated_at AS TERMINATED_AT,
+                hs.terminated_by AS TERMINATED_BY,
+                ut.username AS TERMINATED_BY_USERNAME
+            FROM %s hs
+            LEFT JOIN common_status cs
+                ON hs.status = cs.id
+            LEFT JOIN user uc
+                ON hs.created_by = uc.user_id
+            LEFT JOIN user uu
+                ON hs.updated_by = uu.user_id
+            LEFT JOIN user ut
+                ON hs.terminated_by = ut.user_id
+            WHERE hs.id = ?
+            """;
+
+    public static final String INSERT_HERO_SECTION = """
+            INSERT INTO %s
+            (
+                name,
+                image_url,
+                title,
+                subtitle,
+                description,
+                primary_button_text,
+                primary_button_link,
+                secondary_button_text,
+                secondary_button_link,
+                status,
+                `order`,
+                created_at,
+                created_by
+            )
+            VALUES
+            (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?
+            )
+            """;
+
+    public static final String UPDATE_HERO_SECTION = """
+            UPDATE %s
+            SET
+                name = ?,
+                image_url = ?,
+                title = ?,
+                subtitle = ?,
+                description = ?,
+                primary_button_text = ?,
+                primary_button_link = ?,
+                secondary_button_text = ?,
+                secondary_button_link = ?,
+                status = ?,
+                `order` = ?,
+                updated_at = NOW(),
+                updated_by = ?
+            WHERE id = ?
+              AND terminated_at IS NULL
+            """;
+
+    public static final String TERMINATE_HERO_SECTION = """
+    UPDATE %s
+    SET
+        status = ?,
+        terminated_at = NOW(),
+        terminated_by = ?
+    WHERE id = ?
+      AND terminated_at IS NULL
     """;
-
-
 
 }

@@ -623,6 +623,9 @@ public class CommonServiceImpl implements CommonService {
             List<AllCategoriesResponse.TourType> tourTypeList =
                     commonRepository.getAllTourTypes();
             allCategoriesResponse.setTourTypeList(tourTypeList);
+            List<AllCategoriesResponse.Status> statusList =
+                    commonRepository.getStatusList();
+            allCategoriesResponse.setStatusList(statusList);
 
             LOGGER.info("Fetched all categories successfully.");
             return new CommonResponse<>(

@@ -1,6 +1,12 @@
 package com.felicita.controller;
 
+import com.felicita.model.request.common.IdWithTypeRequest;
+import com.felicita.model.request.heroSection.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.heroSection.HeroSectionBasicResponse;
+import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
+import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
+import com.felicita.model.response.heroSection.HeroSectionParamResponse;
 import com.felicita.service.HeroSectionService;
 import com.felicita.util.Constant;
 import org.slf4j.Logger;
@@ -8,10 +14,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -160,6 +164,55 @@ public class HeroSectionController {
         LOGGER.info("{} Start execute get activity hero section data by activity id {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<List<ActivityDetailsHeroSectionResponse>> response = heroSectionService.getActivityHeroSectionDetailsByActivityId(activityId);
         LOGGER.info("{} End execute get activity hero section data by activity id {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    // admin
+    @PostMapping(path = "/basic-details-for-request")
+    public ResponseEntity<CommonResponse<HeroSectionParamResponse>> getHeroSectionDataWithParams(@RequestBody HeroSectionDataRequest heroSectionDataRequest) {
+        LOGGER.info("{} Start execute get hero section basic details {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<HeroSectionParamResponse> response = heroSectionService.getHeroSectionDataWithParams(heroSectionDataRequest);
+        LOGGER.info("{} End execute get hero section basic details {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/data-for-request-params")
+    public ResponseEntity<CommonResponse<HeroSectionDataForParamsResponse>> getDataForRequestParams(@RequestBody HeroSectionTypeRequest heroSectionTypeRequest) {
+        LOGGER.info("{} Start execute get hero section basic details {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<HeroSectionDataForParamsResponse> response = heroSectionService.getDataForRequestParams(heroSectionTypeRequest);
+        LOGGER.info("{} End execute get hero section basic details {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/hero-section-details")
+    public ResponseEntity<CommonResponse<HeroSectionDetailsResponse>> getHeroSectionDetailsById(@RequestBody HeroSectionDetailsDataRequest heroSectionDetailsDataRequest) {
+        LOGGER.info("{} Start execute get hero section details {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<HeroSectionDetailsResponse> response = heroSectionService.getHeroSectionDetailsById(heroSectionDetailsDataRequest);
+        LOGGER.info("{} End execute get hero section details {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/add-hero-section")
+    public ResponseEntity<CommonResponse<InsertResponse>> addHeroSection(@RequestBody HeroSectionInsertRequest heroSectionInsertRequest) {
+        LOGGER.info("{} Start execute add hero section {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<InsertResponse> response = heroSectionService.addHeroSection(heroSectionInsertRequest);
+        LOGGER.info("{} End execute add hero section {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @PostMapping(path = "/update-hero-section")
+    public ResponseEntity<CommonResponse<UpdateResponse>> updateHeroSection(@RequestBody HeroSectionUpdateRequest heroSectionUpdateRequest) {
+        LOGGER.info("{} Start execute update hero section {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<UpdateResponse> response = heroSectionService.updateHeroSection(heroSectionUpdateRequest);
+        LOGGER.info("{} End execute update hero section {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/terminate-hero-section")
+    public ResponseEntity<CommonResponse<TerminateResponse>> terminateHeroSection(@RequestBody IdWithTypeRequest idWithTypeRequest) {
+        LOGGER.info("{} Start execute terminate hero section {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<TerminateResponse> response = heroSectionService.terminateHeroSection(idWithTypeRequest);
+        LOGGER.info("{} End execute terminate hero section {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

@@ -114,7 +114,11 @@ public enum NotificationType {
     BOOKINGS_STATUSES_TERMINATED(""),
 
     BOOKING_ASSIGNED(""),
-    BOOKING_ASSIGN_UPDATED("");
+    BOOKING_ASSIGN_UPDATED(""),
+
+    HERO_SECTION_CREATED(""),
+    HERO_SECTION_UPDATED(""),
+    HERO_SECTION_TERMINATED("");
 
     private final String description;
 

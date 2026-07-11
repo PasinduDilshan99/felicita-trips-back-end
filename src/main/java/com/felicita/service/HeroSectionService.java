@@ -1,6 +1,12 @@
 package com.felicita.service;
 
+import com.felicita.model.request.common.IdWithTypeRequest;
+import com.felicita.model.request.heroSection.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
+import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
+import com.felicita.model.response.heroSection.HeroSectionParamResponse;
+
 import java.util.List;
 
 public interface HeroSectionService {
@@ -38,4 +44,16 @@ public interface HeroSectionService {
     CommonResponse<List<VehicleTypesHeroSectionResponse>> getVehicleTypesHeroSectionDetails();
 
     CommonResponse<List<SeasonsHeroSectionResponse>> getSeasonHeroSectionDetails();
+
+    CommonResponse<HeroSectionParamResponse> getHeroSectionDataWithParams(HeroSectionDataRequest heroSectionDataRequest);
+
+    CommonResponse<HeroSectionDataForParamsResponse> getDataForRequestParams(HeroSectionTypeRequest heroSectionTypeRequest);
+
+    CommonResponse<HeroSectionDetailsResponse> getHeroSectionDetailsById(HeroSectionDetailsDataRequest heroSectionDetailsDataRequest);
+
+    CommonResponse<InsertResponse> addHeroSection(HeroSectionInsertRequest heroSectionInsertRequest);
+
+    CommonResponse<UpdateResponse> updateHeroSection(HeroSectionUpdateRequest heroSectionUpdateRequest);
+
+    CommonResponse<TerminateResponse> terminateHeroSection(IdWithTypeRequest idWithTypeRequest);
 }

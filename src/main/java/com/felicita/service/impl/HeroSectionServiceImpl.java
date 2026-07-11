@@ -1,21 +1,35 @@
 package com.felicita.service.impl;
 
-import com.felicita.exception.DataAccessErrorExceptionHandler;
-import com.felicita.exception.DataNotFoundErrorExceptionHandler;
-import com.felicita.exception.InternalServerErrorExceptionHandler;
-import com.felicita.model.enums.CommonStatus;
-import com.felicita.model.enums.HeroSectionItemStatus;
+import com.felicita.email.HeroSectionEmailHelperService;
+import com.felicita.exception.*;
+import com.felicita.model.dto.NotificationInsertRequestDto;
+import com.felicita.model.dto.SupervisorBasicDetailsDto;
+import com.felicita.model.enums.*;
+import com.felicita.model.other.HeroSectionComparisonResult;
+import com.felicita.model.request.common.IdWithTypeRequest;
+import com.felicita.model.request.heroSection.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.heroSection.HeroSectionBasicResponse;
+import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
+import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
+import com.felicita.model.response.heroSection.HeroSectionParamResponse;
 import com.felicita.repository.HeroSectionRepository;
+import com.felicita.security.model.User;
+import com.felicita.service.CommonService;
+import com.felicita.service.EmailService;
 import com.felicita.service.HeroSectionService;
 import com.felicita.util.CommonResponseMessages;
+import com.felicita.validation.HeroSectionValidationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
+import java.util.*;
+
+import static com.felicita.util.Constant.COMPANY_EMAIL;
+import static com.felicita.util.FrontEndUrls.VIEW_HERO_SECTION_DETAILS;
 
 @Service
 public class HeroSectionServiceImpl implements HeroSectionService {
@@ -23,10 +37,18 @@ public class HeroSectionServiceImpl implements HeroSectionService {
     private static final Logger LOGGER = LoggerFactory.getLogger(HeroSectionServiceImpl.class);
 
     private final HeroSectionRepository heroSectionRepository;
+    private final CommonService commonService;
+    private final EmailService emailService;
+    private final HeroSectionValidationService heroSectionValidationService;
+    private final HeroSectionEmailHelperService heroSectionEmailHelperService;
 
     @Autowired
-    public HeroSectionServiceImpl(HeroSectionRepository heroSectionRepository) {
+    public HeroSectionServiceImpl(HeroSectionRepository heroSectionRepository, CommonService commonService, EmailService emailService, HeroSectionValidationService heroSectionValidationService, HeroSectionEmailHelperService heroSectionEmailHelperService) {
         this.heroSectionRepository = heroSectionRepository;
+        this.commonService = commonService;
+        this.emailService = emailService;
+        this.heroSectionValidationService = heroSectionValidationService;
+        this.heroSectionEmailHelperService = heroSectionEmailHelperService;
     }
 
     @Override
@@ -651,6 +673,603 @@ public class HeroSectionServiceImpl implements HeroSectionService {
             throw new InternalServerErrorExceptionHandler("Failed to fetch seasons hero section data from database");
         } finally {
             LOGGER.info("End fetching seasons hero section data from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<HeroSectionParamResponse> getHeroSectionDataWithParams(HeroSectionDataRequest heroSectionDataRequest) {
+        LOGGER.info("Start fetching hero section data with params from repository");
+        try {
+            HeroSectionParamResponse heroSectionData = new HeroSectionParamResponse();
+
+            List<HeroSectionBasicResponse> heroSectionBasicResponses = heroSectionRepository.getHeroSectionBasicResponseForParms(heroSectionDataRequest);
+            Integer count = heroSectionRepository.getHeroSectionBasicResponseCountForParms(heroSectionDataRequest);
+            heroSectionData.setCount(count);
+            heroSectionData.setHeroSectionBasicResponses(heroSectionBasicResponses);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    heroSectionData,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching hero section data with params: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch hero section data with params from database");
+        } finally {
+            LOGGER.info("End fetching hero section data with params from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<HeroSectionDataForParamsResponse> getDataForRequestParams(HeroSectionTypeRequest heroSectionTypeRequest) {
+        LOGGER.info("Start fetching hero section data for request params from repository");
+        try {
+            HeroSectionDataForParamsResponse heroSectionData = heroSectionRepository.getDataForRequestParams(heroSectionTypeRequest);
+
+            if (heroSectionData == null) {
+                return new CommonResponse<>(
+                        CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                        CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                        "No hero section data found for the given parameters",
+                        new HeroSectionDataForParamsResponse(),
+                        Instant.now());
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    heroSectionData,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching hero section data for request params: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch hero section data for request params from database");
+        } finally {
+            LOGGER.info("End fetching hero section data for request params from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<HeroSectionDetailsResponse> getHeroSectionDetailsById(HeroSectionDetailsDataRequest heroSectionDetailsDataRequest) {
+        LOGGER.info("Start fetching hero section details by id from repository");
+        try {
+            HeroSectionDetailsResponse heroSectionDetails = heroSectionRepository.getHeroSectionDetailsById(heroSectionDetailsDataRequest);
+
+            if (heroSectionDetails == null) {
+                return new CommonResponse<>(
+                        CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                        CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                        "No hero section details found for the given id",
+                        new HeroSectionDetailsResponse(),
+                        Instant.now());
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    heroSectionDetails,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching hero section details by id: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch hero section details from database");
+        } finally {
+            LOGGER.info("End fetching hero section details from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<InsertResponse> addHeroSection(HeroSectionInsertRequest heroSectionInsertRequest) {
+        LOGGER.info("Start execute add hero section request.");
+
+        try {
+            heroSectionValidationService.validateHeroSectionInsertRequest(heroSectionInsertRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            Long heroSectionId = heroSectionRepository.insertHeroSectionDetails(heroSectionInsertRequest, userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.HERO_SECTION_CREATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("New Hero Section Created")
+                    .message("A new hero section '" + heroSectionInsertRequest.getName() + "' has been created.")
+                    .actionUrl(VIEW_HERO_SECTION_DETAILS + "/" + heroSectionId)
+                    .actionText("View Hero Section")
+                    .icon("Image")
+                    .color("#8B5CF6")
+                    .metadata(Map.of(
+                            "heroSectionId", heroSectionId,
+                            "heroSectionName", heroSectionInsertRequest.getName(),
+                            "heroSectionType", heroSectionInsertRequest.getHeroSectionType(),
+                            "createdBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.HERO_SECTION_CREATE.name())
+                    .sourceModule(SourceModule.HERO_SECTION.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            if (heroSectionId != null) {
+                List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(
+                        NotificationType.HERO_SECTION_CREATED.name(), supervisorUserIds);
+                emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+                emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+                String body = heroSectionEmailHelperService.buildHeroSectionCreateSuccessfullBody(heroSectionInsertRequest, heroSectionId, loggedUser);
+                String subject = heroSectionEmailHelperService.buildHeroSectionCreateSuccessfullSubject(heroSectionInsertRequest, heroSectionId, loggedUser);
+                // emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_INSERT_MESSAGE,
+                    new InsertResponse("Successfully insert hero section request"),
+                    Instant.now());
+
+        } catch (ValidationFailedErrorExceptionHandler vfe) {
+            throw new ValidationFailedErrorExceptionHandler("validation failed in the insert hero section request", vfe.getValidationFailedResponses());
+        } catch (InsertFailedErrorExceptionHandler ife) {
+            throw new InsertFailedErrorExceptionHandler(ife.getMessage());
+        } catch (UnAuthenticateErrorExceptionHandler uae) {
+            throw new UnAuthenticateErrorExceptionHandler(uae.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while adding hero section: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Something went wrong while adding hero section");
+        }
+    }
+
+    @Override
+    public CommonResponse<UpdateResponse> updateHeroSection(HeroSectionUpdateRequest heroSectionUpdateRequest) {
+        LOGGER.info("Start execute update hero section request.");
+        try {
+            heroSectionValidationService.validateHeroSectionUpdateRequest(heroSectionUpdateRequest);
+
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            HeroSectionDetailsResponse previousHeroSection =
+                    getHeroSectionDetailsById(
+                            new HeroSectionDetailsDataRequest(heroSectionUpdateRequest.getHeroSectionType(), heroSectionUpdateRequest.getHeroSectionId())).getData();
+
+            heroSectionRepository.updateBasicHeroSectionDetails(heroSectionUpdateRequest, userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.HERO_SECTION_UPDATED.name())
+                    .priority(Priority.MEDIUM.name())
+                    .title("Hero Section Updated")
+                    .message("The hero section '" + heroSectionUpdateRequest.getName() + "' has been updated.")
+                    .actionUrl(VIEW_HERO_SECTION_DETAILS + "/" + heroSectionUpdateRequest.getHeroSectionId())
+                    .actionText("View Hero Section")
+                    .icon("Image")
+                    .color("#8B5CF6")
+                    .metadata(Map.of(
+                            "heroSectionId", heroSectionUpdateRequest.getHeroSectionId(),
+                            "heroSectionName", heroSectionUpdateRequest.getName(),
+                            "heroSectionType", heroSectionUpdateRequest.getHeroSectionType(),
+                            "updatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.HERO_SECTION_UPDATE.name())
+                    .sourceModule(SourceModule.HERO_SECTION.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            // Compare changes for email notification
+            HeroSectionComparisonResult comparisonResult = compareHeroSectionUpdates(
+                    heroSectionUpdateRequest,
+                    previousHeroSection
+            );
+
+            // Send email notification to supervisors
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(
+                    NotificationType.HERO_SECTION_UPDATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+            String subject = heroSectionEmailHelperService.buildHeroSectionUpdateSuccessfullSubject(loggedUser, heroSectionUpdateRequest.getHeroSectionId());
+            String body = heroSectionEmailHelperService.buildHeroSectionUpdateSuccessfullBody(loggedUser, heroSectionUpdateRequest.getHeroSectionId(), comparisonResult);
+            // emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_UPDATE_MESSAGE,
+                    new UpdateResponse("Successfully update hero section request", heroSectionUpdateRequest.getHeroSectionId()),
+                    Instant.now());
+
+        } catch (ValidationFailedErrorExceptionHandler vfe) {
+            throw new ValidationFailedErrorExceptionHandler("validation failed in the update hero section request", vfe.getValidationFailedResponses());
+        } catch (UpdateFailedErrorExceptionHandler ufe) {
+            throw new UpdateFailedErrorExceptionHandler(ufe.getMessage());
+        } catch (UnAuthenticateErrorExceptionHandler uae) {
+            throw new UnAuthenticateErrorExceptionHandler(uae.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while updating hero section: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Something went wrong while updating hero section");
+        }
+    }
+
+    @Override
+    public CommonResponse<TerminateResponse> terminateHeroSection(IdWithTypeRequest idWithTypeRequest) {
+        LOGGER.info("Start execute terminate hero section request.");
+        try {
+            heroSectionValidationService.validateIdWithTypeRequest(idWithTypeRequest);
+            Long userId = commonService.getUserIdBySecurityContext();
+            User loggedUser = commonService.getLoggedUser();
+
+            HeroSectionDetailsResponse heroSectionData = getHeroSectionDetailsById(new HeroSectionDetailsDataRequest(idWithTypeRequest.getType(), idWithTypeRequest.getId())).getData();
+
+            if (heroSectionData == null) {
+                throw new DataNotFoundErrorExceptionHandler("Hero section not found with ID: " + idWithTypeRequest.getId());
+            }
+
+            heroSectionRepository.terminateHeroSection(idWithTypeRequest, userId);
+
+            List<SupervisorBasicDetailsDto> supervisorDetails = commonService.getSupervisorBasicDetailsByUserId(userId);
+            List<Long> supervisorUserIds = commonService.extractSupervisorUserIds(supervisorDetails);
+            supervisorUserIds.add(userId);
+
+            // Create notification for supervisors
+            NotificationInsertRequestDto notificationInsertRequestDto = NotificationInsertRequestDto.builder()
+                    .notificationType(NotificationType.HERO_SECTION_TERMINATED.name())
+                    .priority(Priority.HIGH.name())
+                    .title("Hero Section Terminated")
+                    .message("The hero section '" + heroSectionData.getName() + "' has been terminated.")
+                    .actionUrl(VIEW_HERO_SECTION_DETAILS + "/" + heroSectionData.getId())
+                    .actionText("View Hero Section")
+                    .icon("Image")
+                    .color("#EF4444")
+                    .metadata(Map.of(
+                            "heroSectionId", heroSectionData.getId(),
+                            "heroSectionName", heroSectionData.getName(),
+                            "heroSectionType", idWithTypeRequest.getType(),
+                            "status", heroSectionData.getStatusId(),
+                            "terminatedBy", userId
+                    ))
+                    .isArchived(false)
+                    .isDeleted(false)
+                    .assignedTo(null)
+                    .targetRole(Privileges.HERO_SECTION_TERMINATE.name())
+                    .sourceModule(SourceModule.HERO_SECTION.name())
+                    .expiresAt(null)
+                    .createdBy(userId)
+                    .build();
+
+            Long notificationId = commonService.createNotification(notificationInsertRequestDto);
+            commonService.createNotificationRecipients(notificationId, supervisorUserIds);
+
+            // Send email notification to supervisors
+            List<String> emailNotificationEnableSupervisors = commonService.getSupervisorEmailsWhichEnableNotificationForGiven(
+                    NotificationType.HERO_SECTION_TERMINATED.name(), supervisorUserIds);
+            emailNotificationEnableSupervisors.remove(loggedUser.getEmail());
+            emailNotificationEnableSupervisors.add(COMPANY_EMAIL);
+
+            String subject = heroSectionEmailHelperService.buildHeroSectionTerminateSuccessfullSubject(loggedUser, heroSectionData);
+            String body = heroSectionEmailHelperService.buildHeroSectionTerminateSuccessfullBody(loggedUser, heroSectionData, idWithTypeRequest.getType());
+
+            // emailService.sendFromDev(loggedUser.getEmail(), emailNotificationEnableSupervisors, subject, body);
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_TERMINATE_MESSAGE,
+                    new TerminateResponse("Successfully terminate hero section request"),
+                    Instant.now());
+
+        } catch (ValidationFailedErrorExceptionHandler vfe) {
+            throw new ValidationFailedErrorExceptionHandler("validation failed in the terminate hero section request", vfe.getValidationFailedResponses());
+        } catch (TerminateFailedErrorExceptionHandler tfe) {
+            throw new TerminateFailedErrorExceptionHandler(tfe.getMessage());
+        } catch (UnAuthenticateErrorExceptionHandler uae) {
+            throw new UnAuthenticateErrorExceptionHandler(uae.getMessage());
+        } catch (DataNotFoundErrorExceptionHandler dnfe) {
+            throw new DataNotFoundErrorExceptionHandler(dnfe.getMessage());
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while terminating hero section: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Something went wrong while terminating hero section");
+        }
+    }
+
+
+    private HeroSectionComparisonResult compareHeroSectionUpdates(
+            HeroSectionUpdateRequest heroSectionUpdateRequest,
+            HeroSectionDetailsResponse previousHeroSection) {
+
+        HeroSectionComparisonResult.HeroSectionComparisonResultBuilder resultBuilder =
+                HeroSectionComparisonResult.builder();
+
+        List<HeroSectionComparisonResult.FieldChange> fieldChanges = new ArrayList<>();
+        List<String> changes = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        boolean hasChanges = false;
+
+        // Compare name
+        if (heroSectionUpdateRequest.getName() != null &&
+                previousHeroSection.getName() != null &&
+                !heroSectionUpdateRequest.getName().equals(previousHeroSection.getName())) {
+            changes.add(String.format("Name changed from '%s' to '%s'",
+                    previousHeroSection.getName(),
+                    heroSectionUpdateRequest.getName()));
+            fieldChanges.add(new HeroSectionComparisonResult.FieldChange(
+                    "name",
+                    previousHeroSection.getName(),
+                    heroSectionUpdateRequest.getName(),
+                    "Name"));
+            hasChanges = true;
+        }
+
+        // Compare imageUrl
+        if (!Objects.equals(heroSectionUpdateRequest.getImageUrl(), previousHeroSection.getImageUrl())) {
+            String oldUrl = previousHeroSection.getImageUrl() != null ?
+                    previousHeroSection.getImageUrl() : "null";
+            String newUrl = heroSectionUpdateRequest.getImageUrl() != null ?
+                    heroSectionUpdateRequest.getImageUrl() : "null";
+            changes.add(String.format("Image URL changed from '%s' to '%s'", oldUrl, newUrl));
+            fieldChanges.add(new HeroSectionComparisonResult.FieldChange(
+                    "imageUrl",
+                    previousHeroSection.getImageUrl(),
+                    heroSectionUpdateRequest.getImageUrl(),
+                    "Image URL"));
+            hasChanges = true;
+
+            if (heroSectionUpdateRequest.getImageUrl() != null &&
+                    !heroSectionUpdateRequest.getImageUrl().startsWith("http")) {
+                warnings.add("Warning: Image URL should start with http:// or https://");
+            }
+        }
+
+        // Compare title
+        if (heroSectionUpdateRequest.getTitle() != null &&
+                previousHeroSection.getTitle() != null &&
+                !heroSectionUpdateRequest.getTitle().equals(previousHeroSection.getTitle())) {
+            changes.add(String.format("Title changed from '%s' to '%s'",
+                    previousHeroSection.getTitle(),
+                    heroSectionUpdateRequest.getTitle()));
+            fieldChanges.add(new HeroSectionComparisonResult.FieldChange(
+                    "title",
+                    previousHeroSection.getTitle(),
+                    heroSectionUpdateRequest.getTitle(),
+                    "Title"));
+            hasChanges = true;
+        }
+
+        // Compare subtitle
+        if (!Objects.equals(heroSectionUpdateRequest.getSubtitle(), previousHeroSection.getSubtitle())) {
+            String oldSub = previousHeroSection.getSubtitle() != null ?
+                    previousHeroSection.getSubtitle() : "null";
+            String newSub = heroSectionUpdateRequest.getSubtitle() != null ?
+                    heroSectionUpdateRequest.getSubtitle() : "null";
+            changes.add(String.format("Subtitle changed from '%s' to '%s'", oldSub, newSub));
+            fieldChanges.add(new HeroSectionComparisonResult.FieldChange(
+                    "subtitle",
+                    previousHeroSection.getSubtitle(),
+                    heroSectionUpdateRequest.getSubtitle(),
+                    "Subtitle"));
+            hasChanges = true;
+        }
+
+        // Compare description
+        if (!Objects.equals(heroSectionUpdateRequest.getDescription(), previousHeroSection.getDescription())) {
+            String oldDesc = previousHeroSection.getDescription() != null ?
+                    previousHeroSection.getDescription() : "null";
+            String newDesc = heroSectionUpdateRequest.getDescription() != null ?
+                    heroSectionUpdateRequest.getDescription() : "null";
+            changes.add(String.format("Description changed from '%s' to '%s'", oldDesc, newDesc));
+            fieldChanges.add(new HeroSectionComparisonResult.FieldChange(
+                    "description",
+                    previousHeroSection.getDescription(),
+                    heroSectionUpdateRequest.getDescription(),
+                    "Description"));
+            hasChanges = true;
+        }
+
+        // Compare primaryButtonText
+        if (!Objects.equals(heroSectionUpdateRequest.getPrimaryButtonText(), previousHeroSection.getPrimaryButtonText())) {
+            String oldText = previousHeroSection.getPrimaryButtonText() != null ?
+                    previousHeroSection.getPrimaryButtonText() : "null";
+            String newText = heroSectionUpdateRequest.getPrimaryButtonText() != null ?
+                    heroSectionUpdateRequest.getPrimaryButtonText() : "null";
+            changes.add(String.format("Primary Button Text changed from '%s' to '%s'", oldText, newText));
+            fieldChanges.add(new HeroSectionComparisonResult.FieldChange(
+                    "primaryButtonText",
+                    previousHeroSection.getPrimaryButtonText(),
+                    heroSectionUpdateRequest.getPrimaryButtonText(),
+                    "Primary Button Text"));
+            hasChanges = true;
+        }
+
+        // Compare primaryButtonLink
+        if (!Objects.equals(heroSectionUpdateRequest.getPrimaryButtonLink(), previousHeroSection.getPrimaryButtonLink())) {
+            String oldLink = previousHeroSection.getPrimaryButtonLink() != null ?
+                    previousHeroSection.getPrimaryButtonLink() : "null";
+            String newLink = heroSectionUpdateRequest.getPrimaryButtonLink() != null ?
+                    heroSectionUpdateRequest.getPrimaryButtonLink() : "null";
+            changes.add(String.format("Primary Button Link changed from '%s' to '%s'", oldLink, newLink));
+            fieldChanges.add(new HeroSectionComparisonResult.FieldChange(
+                    "primaryButtonLink",
+                    previousHeroSection.getPrimaryButtonLink(),
+                    heroSectionUpdateRequest.getPrimaryButtonLink(),
+                    "Primary Button Link"));
+            hasChanges = true;
+
+            if (heroSectionUpdateRequest.getPrimaryButtonLink() != null &&
+                    !heroSectionUpdateRequest.getPrimaryButtonLink().startsWith("/") &&
+                    !heroSectionUpdateRequest.getPrimaryButtonLink().startsWith("http")) {
+                warnings.add("Warning: Primary button link should start with '/' or 'http'");
+            }
+        }
+
+        // Compare secondaryButtonText
+        if (!Objects.equals(heroSectionUpdateRequest.getSecondaryButtonText(), previousHeroSection.getSecondaryButtonText())) {
+            String oldText = previousHeroSection.getSecondaryButtonText() != null ?
+                    previousHeroSection.getSecondaryButtonText() : "null";
+            String newText = heroSectionUpdateRequest.getSecondaryButtonText() != null ?
+                    heroSectionUpdateRequest.getSecondaryButtonText() : "null";
+            changes.add(String.format("Secondary Button Text changed from '%s' to '%s'", oldText, newText));
+            fieldChanges.add(new HeroSectionComparisonResult.FieldChange(
+                    "secondaryButtonText",
+                    previousHeroSection.getSecondaryButtonText(),
+                    heroSectionUpdateRequest.getSecondaryButtonText(),
+                    "Secondary Button Text"));
+            hasChanges = true;
+        }
+
+        // Compare secondaryButtonLink
+        if (!Objects.equals(heroSectionUpdateRequest.getSecondaryButtonLink(), previousHeroSection.getSecondaryButtonLink())) {
+            String oldLink = previousHeroSection.getSecondaryButtonLink() != null ?
+                    previousHeroSection.getSecondaryButtonLink() : "null";
+            String newLink = heroSectionUpdateRequest.getSecondaryButtonLink() != null ?
+                    heroSectionUpdateRequest.getSecondaryButtonLink() : "null";
+            changes.add(String.format("Secondary Button Link changed from '%s' to '%s'", oldLink, newLink));
+            fieldChanges.add(new HeroSectionComparisonResult.FieldChange(
+                    "secondaryButtonLink",
+                    previousHeroSection.getSecondaryButtonLink(),
+                    heroSectionUpdateRequest.getSecondaryButtonLink(),
+                    "Secondary Button Link"));
+            hasChanges = true;
+
+            if (heroSectionUpdateRequest.getSecondaryButtonLink() != null &&
+                    !heroSectionUpdateRequest.getSecondaryButtonLink().startsWith("/") &&
+                    !heroSectionUpdateRequest.getSecondaryButtonLink().startsWith("http")) {
+                warnings.add("Warning: Secondary button link should start with '/' or 'http'");
+            }
+        }
+
+        // Compare statusId
+        Long oldStatusId = previousHeroSection.getStatusId();
+        Long newStatusId = heroSectionUpdateRequest.getStatusId();
+        String oldStatusName = previousHeroSection.getStatus();
+        String newStatusName = getStatusNameById(newStatusId);
+
+        if (oldStatusId != null && newStatusId != null && !oldStatusId.equals(newStatusId)) {
+            changes.add(String.format("Status changed from '%s' (ID: %d) to '%s' (ID: %d)",
+                    oldStatusName != null ? oldStatusName : "Unknown",
+                    oldStatusId,
+                    newStatusName != null ? newStatusName : "Unknown",
+                    newStatusId));
+            fieldChanges.add(new HeroSectionComparisonResult.FieldChange(
+                    "statusId",
+                    oldStatusId,
+                    newStatusId,
+                    "Status"));
+            hasChanges = true;
+
+            // Status change warnings
+            if (newStatusId == 0L || "INACTIVE".equals(newStatusName)) { // Assuming 0 = INACTIVE
+                warnings.add("Warning: Hero section is being deactivated. It will not be displayed on the website.");
+            } else if (newStatusId == 1L || "ACTIVE".equals(newStatusName)) { // Assuming 1 = ACTIVE
+                warnings.add("Info: Hero section is being activated and will be displayed on the website.");
+            }
+        }
+
+        // Compare order
+        Integer oldOrder = previousHeroSection.getOrder();
+        Integer newOrder = heroSectionUpdateRequest.getOrder();
+        if (oldOrder != null && newOrder != null && !oldOrder.equals(newOrder)) {
+            changes.add(String.format("Display Order changed from %d to %d", oldOrder, newOrder));
+            fieldChanges.add(new HeroSectionComparisonResult.FieldChange(
+                    "order",
+                    oldOrder,
+                    newOrder,
+                    "Display Order"));
+            hasChanges = true;
+
+            if (newOrder < 0) {
+                warnings.add("Warning: Display order is negative");
+            }
+        }
+
+        // Additional validations
+        if (heroSectionUpdateRequest.getName() != null &&
+                heroSectionUpdateRequest.getName().trim().isEmpty()) {
+            warnings.add("Warning: Name is empty");
+        }
+
+        if (heroSectionUpdateRequest.getTitle() != null &&
+                heroSectionUpdateRequest.getTitle().length() > 100) {
+            warnings.add("Warning: Title is very long (>100 characters)");
+        }
+
+        if (heroSectionUpdateRequest.getDescription() != null &&
+                heroSectionUpdateRequest.getDescription().length() > 500) {
+            warnings.add("Warning: Description is very long (>500 characters)");
+        }
+
+        // Check if both primary and secondary buttons have text but no links or vice versa
+        if (heroSectionUpdateRequest.getPrimaryButtonText() != null &&
+                !heroSectionUpdateRequest.getPrimaryButtonText().isEmpty() &&
+                (heroSectionUpdateRequest.getPrimaryButtonLink() == null ||
+                        heroSectionUpdateRequest.getPrimaryButtonLink().isEmpty())) {
+            warnings.add("Warning: Primary button has text but no link");
+        }
+
+        if (heroSectionUpdateRequest.getSecondaryButtonText() != null &&
+                !heroSectionUpdateRequest.getSecondaryButtonText().isEmpty() &&
+                (heroSectionUpdateRequest.getSecondaryButtonLink() == null ||
+                        heroSectionUpdateRequest.getSecondaryButtonLink().isEmpty())) {
+            warnings.add("Warning: Secondary button has text but no link");
+        }
+
+        // Check if no changes were made
+        if (!hasChanges) {
+            changes.add("No changes detected in hero section");
+        }
+
+        // Build the result
+        return resultBuilder
+                .fieldChanges(fieldChanges)
+                .changes(changes)
+                .hasChanges(hasChanges)
+                .warnings(warnings)
+                .oldStatusId(oldStatusId)
+                .oldStatusName(oldStatusName)
+                .newStatusId(newStatusId)
+                .newStatusName(newStatusName)
+                .oldOrder(oldOrder)
+                .newOrder(newOrder)
+                .changedBy("System")
+                .changeTimestamp(new Date().toString())
+                .build();
+    }
+
+    // Helper method to get status name by ID
+    private String getStatusNameById(Long statusId) {
+        if (statusId == null) return null;
+        switch (statusId.intValue()) {
+            case 0: return "INACTIVE";
+            case 1: return "ACTIVE";
+            case 2: return "DRAFT";
+            default: return "UNKNOWN";
         }
     }
 
