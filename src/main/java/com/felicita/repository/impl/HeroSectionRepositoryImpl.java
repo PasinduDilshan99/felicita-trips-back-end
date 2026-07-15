@@ -2,15 +2,30 @@ package com.felicita.repository.impl;
 
 import com.felicita.exception.DataAccessErrorExceptionHandler;
 import com.felicita.exception.InternalServerErrorExceptionHandler;
+import com.felicita.model.enums.CommonStatus;
+import com.felicita.model.enums.HeroSectionTypes;
+import com.felicita.model.request.common.IdWithTypeRequest;
+import com.felicita.model.request.heroSection.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.heroSection.HeroSectionBasicResponse;
+import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
+import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
+import com.felicita.model.response.statistics.HeroSectionStatisticsResponse;
 import com.felicita.queries.HeroSectionQueries;
 import com.felicita.repository.HeroSectionRepository;
+import com.felicita.repository.StatusRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 
 @Repository
@@ -19,10 +34,12 @@ public class HeroSectionRepositoryImpl implements HeroSectionRepository {
     private static final Logger LOGGER = LoggerFactory.getLogger(HeroSectionRepositoryImpl.class);
 
     private final JdbcTemplate jdbcTemplate;
+    private final StatusRepository statusRepository;
 
     @Autowired
-    public HeroSectionRepositoryImpl(JdbcTemplate jdbcTemplate) {
+    public HeroSectionRepositoryImpl(JdbcTemplate jdbcTemplate, StatusRepository statusRepository) {
         this.jdbcTemplate = jdbcTemplate;
+        this.statusRepository = statusRepository;
     }
 
     @Override
@@ -42,10 +59,9 @@ public class HeroSectionRepositoryImpl implements HeroSectionRepository {
                 hero.setImageDescription(rs.getString("IMAGE_DESCRIPTION"));
                 hero.setImagePrimaryButtonText(rs.getString("IMAGE_PRIMARY_BUTTON_TEXT"));
                 hero.setImagePrimaryButtonLink(rs.getString("IMAGE_PRIMARY_BUTTON_LINK"));
-                hero.setImageSecondaryButtonText(rs.getString("IMAGE_SECONDRY_BUTTON_TEXT"));
-                hero.setImageSecondaryButtonLink(rs.getString("IMAGE_SECONDRY_BUTTON_LINK"));
+                hero.setImageSecondaryButtonText(rs.getString("IMAGE_SECONDARY_BUTTON_TEXT"));
+                hero.setImageSecondaryButtonLink(rs.getString("IMAGE_SECONDARY_BUTTON_LINK"));
                 hero.setImageStatus(rs.getString("IMAGE_STATUS"));
-                hero.setImageStatusStatus(rs.getString("IMAGE_STATUS_STATUS"));
                 hero.setImageOrder(rs.getInt("IMAGE_ORDER"));
                 hero.setImageCreatedAt(rs.getTimestamp("IMAGE_CREATED_AT") != null ? rs.getTimestamp("IMAGE_CREATED_AT").toLocalDateTime() : null);
                 hero.setImageCreatedBy(rs.getInt("IMAGE_CREATED_BY"));
@@ -918,6 +934,443 @@ public class HeroSectionRepositoryImpl implements HeroSectionRepository {
             );
         }
     }
+
+    @Override
+    public List<HeroSectionBasicResponse> getHeroSectionBasicResponseForParms(HeroSectionDataRequest request) {
+
+        try {
+
+            String tableName = HeroSectionTypes.valueOf(request.getHeroSectionType())
+                    .getTableName();
+
+            StringBuilder sql = new StringBuilder(
+                    String.format(HeroSectionQueries.GET_HERO_SECTION_BASIC_DETAILS, tableName));
+
+            List<Object> params = new ArrayList<>();
+
+            if (request.getName() != null && !request.getName().isBlank()) {
+                sql.append(" AND hs.name LIKE ?");
+                params.add("%" + request.getName() + "%");
+            }
+
+            if (request.getTitle() != null && !request.getTitle().isBlank()) {
+                sql.append(" AND hs.title LIKE ?");
+                params.add("%" + request.getTitle() + "%");
+            }
+
+            if (request.getSubTitle() != null && !request.getSubTitle().isBlank()) {
+                sql.append(" AND hs.subtitle LIKE ?");
+                params.add("%" + request.getSubTitle() + "%");
+            }
+
+            if (request.getDescription() != null && !request.getDescription().isBlank()) {
+                sql.append(" AND hs.description LIKE ?");
+                params.add("%" + request.getDescription() + "%");
+            }
+
+            if (request.getPrimaryButtonText() != null && !request.getPrimaryButtonText().isBlank()) {
+                sql.append(" AND hs.primary_button_text LIKE ?");
+                params.add("%" + request.getPrimaryButtonText() + "%");
+            }
+
+            if (request.getSecondaryButtonText() != null && !request.getSecondaryButtonText().isBlank()) {
+                sql.append(" AND hs.secondary_button_text LIKE ?");
+                params.add("%" + request.getSecondaryButtonText() + "%");
+            }
+
+            if (request.getStatus() != null && !request.getStatus().isBlank()) {
+                sql.append(" AND cs.name = ?");
+                params.add(request.getStatus());
+            }
+
+            sql.append(" ORDER BY ")
+                    .append(request.getSortBy() == null ? "hs.id" : request.getSortBy())
+                    .append(" ")
+                    .append(request.getSortDirection() == null ? "DESC" : request.getSortDirection());
+
+            sql.append(" LIMIT ? OFFSET ?");
+
+            params.add(request.getPageSize());
+            params.add((request.getPageNumber() - 1) * request.getPageSize());
+
+            return jdbcTemplate.query(sql.toString(), params.toArray(), (rs, rowNum) ->
+                    HeroSectionBasicResponse.builder()
+                            .id(rs.getLong("id"))
+                            .name(rs.getString("name"))
+                            .imageUrl(rs.getString("image_url"))
+                            .title(rs.getString("title"))
+                            .subtitle(rs.getString("subtitle"))
+                            .description(rs.getString("description"))
+                            .primaryButtonText(rs.getString("primary_button_text"))
+                            .primaryButtonLink(rs.getString("primary_button_link"))
+                            .secondaryButtonText(rs.getString("secondary_button_text"))
+                            .secondaryButtonLink(rs.getString("secondary_button_link"))
+                            .statusId(rs.getLong("status_id"))
+                            .status(rs.getString("status"))
+                            .order(rs.getInt("order"))
+                            .build());
+
+        } catch (DataAccessException ex) {
+            throw new DataAccessErrorExceptionHandler("Failed to fetch hero sections.");
+        }
+    }
+
+    @Override
+    public Integer getHeroSectionBasicResponseCountForParms(HeroSectionDataRequest request) {
+
+        try {
+
+            String tableName = HeroSectionTypes.valueOf(request.getHeroSectionType())
+                    .getTableName();
+
+            StringBuilder sql = new StringBuilder(
+                    String.format(HeroSectionQueries.GET_HERO_SECTION_BASIC_DETAILS_COUNT, tableName));
+
+            List<Object> params = new ArrayList<>();
+
+            if (request.getName() != null && !request.getName().isBlank()) {
+                sql.append(" AND hs.name LIKE ?");
+                params.add("%" + request.getName() + "%");
+            }
+
+            if (request.getTitle() != null && !request.getTitle().isBlank()) {
+                sql.append(" AND hs.title LIKE ?");
+                params.add("%" + request.getTitle() + "%");
+            }
+
+            if (request.getSubTitle() != null && !request.getSubTitle().isBlank()) {
+                sql.append(" AND hs.subtitle LIKE ?");
+                params.add("%" + request.getSubTitle() + "%");
+            }
+
+            if (request.getDescription() != null && !request.getDescription().isBlank()) {
+                sql.append(" AND hs.description LIKE ?");
+                params.add("%" + request.getDescription() + "%");
+            }
+
+            if (request.getPrimaryButtonText() != null && !request.getPrimaryButtonText().isBlank()) {
+                sql.append(" AND hs.primary_button_text LIKE ?");
+                params.add("%" + request.getPrimaryButtonText() + "%");
+            }
+
+            if (request.getSecondaryButtonText() != null && !request.getSecondaryButtonText().isBlank()) {
+                sql.append(" AND hs.secondary_button_text LIKE ?");
+                params.add("%" + request.getSecondaryButtonText() + "%");
+            }
+
+            if (request.getStatus() != null && !request.getStatus().isBlank()) {
+                sql.append(" AND cs.name = ?");
+                params.add(request.getStatus());
+            }
+
+            return jdbcTemplate.queryForObject(
+                    sql.toString(),
+                    params.toArray(),
+                    Integer.class
+            );
+
+        } catch (DataAccessException ex) {
+            throw new DataAccessErrorExceptionHandler("Failed to fetch hero section count.");
+        }
+    }
+
+    @Override
+    public HeroSectionDataForParamsResponse getDataForRequestParams(HeroSectionTypeRequest request) {
+
+        try {
+
+            String tableName = HeroSectionTypes.valueOf(request.getHeroSectionType())
+                    .getTableName();
+
+            String query = String.format(HeroSectionQueries.GET_HERO_SECTION_DATA_FOR_PARAMS, tableName);
+
+            List<String> primaryButtonTexts = new ArrayList<>();
+            List<String> secondaryButtonTexts = new ArrayList<>();
+
+            jdbcTemplate.query(query, rs -> {
+
+                String primary = rs.getString("PRIMARY_BUTTON_TEXT");
+                if (primary != null && !primary.isBlank() && !primaryButtonTexts.contains(primary)) {
+                    primaryButtonTexts.add(primary);
+                }
+
+                String secondary = rs.getString("SECONDARY_BUTTON_TEXT");
+                if (secondary != null && !secondary.isBlank() && !secondaryButtonTexts.contains(secondary)) {
+                    secondaryButtonTexts.add(secondary);
+                }
+            });
+
+            return HeroSectionDataForParamsResponse.builder()
+                    .primaryButtonText(primaryButtonTexts)
+                    .secondaryButtonText(secondaryButtonTexts)
+                    .build();
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching hero section request params.", ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch hero section request params.");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching hero section request params.", ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching hero section request params.");
+        }
+    }
+
+    @Override
+    public HeroSectionDetailsResponse getHeroSectionDetailsById(HeroSectionDetailsDataRequest request) {
+
+        try {
+
+            String tableName = HeroSectionTypes.valueOf(request.getHeroSectionType())
+                    .getTableName();
+
+            String query = String.format(
+                    HeroSectionQueries.GET_HERO_SECTION_DETAILS_BY_ID,
+                    tableName
+            );
+
+            LOGGER.info("Executing query to fetch hero section details by id.");
+
+            return jdbcTemplate.queryForObject(
+                    query,
+                    new Object[]{request.getHeroSectionId()},
+                    (rs, rowNum) -> HeroSectionDetailsResponse.builder()
+                            .id(rs.getLong("ID"))
+                            .name(rs.getString("NAME"))
+                            .imageUrl(rs.getString("IMAGE_URL"))
+                            .title(rs.getString("TITLE"))
+                            .subtitle(rs.getString("SUBTITLE"))
+                            .description(rs.getString("DESCRIPTION"))
+                            .primaryButtonText(rs.getString("PRIMARY_BUTTON_TEXT"))
+                            .primaryButtonLink(rs.getString("PRIMARY_BUTTON_LINK"))
+                            .secondaryButtonText(rs.getString("SECONDARY_BUTTON_TEXT"))
+                            .secondaryButtonLink(rs.getString("SECONDARY_BUTTON_LINK"))
+                            .statusId(rs.getLong("STATUS_ID"))
+                            .status(rs.getString("STATUS"))
+                            .order(rs.getInt("ORDER"))
+                            .createdAt(rs.getTimestamp("CREATED_AT") != null
+                                    ? rs.getTimestamp("CREATED_AT").toLocalDateTime()
+                                    : null)
+                            .createdBy(rs.getLong("CREATED_BY"))
+                            .createdByUsername(rs.getString("CREATED_BY_USERNAME"))
+                            .updatedAt(rs.getTimestamp("UPDATED_AT") != null
+                                    ? rs.getTimestamp("UPDATED_AT").toLocalDateTime()
+                                    : null)
+                            .updatedBy(rs.getLong("UPDATED_BY"))
+                            .updatedByUsername(rs.getString("UPDATED_BY_USERNAME"))
+                            .terminatedAt(rs.getTimestamp("TERMINATED_AT") != null
+                                    ? rs.getTimestamp("TERMINATED_AT").toLocalDateTime()
+                                    : null)
+                            .terminatedBy(rs.getObject("TERMINATED_BY") != null
+                                    ? rs.getLong("TERMINATED_BY")
+                                    : null)
+                            .terminatedByUsername(rs.getString("TERMINATED_BY_USERNAME"))
+                            .build());
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while fetching hero section details.", ex);
+            throw new DataAccessErrorExceptionHandler("Failed to fetch hero section details.");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while fetching hero section details.", ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while fetching hero section details.");
+        }
+    }
+
+    @Override
+    public Long insertHeroSectionDetails(HeroSectionInsertRequest request, Long userId) {
+
+        try {
+
+            String tableName = HeroSectionTypes.valueOf(request.getHeroSectionType())
+                    .getTableName();
+
+            String query = String.format(HeroSectionQueries.INSERT_HERO_SECTION, tableName);
+
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+
+            jdbcTemplate.update(connection -> {
+
+                PreparedStatement ps = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+
+                ps.setString(1, request.getName());
+                ps.setString(2, request.getImageUrl());
+                ps.setString(3, request.getTitle());
+                ps.setString(4, request.getSubtitle());
+                ps.setString(5, request.getDescription());
+                ps.setString(6, request.getPrimaryButtonText());
+                ps.setString(7, request.getPrimaryButtonLink());
+                ps.setString(8, request.getSecondaryButtonText());
+                ps.setString(9, request.getSecondaryButtonLink());
+                ps.setLong(10, request.getStatusId());
+                ps.setInt(11, request.getOrder());
+                ps.setLong(12, userId);
+
+                return ps;
+
+            }, keyHolder);
+
+            if (keyHolder.getKey() != null) {
+                return keyHolder.getKey().longValue();
+            }
+
+            throw new InternalServerErrorExceptionHandler("Failed to generate hero section id.");
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while inserting hero section.", ex);
+            throw new DataAccessErrorExceptionHandler("Failed to insert hero section.");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while inserting hero section.", ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while inserting hero section.");
+        }
+    }
+
+    @Override
+    public void updateBasicHeroSectionDetails(HeroSectionUpdateRequest request, Long userId) {
+
+        try {
+
+            String tableName = HeroSectionTypes.valueOf(request.getHeroSectionType())
+                    .getTableName();
+
+            String query = String.format(HeroSectionQueries.UPDATE_HERO_SECTION, tableName);
+
+            int rows = jdbcTemplate.update(
+                    query,
+                    request.getName(),
+                    request.getImageUrl(),
+                    request.getTitle(),
+                    request.getSubtitle(),
+                    request.getDescription(),
+                    request.getPrimaryButtonText(),
+                    request.getPrimaryButtonLink(),
+                    request.getSecondaryButtonText(),
+                    request.getSecondaryButtonLink(),
+                    request.getStatusId(),
+                    request.getOrder(),
+                    userId,
+                    request.getHeroSectionId()
+            );
+
+            if (rows == 0) {
+                throw new DataAccessErrorExceptionHandler("Hero section not found.");
+            }
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while updating hero section.", ex);
+            throw new DataAccessErrorExceptionHandler("Failed to update hero section.");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while updating hero section.", ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while updating hero section.");
+        }
+    }
+
+    @Override
+    public void terminateHeroSection(IdWithTypeRequest request, Long userId) {
+
+        try {
+            String tableName = HeroSectionTypes.valueOf(request.getType())
+                    .getTableName();
+            String query = String.format(HeroSectionQueries.TERMINATE_HERO_SECTION, tableName);
+            Long terminateStatus = statusRepository.getStatusIdByName(CommonStatus.TERMINATED.toString());
+            int rows = jdbcTemplate.update(
+                    query,
+                    terminateStatus,
+                    userId,
+                    request.getId()
+            );
+
+            if (rows == 0) {
+                throw new DataAccessErrorExceptionHandler("Hero section not found.");
+            }
+
+        } catch (DataAccessException ex) {
+            LOGGER.error("Database error while terminating hero section.", ex);
+            throw new DataAccessErrorExceptionHandler("Failed to terminate hero section.");
+        } catch (Exception ex) {
+            LOGGER.error("Unexpected error while terminating hero section.", ex);
+            throw new InternalServerErrorExceptionHandler("Unexpected error occurred while terminating hero section.");
+        }
+    }
+
+    @Override
+    public List<HeroSectionStatisticsResponse.TopEditorStatistics> getHeroSectionTopEditorStatistics(String heroSectionType) {
+
+        String table = HeroSectionTypes.valueOf(heroSectionType).getTableName();
+
+        return jdbcTemplate.query(
+                String.format(HeroSectionQueries.GET_HERO_SECTION_TOP_EDITOR_STATISTICS, table),
+                (rs, rowNum) ->
+                        HeroSectionStatisticsResponse.TopEditorStatistics.builder()
+                                .userId(rs.getLong("id"))
+                                .username(rs.getString("username"))
+                                .updateCount(rs.getInt("updateCount"))
+                                .build());
+    }
+
+
+    @Override
+    public List<HeroSectionStatisticsResponse.ActivityStatistics> getHeroSectionActivityStatistics(String heroSectionType) {
+
+        String table = HeroSectionTypes.valueOf(heroSectionType).getTableName();
+
+        return jdbcTemplate.query(
+                String.format(HeroSectionQueries.GET_HERO_SECTION_ACTIVITY_STATISTICS, table),
+                (rs, rowNum) ->
+                        HeroSectionStatisticsResponse.ActivityStatistics.builder()
+                                .year(rs.getInt("YEAR_VALUE"))
+                                .month(rs.getInt("MONTH_VALUE"))
+                                .monthName(rs.getString("MONTH_NAME"))
+                                .createdCount(rs.getInt("createdCount"))
+                                .updatedCount(rs.getInt("updatedCount"))
+                                .build());
+    }
+
+    @Override
+    public List<HeroSectionStatisticsResponse.MonthlyStatistics> getHeroSectionMonthlyStatistics(String heroSectionType) {
+
+        String table = HeroSectionTypes.valueOf(heroSectionType).getTableName();
+
+        return jdbcTemplate.query(
+                String.format(HeroSectionQueries.GET_HERO_SECTION_MONTHLY_STATISTICS, table),
+                (rs, rowNum) ->
+                        HeroSectionStatisticsResponse.MonthlyStatistics.builder()
+                                .year(rs.getInt("YEAR_VALUE"))
+                                .month(rs.getInt("MONTH_VALUE"))
+                                .monthName(rs.getString("MONTH_NAME"))
+                                .count(rs.getInt("COUNT_VALUE"))
+                                .build());
+    }
+
+    @Override
+    public List<HeroSectionStatisticsResponse.StatusStatistics> getHeroSectionStatusStatistics(String heroSectionType) {
+
+        String table = HeroSectionTypes.valueOf(heroSectionType).getTableName();
+
+        return jdbcTemplate.query(
+                String.format(HeroSectionQueries.GET_HERO_SECTION_STATUS_STATISTICS, table),
+                (rs, rowNum) ->
+                        HeroSectionStatisticsResponse.StatusStatistics.builder()
+                                .statusId(rs.getLong("id"))
+                                .status(rs.getString("name"))
+                                .count(rs.getInt("COUNT_VALUE"))
+                                .build());
+    }
+
+    @Override
+    public HeroSectionStatisticsResponse.Summary getHeroSectionSummaryStatistics(String heroSectionType) {
+
+        String table = HeroSectionTypes.valueOf(heroSectionType).getTableName();
+
+        return jdbcTemplate.queryForObject(
+                String.format(HeroSectionQueries.GET_HERO_SECTION_SUMMARY_STATISTICS, table),
+                (rs, rowNum) -> HeroSectionStatisticsResponse.Summary.builder()
+                        .totalHeroSections(rs.getInt("TOTAL"))
+                        .activeHeroSections(rs.getInt("ACTIVE"))
+                        .inactiveHeroSections(rs.getInt("INACTIVE"))
+                        .terminatedHeroSections(rs.getInt("TERMINATED_COUNT"))
+                        .createdThisMonth(rs.getInt("CREATED_THIS_MONTH"))
+                        .updatedThisMonth(rs.getInt("UPDATED_THIS_MONTH"))
+                        .build());
+    }
+
 
 
 }

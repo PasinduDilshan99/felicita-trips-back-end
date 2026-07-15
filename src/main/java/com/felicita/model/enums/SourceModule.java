@@ -16,5 +16,6 @@ public enum SourceModule {
     ROLE,
     EMPLOYEE,
     SEASON,
-    BOOKING
+    BOOKING,
+    HERO_SECTION
 }

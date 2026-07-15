@@ -18,6 +18,7 @@ public class AllCategoriesResponse {
     private List<PackageCategory> packageCategoryList;
     private List<TourType> tourTypeList;
     private List<Seasons> seasonsList;
+    private List<Status> statusList;
 
     @Data
     @AllArgsConstructor
@@ -106,5 +107,15 @@ public class AllCategoriesResponse {
         private String imageUrl;
         private String imageName;
         private String imageDescription;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class Status {
+        private Long statusId;
+        private String statusName;
+        private String statusDescription;
     }
 }

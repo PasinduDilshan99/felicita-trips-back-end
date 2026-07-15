@@ -21,7 +21,6 @@ public class HeroSectionResponse {
     private String imageSecondaryButtonText;
     private String imageSecondaryButtonLink;
     private String imageStatus;
-    private String imageStatusStatus;
     private Integer imageOrder;
     private LocalDateTime imageCreatedAt;
     private Integer imageCreatedBy;

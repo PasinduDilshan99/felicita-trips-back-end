@@ -80,4 +80,6 @@ public interface CommonRepository {
     List<IdAndNameResponse> getActivityIdAndNameResponsesByTourId(Long id);
 
     List<ActivityIdScheduleIdAndScheduleNameResponse> getActivityScheduleIdAndNameResponsesByTourId(Long id);
+
+    List<AllCategoriesResponse.Status> getStatusList();
 }

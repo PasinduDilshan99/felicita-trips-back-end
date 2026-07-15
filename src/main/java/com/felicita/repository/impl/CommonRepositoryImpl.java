@@ -1000,6 +1000,25 @@ public class CommonRepositoryImpl implements CommonRepository {
     }
 
     @Override
+    public List<AllCategoriesResponse.Status> getStatusList() {
+        try {
+            String query = "SELECT id, name, description FROM common_status WHERE terminated_at IS NULL";
+
+            return jdbcTemplate.query(
+                    query,
+                    (rs, rowNum) -> AllCategoriesResponse.Status.builder()
+                            .statusId(rs.getLong("id"))
+                            .statusName(rs.getString("name"))
+                            .statusDescription(rs.getString("description"))
+                            .build()
+            );
+        } catch (Exception ex) {
+            LOGGER.error("Error fetching statuses.", ex);
+            throw new InternalServerErrorExceptionHandler("Failed to retrieve statuses.");
+        }
+    }
+
+    @Override
     public List<DestinationIdAndNameResponse> getDestinationIdAndNameResponses() {
 
         try {
