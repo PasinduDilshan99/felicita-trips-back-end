@@ -10,6 +10,7 @@ import com.felicita.model.response.*;
 import com.felicita.model.response.heroSection.HeroSectionBasicResponse;
 import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
 import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
+import com.felicita.model.response.statistics.HeroSectionStatisticsResponse;
 import com.felicita.queries.HeroSectionQueries;
 import com.felicita.repository.HeroSectionRepository;
 import com.felicita.repository.StatusRepository;
@@ -1288,6 +1289,88 @@ public class HeroSectionRepositoryImpl implements HeroSectionRepository {
             throw new InternalServerErrorExceptionHandler("Unexpected error occurred while terminating hero section.");
         }
     }
+
+    @Override
+    public List<HeroSectionStatisticsResponse.TopEditorStatistics> getHeroSectionTopEditorStatistics(String heroSectionType) {
+
+        String table = HeroSectionTypes.valueOf(heroSectionType).getTableName();
+
+        return jdbcTemplate.query(
+                String.format(HeroSectionQueries.GET_HERO_SECTION_TOP_EDITOR_STATISTICS, table),
+                (rs, rowNum) ->
+                        HeroSectionStatisticsResponse.TopEditorStatistics.builder()
+                                .userId(rs.getLong("id"))
+                                .username(rs.getString("username"))
+                                .updateCount(rs.getInt("updateCount"))
+                                .build());
+    }
+
+
+    @Override
+    public List<HeroSectionStatisticsResponse.ActivityStatistics> getHeroSectionActivityStatistics(String heroSectionType) {
+
+        String table = HeroSectionTypes.valueOf(heroSectionType).getTableName();
+
+        return jdbcTemplate.query(
+                String.format(HeroSectionQueries.GET_HERO_SECTION_ACTIVITY_STATISTICS, table),
+                (rs, rowNum) ->
+                        HeroSectionStatisticsResponse.ActivityStatistics.builder()
+                                .year(rs.getInt("YEAR_VALUE"))
+                                .month(rs.getInt("MONTH_VALUE"))
+                                .monthName(rs.getString("MONTH_NAME"))
+                                .createdCount(rs.getInt("createdCount"))
+                                .updatedCount(rs.getInt("updatedCount"))
+                                .build());
+    }
+
+    @Override
+    public List<HeroSectionStatisticsResponse.MonthlyStatistics> getHeroSectionMonthlyStatistics(String heroSectionType) {
+
+        String table = HeroSectionTypes.valueOf(heroSectionType).getTableName();
+
+        return jdbcTemplate.query(
+                String.format(HeroSectionQueries.GET_HERO_SECTION_MONTHLY_STATISTICS, table),
+                (rs, rowNum) ->
+                        HeroSectionStatisticsResponse.MonthlyStatistics.builder()
+                                .year(rs.getInt("YEAR_VALUE"))
+                                .month(rs.getInt("MONTH_VALUE"))
+                                .monthName(rs.getString("MONTH_NAME"))
+                                .count(rs.getInt("COUNT_VALUE"))
+                                .build());
+    }
+
+    @Override
+    public List<HeroSectionStatisticsResponse.StatusStatistics> getHeroSectionStatusStatistics(String heroSectionType) {
+
+        String table = HeroSectionTypes.valueOf(heroSectionType).getTableName();
+
+        return jdbcTemplate.query(
+                String.format(HeroSectionQueries.GET_HERO_SECTION_STATUS_STATISTICS, table),
+                (rs, rowNum) ->
+                        HeroSectionStatisticsResponse.StatusStatistics.builder()
+                                .statusId(rs.getLong("id"))
+                                .status(rs.getString("name"))
+                                .count(rs.getInt("COUNT_VALUE"))
+                                .build());
+    }
+
+    @Override
+    public HeroSectionStatisticsResponse.Summary getHeroSectionSummaryStatistics(String heroSectionType) {
+
+        String table = HeroSectionTypes.valueOf(heroSectionType).getTableName();
+
+        return jdbcTemplate.queryForObject(
+                String.format(HeroSectionQueries.GET_HERO_SECTION_SUMMARY_STATISTICS, table),
+                (rs, rowNum) -> HeroSectionStatisticsResponse.Summary.builder()
+                        .totalHeroSections(rs.getInt("TOTAL"))
+                        .activeHeroSections(rs.getInt("ACTIVE"))
+                        .inactiveHeroSections(rs.getInt("INACTIVE"))
+                        .terminatedHeroSections(rs.getInt("TERMINATED_COUNT"))
+                        .createdThisMonth(rs.getInt("CREATED_THIS_MONTH"))
+                        .updatedThisMonth(rs.getInt("UPDATED_THIS_MONTH"))
+                        .build());
+    }
+
 
 
 }

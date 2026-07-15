@@ -479,13 +479,99 @@ public class HeroSectionQueries {
             """;
 
     public static final String TERMINATE_HERO_SECTION = """
-    UPDATE %s
-    SET
-        status = ?,
-        terminated_at = NOW(),
-        terminated_by = ?
-    WHERE id = ?
-      AND terminated_at IS NULL
+            UPDATE %s
+            SET
+                status = ?,
+                terminated_at = NOW(),
+                terminated_by = ?
+            WHERE id = ?
+              AND terminated_at IS NULL
+            """;
+
+
+    public static final String GET_HERO_SECTION_SUMMARY_STATISTICS = """
+            SELECT
+                COUNT(*) AS TOTAL,
+                SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS ACTIVE,
+                SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS INACTIVE,
+                SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS TERMINATED_COUNT,
+                SUM(
+                    CASE
+                        WHEN YEAR(created_at) = YEAR(CURDATE())
+                         AND MONTH(created_at) = MONTH(CURDATE())
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS CREATED_THIS_MONTH,
+                SUM(
+                    CASE
+                        WHEN updated_at IS NOT NULL
+                         AND YEAR(updated_at) = YEAR(CURDATE())
+                         AND MONTH(updated_at) = MONTH(CURDATE())
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS UPDATED_THIS_MONTH
+            FROM %s;
+            """;
+    public static final String GET_HERO_SECTION_STATUS_STATISTICS = """
+            SELECT
+                cs.id,
+                cs.name,
+                COUNT(hs.id) COUNT_VALUE
+            FROM common_status cs
+            LEFT JOIN %s hs
+            ON hs.status=cs.id
+            GROUP BY cs.id,cs.name
+            ORDER BY cs.id
+            """;
+
+    public static final String GET_HERO_SECTION_MONTHLY_STATISTICS = """
+    SELECT
+        YEAR(created_at) AS YEAR_VALUE,
+        MONTH(created_at) AS MONTH_VALUE,
+        MONTHNAME(created_at) AS MONTH_NAME,
+        COUNT(*) AS COUNT_VALUE
+    FROM %s
+    GROUP BY
+        YEAR(created_at),
+        MONTH(created_at),
+        MONTHNAME(created_at)
+    ORDER BY
+        YEAR_VALUE,
+        MONTH_VALUE
     """;
+
+
+    public static final String GET_HERO_SECTION_ACTIVITY_STATISTICS = """
+        SELECT
+            YEAR(created_at) AS YEAR_VALUE,
+            MONTH(created_at) AS MONTH_VALUE,
+            MONTHNAME(created_at) AS MONTH_NAME,
+            COUNT(*) AS createdCount,
+            SUM(CASE WHEN updated_at IS NOT NULL THEN 1 ELSE 0 END) AS updatedCount
+        FROM %s
+        GROUP BY 
+            YEAR(created_at),
+            MONTH(created_at),
+            MONTHNAME(created_at)
+        ORDER BY 
+            YEAR(created_at),
+            MONTH(created_at)
+        """;
+
+    public static final String GET_HERO_SECTION_TOP_EDITOR_STATISTICS = """
+            SELECT
+                u.user_id AS id,
+                u.username,
+                COUNT(*) updateCount
+            FROM %s hs
+            JOIN user u
+            ON hs.updated_by=u.user_id
+            WHERE hs.updated_by IS NOT NULL
+            GROUP BY u.user_id,u.username
+            ORDER BY updateCount DESC
+            LIMIT 10
+            """;
 
 }

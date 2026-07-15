@@ -6,6 +6,7 @@ import com.felicita.model.response.*;
 import com.felicita.model.response.heroSection.HeroSectionBasicResponse;
 import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
 import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
+import com.felicita.model.response.statistics.HeroSectionStatisticsResponse;
 
 import java.util.List;
 
@@ -56,4 +57,14 @@ public interface HeroSectionRepository {
     void updateBasicHeroSectionDetails(HeroSectionUpdateRequest heroSectionUpdateRequest, Long userId);
 
     void terminateHeroSection(IdWithTypeRequest idWithTypeRequest, Long userId);
+
+    HeroSectionStatisticsResponse.Summary getHeroSectionSummaryStatistics(String heroSectionType);
+
+    List<HeroSectionStatisticsResponse.StatusStatistics> getHeroSectionStatusStatistics(String heroSectionType);
+
+    List<HeroSectionStatisticsResponse.MonthlyStatistics> getHeroSectionMonthlyStatistics(String heroSectionType);
+
+    List<HeroSectionStatisticsResponse.ActivityStatistics> getHeroSectionActivityStatistics(String heroSectionType);
+
+    List<HeroSectionStatisticsResponse.TopEditorStatistics> getHeroSectionTopEditorStatistics(String heroSectionType);
 }

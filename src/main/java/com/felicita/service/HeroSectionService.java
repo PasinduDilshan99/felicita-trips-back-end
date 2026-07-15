@@ -6,6 +6,7 @@ import com.felicita.model.response.*;
 import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
 import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
 import com.felicita.model.response.heroSection.HeroSectionParamResponse;
+import com.felicita.model.response.statistics.HeroSectionStatisticsResponse;
 
 import java.util.List;
 
@@ -56,4 +57,6 @@ public interface HeroSectionService {
     CommonResponse<UpdateResponse> updateHeroSection(HeroSectionUpdateRequest heroSectionUpdateRequest);
 
     CommonResponse<TerminateResponse> terminateHeroSection(IdWithTypeRequest idWithTypeRequest);
+
+    CommonResponse<HeroSectionStatisticsResponse> getHeroSectionStatisctisByType(HeroSectionTypeRequest heroSectionTypeRequest);
 }

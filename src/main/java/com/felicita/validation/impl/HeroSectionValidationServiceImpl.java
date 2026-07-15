@@ -2,6 +2,7 @@ package com.felicita.validation.impl;
 
 import com.felicita.model.request.common.IdWithTypeRequest;
 import com.felicita.model.request.heroSection.HeroSectionInsertRequest;
+import com.felicita.model.request.heroSection.HeroSectionTypeRequest;
 import com.felicita.model.request.heroSection.HeroSectionUpdateRequest;
 import com.felicita.validation.CommonValidationService;
 import com.felicita.validation.HeroSectionValidationService;
@@ -34,6 +35,11 @@ public class HeroSectionValidationServiceImpl implements HeroSectionValidationSe
 
     @Override
     public void validateIdWithTypeRequest(IdWithTypeRequest idWithTypeRequest) {
+
+    }
+
+    @Override
+    public void validateHeroSectionTypeRequest(HeroSectionTypeRequest heroSectionTypeRequest) {
 
     }
 }

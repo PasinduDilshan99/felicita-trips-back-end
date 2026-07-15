@@ -7,6 +7,7 @@ import com.felicita.model.response.heroSection.HeroSectionBasicResponse;
 import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
 import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
 import com.felicita.model.response.heroSection.HeroSectionParamResponse;
+import com.felicita.model.response.statistics.HeroSectionStatisticsResponse;
 import com.felicita.service.HeroSectionService;
 import com.felicita.util.Constant;
 import org.slf4j.Logger;
@@ -213,6 +214,14 @@ public class HeroSectionController {
         LOGGER.info("{} Start execute terminate hero section {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<TerminateResponse> response = heroSectionService.terminateHeroSection(idWithTypeRequest);
         LOGGER.info("{} End execute terminate hero section {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/hero-section-statistics")
+    public ResponseEntity<CommonResponse<HeroSectionStatisticsResponse>> getHeroSectionStatisctisByType(@RequestBody HeroSectionTypeRequest heroSectionTypeRequest) {
+        LOGGER.info("{} Start execute get statistics by type of hero section {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<HeroSectionStatisticsResponse> response = heroSectionService.getHeroSectionStatisctisByType(heroSectionTypeRequest);
+        LOGGER.info("{} End execute get statistics by type of hero section {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

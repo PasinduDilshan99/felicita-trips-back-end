@@ -13,6 +13,7 @@ import com.felicita.model.response.heroSection.HeroSectionBasicResponse;
 import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
 import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
 import com.felicita.model.response.heroSection.HeroSectionParamResponse;
+import com.felicita.model.response.statistics.HeroSectionStatisticsResponse;
 import com.felicita.repository.HeroSectionRepository;
 import com.felicita.security.model.User;
 import com.felicita.service.CommonService;
@@ -1000,6 +1001,63 @@ public class HeroSectionServiceImpl implements HeroSectionService {
         }
     }
 
+    @Override
+    public CommonResponse<HeroSectionStatisticsResponse> getHeroSectionStatisctisByType(HeroSectionTypeRequest heroSectionTypeRequest) {
+        LOGGER.info("Start fetching hero section statistics by type from repository");
+        try {
+            heroSectionValidationService.validateHeroSectionTypeRequest(heroSectionTypeRequest);
+
+            HeroSectionStatisticsResponse heroSectionStatistics = new HeroSectionStatisticsResponse();
+
+            HeroSectionStatisticsResponse.Summary summary = heroSectionRepository.getHeroSectionSummaryStatistics(heroSectionTypeRequest.getHeroSectionType());
+            heroSectionStatistics.setSummary(summary);
+
+            List<HeroSectionStatisticsResponse.StatusStatistics> statusStatistics =
+                    heroSectionRepository.getHeroSectionStatusStatistics(heroSectionTypeRequest.getHeroSectionType())
+                            .stream()
+                            .filter(status -> List.of("ACTIVE", "INACTIVE", "TERMINATED")
+                                    .contains(status.getStatus()))
+                            .toList();
+
+            heroSectionStatistics.setStatusStatistics(statusStatistics);
+
+            List<HeroSectionStatisticsResponse.MonthlyStatistics> monthlyStatistics = heroSectionRepository.getHeroSectionMonthlyStatistics(heroSectionTypeRequest.getHeroSectionType());
+            heroSectionStatistics.setMonthlyStatistics(monthlyStatistics);
+
+            List<HeroSectionStatisticsResponse.ActivityStatistics> activityStatistics = heroSectionRepository.getHeroSectionActivityStatistics(heroSectionTypeRequest.getHeroSectionType());
+            heroSectionStatistics.setActivityStatistics(activityStatistics);
+
+            List<HeroSectionStatisticsResponse.TopEditorStatistics> topEditorStatistics = heroSectionRepository.getHeroSectionTopEditorStatistics(heroSectionTypeRequest.getHeroSectionType());
+            heroSectionStatistics.setTopEditorStatistics(topEditorStatistics);
+
+
+            if (heroSectionStatistics == null) {
+                return new CommonResponse<>(
+                        CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                        CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                        "No statistics found for the given section type",
+                        new HeroSectionStatisticsResponse(),
+                        Instant.now());
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    heroSectionStatistics,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (ValidationFailedErrorExceptionHandler vfe) {
+            throw new ValidationFailedErrorExceptionHandler("validation failed in the get hero section statistics request", vfe.getValidationFailedResponses());
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching hero section statistics by type: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch hero section statistics from database");
+        } finally {
+            LOGGER.info("End fetching hero section statistics by type from repository");
+        }
+    }
 
     private HeroSectionComparisonResult compareHeroSectionUpdates(
             HeroSectionUpdateRequest heroSectionUpdateRequest,
@@ -1266,10 +1324,14 @@ public class HeroSectionServiceImpl implements HeroSectionService {
     private String getStatusNameById(Long statusId) {
         if (statusId == null) return null;
         switch (statusId.intValue()) {
-            case 0: return "INACTIVE";
-            case 1: return "ACTIVE";
-            case 2: return "DRAFT";
-            default: return "UNKNOWN";
+            case 0:
+                return "INACTIVE";
+            case 1:
+                return "ACTIVE";
+            case 2:
+                return "DRAFT";
+            default:
+                return "UNKNOWN";
         }
     }
 
