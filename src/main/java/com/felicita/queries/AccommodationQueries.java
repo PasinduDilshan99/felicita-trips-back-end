@@ -132,7 +132,7 @@ public class AccommodationQueries {
                 AND sprv.is_approved = TRUE
             WHERE sp.service_provider_type_id = 1  -- Hotels only
             AND sp.status_id = 1
-            AND sp.approval_status_id = 1
+            -- AND sp.approval_status_id = 35
             GROUP BY
                 sp.service_provider_id, sp.name, sp.description, sp.address, sp.contact_number,
                 sp.email, sp.website_url, sp.check_in_time, sp.check_out_time, sp.star_rating,
@@ -273,7 +273,7 @@ public class AccommodationQueries {
                 AND sprv.is_approved = TRUE
             WHERE sp.service_provider_type_id = 2  -- Resorts (assuming 2 is the ID for resorts)
             AND sp.status_id = 1
-            AND sp.approval_status_id = 1
+         --   AND sp.approval_status_id = 1
             GROUP BY
                 sp.service_provider_id, sp.name, sp.description, sp.address, sp.contact_number,
                 sp.email, sp.website_url, sp.check_in_time, sp.check_out_time, sp.star_rating,
@@ -374,7 +374,7 @@ public class AccommodationQueries {
                 AND sprv.is_approved = TRUE
             WHERE sp.service_provider_type_id = 3  -- Villas
             AND sp.status_id = 1
-            AND sp.approval_status_id = 1
+           -- AND sp.approval_status_id = 1
             GROUP BY
                 sp.service_provider_id, sp.name, sp.description, sp.address, sp.contact_number,
                 sp.email, sp.website_url, sp.check_in_time, sp.check_out_time, sp.star_rating,
@@ -503,7 +503,7 @@ public class AccommodationQueries {
                 AND sprv.is_approved = TRUE
             WHERE sp.service_provider_type_id = 4  -- Restaurants
             AND sp.status_id = 1
-            AND sp.approval_status_id = 1
+           -- AND sp.approval_status_id = 1
             GROUP BY
                 sp.service_provider_id, sp.name, sp.description, sp.address, sp.contact_number,
                 sp.email, sp.website_url, sp.star_rating, c.currency_code, spt.name,
@@ -659,7 +659,7 @@ public class AccommodationQueries {
             AND sprv.is_approved = TRUE
         WHERE sp.service_provider_type_id = 5  -- Hostels
         AND sp.status_id = 1
-        AND sp.approval_status_id = 1
+   --     AND sp.approval_status_id = 1
         GROUP BY
             sp.service_provider_id, sp.name, sp.description, sp.address, sp.contact_number,
             sp.email, sp.website_url, sp.check_in_time, sp.check_out_time, sp.star_rating,

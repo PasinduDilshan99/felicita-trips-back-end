@@ -3,6 +3,7 @@ package com.felicita.service;
 import com.felicita.model.request.common.IdWithTypeRequest;
 import com.felicita.model.request.heroSection.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.IdAndNameResponse;
 import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
 import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
 import com.felicita.model.response.heroSection.HeroSectionParamResponse;
@@ -59,4 +60,6 @@ public interface HeroSectionService {
     CommonResponse<TerminateResponse> terminateHeroSection(IdWithTypeRequest idWithTypeRequest);
 
     CommonResponse<HeroSectionStatisticsResponse> getHeroSectionStatisctisByType(HeroSectionTypeRequest heroSectionTypeRequest);
+
+    CommonResponse<List<IdAndNameResponse>> getHeroSectionNameAndIdsForType(HeroSectionTypeRequest heroSectionTypeRequest);
 }

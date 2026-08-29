@@ -9,6 +9,7 @@ import com.felicita.model.other.HeroSectionComparisonResult;
 import com.felicita.model.request.common.IdWithTypeRequest;
 import com.felicita.model.request.heroSection.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.IdAndNameResponse;
 import com.felicita.model.response.heroSection.HeroSectionBasicResponse;
 import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
 import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
@@ -1056,6 +1057,41 @@ public class HeroSectionServiceImpl implements HeroSectionService {
             throw new InternalServerErrorExceptionHandler("Failed to fetch hero section statistics from database");
         } finally {
             LOGGER.info("End fetching hero section statistics by type from repository");
+        }
+    }
+
+    @Override
+    public CommonResponse<List<IdAndNameResponse>> getHeroSectionNameAndIdsForType(HeroSectionTypeRequest heroSectionTypeRequest) {
+        LOGGER.info("Start fetching hero section names and ids by type from repository");
+        try {
+
+            List<IdAndNameResponse> heroSectionList = heroSectionRepository.getHeroSectionNameAndIdsForType(heroSectionTypeRequest);
+
+            if (heroSectionList == null || heroSectionList.isEmpty()) {
+                return new CommonResponse<>(
+                        CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                        CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                        "No hero sections found for the given type",
+                        List.of(),
+                        Instant.now());
+            }
+
+            return new CommonResponse<>(
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_CODE,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_STATUS,
+                    CommonResponseMessages.SUCCESSFULLY_RETRIEVE_MESSAGE,
+                    heroSectionList,
+                    Instant.now());
+
+        } catch (DataNotFoundErrorExceptionHandler | DataAccessErrorExceptionHandler e) {
+            throw e;
+        } catch (ValidationFailedErrorExceptionHandler vfe) {
+            throw new ValidationFailedErrorExceptionHandler("validation failed in the get hero section names and ids request", vfe.getValidationFailedResponses());
+        } catch (Exception e) {
+            LOGGER.error("Error occurred while fetching hero section names and ids by type: {}", e.getMessage(), e);
+            throw new InternalServerErrorExceptionHandler("Failed to fetch hero section names and ids from database");
+        } finally {
+            LOGGER.info("End fetching hero section names and ids by type from repository");
         }
     }
 

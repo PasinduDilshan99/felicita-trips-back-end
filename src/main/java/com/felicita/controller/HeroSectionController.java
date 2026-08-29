@@ -3,6 +3,7 @@ package com.felicita.controller;
 import com.felicita.model.request.common.IdWithTypeRequest;
 import com.felicita.model.request.heroSection.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.IdAndNameResponse;
 import com.felicita.model.response.heroSection.HeroSectionBasicResponse;
 import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
 import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
@@ -222,6 +223,14 @@ public class HeroSectionController {
         LOGGER.info("{} Start execute get statistics by type of hero section {}", Constant.DOTS, Constant.DOTS);
         CommonResponse<HeroSectionStatisticsResponse> response = heroSectionService.getHeroSectionStatisctisByType(heroSectionTypeRequest);
         LOGGER.info("{} End execute get statistics by type of hero section {}", Constant.DOTS, Constant.DOTS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping(path = "/name-and-id")
+    public ResponseEntity<CommonResponse<List<IdAndNameResponse>>> getHeroSectionNameAndIdsForType(@RequestBody HeroSectionTypeRequest heroSectionTypeRequest) {
+        LOGGER.info("{} Start execute get hero section basic details {}", Constant.DOTS, Constant.DOTS);
+        CommonResponse<List<IdAndNameResponse>> response = heroSectionService.getHeroSectionNameAndIdsForType(heroSectionTypeRequest);
+        LOGGER.info("{} End execute get hero section basic details {}", Constant.DOTS, Constant.DOTS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

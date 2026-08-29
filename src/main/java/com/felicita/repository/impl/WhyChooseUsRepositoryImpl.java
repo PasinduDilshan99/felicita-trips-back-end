@@ -43,7 +43,6 @@ public class WhyChooseUsRepositoryImpl implements WhyChooseUsRepository {
                 card.setCardIconUrl(rs.getString("CARD_ICON_URL"));
                 card.setCardClickedUrl(rs.getString("CARD_CLICKED_URL"));
                 card.setCardStatus(rs.getString("CARD_STATUS"));
-                card.setCardStatusStatus(rs.getString("CARD_STATUS_STATUS"));
                 card.setCardColor(rs.getString("CARD_COLOR"));
                 card.setCardOrder(rs.getInt("CARD_ORDER"));
                 card.setCardCreatedAt(rs.getTimestamp("CARD_CREATED_AT") != null ? rs.getTimestamp("CARD_CREATED_AT").toLocalDateTime() : null);

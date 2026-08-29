@@ -183,7 +183,7 @@ public class ServiceProviderRepositoryImpl implements ServiceProviderRepository 
                         destination.setLatitude(rs.getBigDecimal("latitude"));
                         destination.setLongitude(rs.getBigDecimal("longitude"));
                         destination.setLocation(rs.getString("location"));
-                        destination.setDestinationCategory(rs.getString("destination_category"));
+//                        destination.setDestinationCategory(rs.getString("destination_category"));
                         destination.setStatusName(rs.getString("status_name"));
                         destination.setLinkedDate(rs.getTimestamp("linked_date") != null
                                 ? rs.getTimestamp("linked_date").toLocalDateTime()

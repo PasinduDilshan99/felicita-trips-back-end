@@ -19,7 +19,6 @@ public class WhyChooseUsResponse {
     private String cardIconUrl;
     private String cardClickedUrl;
     private String cardStatus;
-    private String cardStatusStatus;
     private String cardColor;
     private Integer cardOrder;
     private LocalDateTime cardCreatedAt;
