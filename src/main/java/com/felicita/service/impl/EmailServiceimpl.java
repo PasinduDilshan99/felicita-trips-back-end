@@ -149,7 +149,7 @@ public class EmailServiceimpl implements EmailService {
                 "In this regard, we would appreciate it if you could share your travel agent rates for the Summer and Winter seasons.<br><br>" +
                 "Should you require any further details or documents from our end, please feel free to reach out to us.<br><br>" +
                 "We look forward to hearing from you and hope to build a good business relationship with your team.<br><br>" +
-                "Kind regards,<br>" +
+                "Best regards,<br>" +
                 "</p>";
     }
 
@@ -180,37 +180,37 @@ public class EmailServiceimpl implements EmailService {
                 "    </td>" +
                 "    <!-- Vertical divider -->" +
                 "    <td style=\"border-left:2px solid #4f8f80; padding-left:18px; vertical-align:middle;\">" +
-                "      <table cellpadding=\"0\" cellspacing=\"0\" border=\"0\">" +
+                "      <table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"font-family: Arial, Helvetica, sans-serif; border-collapse: collapse;\">" +
                 "        <tr>" +
-                "          <td style=\"font-size:19px; font-weight:bold; color:#1a1a1a; padding-bottom:2px;\">" +
+                "          <td style=\"font-size:19px; font-weight:bold; color:#1a1a1a; padding-bottom:2px; font-family: Arial, Helvetica, sans-serif;\">" +
                 "            Dilshan Dimbulana" +
                 "          </td>" +
                 "        </tr>" +
                 "        <tr>" +
-                "          <td style=\"font-size:13px; font-style:italic; color:#4f8f80; font-weight:bold; padding-bottom:8px;\">" +
+                "          <td style=\"font-size:13px; color:#4f8f80; font-weight:bold; padding-bottom:8px; font-family: Arial, Helvetica, sans-serif;\">" +
                 "            Proprietor, Felicita Trips" +
                 "          </td>" +
                 "        </tr>" +
                 "        <tr>" +
-                "          <td style=\"font-size:12.5px; color:#333333; padding-bottom:3px;\">" +
+                "          <td style=\"font-size:12.5px; color:#333333; padding-bottom:3px; font-family: Arial, Helvetica, sans-serif;\">" +
                 "            <span style=\"color:#4f8f80; font-weight:bold;\">M:</span>" +
-                "            <a href=\"https://wa.me/94701774488\" style=\"color:#333333; text-decoration:none;\">+94 70 177 4488</a>" +
+                "            <a href=\"https://wa.me/94701774488\" style=\"color:#333333; text-decoration:none; font-family: Arial, Helvetica, sans-serif;\">+94 70 177 4488</a>" +
                 "          </td>" +
                 "        </tr>" +
                 "        <tr>" +
-                "          <td style=\"font-size:12.5px; color:#333333; padding-bottom:3px;\">" +
+                "          <td style=\"font-size:12.5px; color:#333333; padding-bottom:3px; font-family: Arial, Helvetica, sans-serif;\">" +
                 "            <span style=\"color:#4f8f80; font-weight:bold;\">E:</span>" +
-                "            <a href=\"mailto:info@felicitatrips.com\" style=\"color:#333333; text-decoration:none;\">info@felicitatrips.com</a>" +
+                "            <a href=\"mailto:info@felicitatrips.com\" style=\"color:#333333; text-decoration:none; font-family: Arial, Helvetica, sans-serif;\">info@felicitatrips.com</a>" +
                 "          </td>" +
                 "        </tr>" +
                 "        <tr>" +
-                "          <td style=\"font-size:12.5px; color:#333333; padding-bottom:8px;\">" +
+                "          <td style=\"font-size:12.5px; color:#333333; padding-bottom:8px; font-family: Arial, Helvetica, sans-serif;\">" +
                 "            <span style=\"color:#4f8f80; font-weight:bold;\">W:</span>" +
-                "            <a href=\"https://www.felicitatrips.com\" style=\"color:#333333; text-decoration:none;\">www.felicitatrips.com</a>" +
+                "            <a href=\"https://www.felicitatrips.com\" style=\"color:#333333; text-decoration:none; font-family: Arial, Helvetica, sans-serif;\">www.felicitatrips.com</a>" +
                 "          </td>" +
                 "        </tr>" +
                 "        <tr>" +
-                "          <td style=\"font-size:11px; color:#888888; padding-top:4px;\">" +
+                "          <td style=\"font-size:11px; color:#888888; padding-top:4px; font-family: Arial, Helvetica, sans-serif;\">" +
                 "            Colombo, Sri Lanka" +
                 "          </td>" +
                 "        </tr>" +
