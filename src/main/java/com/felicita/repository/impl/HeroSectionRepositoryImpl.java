@@ -7,6 +7,7 @@ import com.felicita.model.enums.HeroSectionTypes;
 import com.felicita.model.request.common.IdWithTypeRequest;
 import com.felicita.model.request.heroSection.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.IdAndNameResponse;
 import com.felicita.model.response.heroSection.HeroSectionBasicResponse;
 import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
 import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
@@ -1305,6 +1306,18 @@ public class HeroSectionRepositoryImpl implements HeroSectionRepository {
                                 .build());
     }
 
+    @Override
+    public List<IdAndNameResponse> getHeroSectionNameAndIdsForType(HeroSectionTypeRequest heroSectionTypeRequest) {
+
+        String table = HeroSectionTypes.valueOf(heroSectionTypeRequest.getHeroSectionType()).getTableName();
+        return jdbcTemplate.query(
+                String.format(HeroSectionQueries.GET_HERO_SECTION_NAME_AND_IDS, table),
+                (rs, rowNum) -> IdAndNameResponse.builder()
+                        .id(rs.getLong("id"))
+                        .name(rs.getString("name"))
+                        .build()
+        );
+    }
 
     @Override
     public List<HeroSectionStatisticsResponse.ActivityStatistics> getHeroSectionActivityStatistics(String heroSectionType) {

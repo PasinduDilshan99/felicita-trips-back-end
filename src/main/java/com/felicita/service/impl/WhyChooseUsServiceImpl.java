@@ -4,8 +4,14 @@ import com.felicita.exception.DataAccessErrorExceptionHandler;
 import com.felicita.exception.DataNotFoundErrorExceptionHandler;
 import com.felicita.exception.InternalServerErrorExceptionHandler;
 import com.felicita.model.enums.WhyChooseUsItemStatus;
-import com.felicita.model.response.CommonResponse;
-import com.felicita.model.response.WhyChooseUsResponse;
+import com.felicita.model.request.CommonIdRequest;
+import com.felicita.model.request.whyChooseUs.WhyChooseUsInsertRequest;
+import com.felicita.model.request.whyChooseUs.WhyChooseUsTerminateRequest;
+import com.felicita.model.request.whyChooseUs.WhyChooseUsUpdateRequest;
+import com.felicita.model.response.*;
+import com.felicita.model.response.common.IdAndNameResponse;
+import com.felicita.model.response.statistics.WhyChooseUsStatisticsResponse;
+import com.felicita.model.response.whyChooseUs.WhyChooseUsDetailsResponse;
 import com.felicita.repository.WhyChooseUsRepository;
 import com.felicita.service.WhyChooseUsService;
 import com.felicita.util.CommonResponseMessages;
@@ -90,6 +96,36 @@ public class WhyChooseUsServiceImpl implements WhyChooseUsService {
         } finally {
             LOGGER.info("End fetching active why choose us data from repository");
         }
+    }
+
+    @Override
+    public CommonResponse<List<IdAndNameResponse>> getWhyChooseUsDataIdsAndNames() {
+        return null;
+    }
+
+    @Override
+    public CommonResponse<WhyChooseUsStatisticsResponse> getWhyChooseUsStatistics() {
+        return null;
+    }
+
+    @Override
+    public CommonResponse<WhyChooseUsDetailsResponse> getWhyChooseUsDetailsById(CommonIdRequest commonIdRequest) {
+        return null;
+    }
+
+    @Override
+    public CommonResponse<InsertResponse> insertWhyChooseUs(WhyChooseUsInsertRequest whyChooseUsInsertRequest) {
+        return null;
+    }
+
+    @Override
+    public CommonResponse<UpdateResponse> updateWhyChooseUs(WhyChooseUsUpdateRequest whyChooseUsUpdateRequest) {
+        return null;
+    }
+
+    @Override
+    public CommonResponse<TerminateResponse> terminateWhyChooseUs(WhyChooseUsTerminateRequest whyChooseUsTerminateRequest) {
+        return null;
     }
 
 }

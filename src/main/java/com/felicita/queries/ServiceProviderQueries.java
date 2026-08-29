@@ -90,12 +90,12 @@ public class ServiceProviderQueries {
                 d.latitude,
                 d.longitude,
                 d.location,
-                dc.category as destination_category,
+               -- dc.category as destination_category,
                 cs.name as status_name,
                 spd.created_at as linked_date
             FROM service_provider_destination spd
             JOIN destination d ON spd.destination_id = d.destination_id
-            LEFT JOIN destination_categories dc ON d.destination_category = dc.id
+--            LEFT JOIN destination_categories dc ON d.destination_category = dc.id
             LEFT JOIN common_status cs ON spd.status_id = cs.id
             WHERE spd.service_provider_id = ?
             AND spd.status_id = (SELECT id FROM common_status WHERE name = 'ACTIVE')

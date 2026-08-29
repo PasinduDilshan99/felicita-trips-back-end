@@ -3,6 +3,7 @@ package com.felicita.repository;
 import com.felicita.model.request.common.IdWithTypeRequest;
 import com.felicita.model.request.heroSection.*;
 import com.felicita.model.response.*;
+import com.felicita.model.response.common.IdAndNameResponse;
 import com.felicita.model.response.heroSection.HeroSectionBasicResponse;
 import com.felicita.model.response.heroSection.HeroSectionDataForParamsResponse;
 import com.felicita.model.response.heroSection.HeroSectionDetailsResponse;
@@ -67,4 +68,6 @@ public interface HeroSectionRepository {
     List<HeroSectionStatisticsResponse.ActivityStatistics> getHeroSectionActivityStatistics(String heroSectionType);
 
     List<HeroSectionStatisticsResponse.TopEditorStatistics> getHeroSectionTopEditorStatistics(String heroSectionType);
+
+    List<IdAndNameResponse> getHeroSectionNameAndIdsForType(HeroSectionTypeRequest heroSectionTypeRequest);
 }

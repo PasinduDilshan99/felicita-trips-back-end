@@ -574,4 +574,13 @@ public class HeroSectionQueries {
             LIMIT 10
             """;
 
+    public static final String GET_HERO_SECTION_NAME_AND_IDS = """
+    SELECT
+        id,
+        name
+    FROM %s
+    WHERE terminated_at IS NULL
+    ORDER BY `order`, name
+    """;
+
 }
